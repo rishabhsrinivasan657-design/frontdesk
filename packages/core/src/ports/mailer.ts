@@ -1,0 +1,14 @@
+import type { ActionKind } from "../agent/types.js";
+import type { Booking } from "./calendar.js";
+
+export interface ConfirmationEmail {
+  kind: ActionKind;
+  to: string;
+  booking: Booking;
+  businessName: string;
+}
+
+/** Confirmation emails are a side effect of a confirmed write, never a tool (spec §6). */
+export interface Mailer {
+  sendConfirmation(email: ConfirmationEmail): Promise<void>;
+}
