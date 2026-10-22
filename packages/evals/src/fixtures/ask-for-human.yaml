@@ -1,0 +1,10 @@
+id: ask-for-human
+category: handoff
+persona: "Kim Park, wants a person, not a bot"
+goal: "Talk to a real person"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+  reservations: [{ name: Ana Ruiz, start: 2026-11-06T19:00, party: 4 }]
+expect:
+  outcome: handoff
+  handoffReason: human_requested
