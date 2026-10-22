@@ -7,3 +7,11 @@ export {
   type DayKey,
 } from "./config/schema.js";
 export { BusinessConfigError, parseBusinessConfig } from "./config/parse.js";
+export { findSlots } from "./availability/find-slots.js";
+export {
+  UnknownTableError,
+  holdMinutesFor,
+  tablesFromConfig,
+  type Table,
+} from "./availability/tables.js";
+export type { Reservation, Slot, SlotRequest } from "./availability/types.js";

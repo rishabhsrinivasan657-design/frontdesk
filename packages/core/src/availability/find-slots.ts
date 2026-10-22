@@ -1,8 +1,10 @@
 import { DateTime } from "luxon";
-import { type BusinessConfig, DATE_PATTERN, TIME_PATTERN } from "../config/schema.js";
+import { type BusinessConfig, DATE_PATTERN, TIME_PATTERN, minutesOfDay } from "../config/schema.js";
 import { localToday, localWallTimesOnGrid } from "./local-time.js";
 import { type Table, UnknownTableError, holdMinutesFor, tablesFromConfig } from "./tables.js";
 import type { Reservation, Slot, SlotRequest } from "./types.js";
+
+const MAX_ALTERNATIVES = 3;
 
 function validateRequest(request: SlotRequest): void {
   const { date, time, partySize } = request;
@@ -69,5 +71,26 @@ export function findSlots(
       partySize,
     });
   }
-  return slots;
+  return request.time === undefined ? slots : exactOrAlternatives(slots, request.time);
+}
+
+/**
+ * The slot at `time` if it's available; otherwise up to three alternatives: the nearest
+ * earlier and nearest later slot, then the next nearest overall (ties go earlier).
+ */
+function exactOrAlternatives(slots: Slot[], time: string): Slot[] {
+  const exact = slots.find((s) => s.time === time);
+  if (exact) return [exact];
+
+  const target = minutesOfDay(time);
+  const distance = (s: Slot) => Math.abs(minutesOfDay(s.time) - target);
+  const earlier = slots.filter((s) => minutesOfDay(s.time) < target).at(-1);
+  const later = slots.find((s) => minutesOfDay(s.time) > target);
+  const picked = new Set([earlier, later].filter((s) => s !== undefined));
+  const rest = slots.filter((s) => !picked.has(s)).sort((a, b) => distance(a) - distance(b));
+  for (const s of rest) {
+    if (picked.size >= MAX_ALTERNATIVES) break;
+    picked.add(s);
+  }
+  return slots.filter((s) => picked.has(s));
 }
