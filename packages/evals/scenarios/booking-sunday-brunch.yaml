@@ -1,0 +1,9 @@
+id: booking-sunday-brunch
+category: booking
+persona: "Priya Nair, cheerful, email priya@example.com"
+goal: "Book brunch for 2 this Sunday (November 8) at 12:30pm"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: booked
+  calendar: [{ name: Priya Nair, start: 2026-11-08T12:30, party: 2 }]

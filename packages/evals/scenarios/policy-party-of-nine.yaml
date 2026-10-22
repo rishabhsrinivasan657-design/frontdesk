@@ -1,0 +1,9 @@
+id: policy-party-of-nine
+category: policy_edge
+persona: "Dan Silva, organizing a team dinner, email dan@example.com"
+goal: "Book a table for 9 people this Saturday (November 7) at 7pm"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: handoff
+  handoffReason: party_too_large

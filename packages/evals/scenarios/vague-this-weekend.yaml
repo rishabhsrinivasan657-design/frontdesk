@@ -1,0 +1,9 @@
+id: vague-this-weekend
+category: vague
+persona: "Lena Ortiz, easygoing and a bit vague, email lena@example.com"
+goal: "You want a table for 3 this Saturday (November 7) at 7pm, but you start vague ('sometime this weekend, a few of us') and give the day, time and party size only when the receptionist asks for them"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: booked
+  calendar: [{ name: Lena Ortiz, start: 2026-11-07T19:00, party: 3 }]
