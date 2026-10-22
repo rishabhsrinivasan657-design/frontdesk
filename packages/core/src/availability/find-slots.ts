@@ -27,10 +27,15 @@ export function findSlots(
   now: Date,
 ): Slot[] {
   validateRequest(request);
+  if (Number.isNaN(now.getTime())) throw new RangeError("now must be a valid Date");
   const tables = tablesFromConfig(config);
   const known = new Set(tables.map((t) => t.id));
   for (const r of reservations) {
     if (!known.has(r.tableId)) throw new UnknownTableError(r.id, r.tableId);
+    if (!(r.start.getTime() < r.end.getTime())) {
+      // Also catches invalid Dates (NaN): a reservation we can't place must not read as free.
+      throw new RangeError(`Reservation ${r.id} needs a valid start before its end`);
+    }
   }
   const { date, partySize } = request;
   const zone = config.business.timezone;

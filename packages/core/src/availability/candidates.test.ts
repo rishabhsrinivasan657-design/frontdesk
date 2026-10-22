@@ -119,4 +119,10 @@ describe("findSlots candidates", () => {
     expect(() => findSlots(config, [], request, mondayMorning)).toThrow(RangeError);
     expect(() => findSlots(config, [], request, mondayMorning)).toThrow(field);
   });
+
+  it("rejects an invalid now instead of skipping lead time and the window", () => {
+    const request = { date: "2027-06-01", partySize: 2 };
+    expect(() => findSlots(config, [], request, new Date("x"))).toThrow(RangeError);
+    expect(() => findSlots(config, [], request, new Date("x"))).toThrow("now");
+  });
 });

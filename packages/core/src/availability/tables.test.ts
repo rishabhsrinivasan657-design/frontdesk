@@ -94,4 +94,16 @@ describe("tables", () => {
       /evt-stray.*t10-1/,
     );
   });
+
+  it.each<[string, Partial<Reservation>]>([
+    ["unparseable times", { start: new Date("garbage"), end: new Date("garbage") }],
+    ["end before start", { start: at(TUESDAY, "20:30"), end: at(TUESDAY, "19:00") }],
+    ["zero length", { start: at(TUESDAY, "19:00"), end: at(TUESDAY, "19:00") }],
+  ])("throws RangeError for a reservation with %s instead of treating it as free", (_n, times) => {
+    const bad = { ...res("t2-1", "19:00", "20:30"), ...times, id: "evt-bad" };
+    expect(() => findSlots(config, [bad], { date: TUESDAY, partySize: 2 }, now)).toThrow(
+      RangeError,
+    );
+    expect(() => findSlots(config, [bad], { date: TUESDAY, partySize: 2 }, now)).toThrow("evt-bad");
+  });
 });
