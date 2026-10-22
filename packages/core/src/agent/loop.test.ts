@@ -68,7 +68,7 @@ describe("runTurn", () => {
     const s = setup();
     const result = await proposeBooking(s);
     expect(result.reply).toBe(
-      "To confirm: a table for 4 on Saturday, November 7 at 7:00 PM under Bo Chen. Shall I book it?",
+      "To confirm: a table for 4 on Saturday, November 7 at 7:00 PM under Bo Chen, contact bo@example.com. Shall I book it?",
     );
     expect(result.reply).not.toContain("Booking it now");
     expect(result.messages.map((m) => m.type)).toContain("pending_action");
@@ -150,6 +150,53 @@ describe("runTurn", () => {
     const result = await s.turn("yes");
     expect(result.reply).toContain("timed out");
     expect(result.messages[0]).toMatchObject({ status: "voided", reason: "expired" });
+    expect(s.deps.calendar.writes).toEqual([]);
+  });
+
+  it("tells the caller about the timeout when an expired action gets a model-classified yes", async () => {
+    const s = setup();
+    await proposeBooking(s);
+    s.deps.clock.advance(300_001);
+    s.llm.onGenerate(() => ({ decision: "confirm", confidence: 0.9 }));
+    const streams = s.llm.calls.filter((c) => c.mode === "stream").length;
+    const result = await s.turn("yes please book it for us");
+    expect(result.reply).toContain("timed out");
+    expect(s.llm.calls.filter((c) => c.mode === "stream")).toHaveLength(streams);
+    expect(s.deps.calendar.writes).toEqual([]);
+  });
+
+  it("voids an action proposed in a turn that then fails", async () => {
+    const s = setup();
+    const save = s.deps.sessions.save.bind(s.deps.sessions);
+    let failOnce = true;
+    s.deps.sessions.save = (state) => {
+      if (failOnce) {
+        failOnce = false;
+        return Promise.reject(new Error("store down"));
+      }
+      return save(state);
+    };
+    await expect(proposeBooking(s)).rejects.toThrow("store down");
+    expect(await s.deps.sessions.getPending("s1")).toBeUndefined();
+    expect(s.deps.audit.entries().at(-1)).toMatchObject({ stage: "voided", reason: "error" });
+  });
+
+  it("serializes concurrent turns on one session so a handoff is not lost", async () => {
+    const s = setup();
+    let n = 0;
+    s.llm.onStream((req) => {
+      const last = req.messages.filter((m) => m.role === "user").at(-1);
+      if (last && "text" in last && last.text.includes("human")) {
+        return [call("request_handoff", { reason: "human_requested", summary: "wants a human" })];
+      }
+      return n++ % 2 === 0 ? [call("check_availability", CHECK)] : [call("book", BOOK)];
+    });
+    await Promise.all([
+      s.turn("get me a human"),
+      s.turn("book sat 7 for 4, Bo Chen, bo@example.com"),
+    ]);
+    expect((await s.deps.sessions.load("s1"))!.handoff).toBeDefined();
+    await s.turn("yes");
     expect(s.deps.calendar.writes).toEqual([]);
   });
 

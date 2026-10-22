@@ -14,7 +14,7 @@ export function readBack(action: PendingAction, config: BusinessConfig): string 
   switch (args.kind) {
     case "book": {
       const notes = args.notes.trim() ? ` Notes: ${args.notes.trim()}.` : "";
-      return `To confirm: a table for ${args.partySize} on ${when(config, action.slot!.start)} under ${args.name}.${notes} Shall I book it?`;
+      return `To confirm: a table for ${args.partySize} on ${when(config, action.slot!.start)} under ${args.name}, contact ${args.contact}.${notes} Shall I book it?`;
     }
     case "reschedule":
       return `To confirm: move your reservation for ${action.reservation!.partySize} from ${when(config, action.reservation!.start)} to ${when(config, action.slot!.start)}. Shall I make the change?`;
@@ -62,6 +62,8 @@ export const CALENDAR_DOWN_REPLY =
   "Sorry, I couldn't reach our booking system, so nothing was changed.";
 export const AUDIT_FAILED_REPLY =
   "Sorry, something went wrong on my side, so nothing was changed. Could we try that again?";
+export const RESERVATION_CHANGED_REPLY =
+  "That reservation changed since I read it back, so I didn't change anything. Shall I look it up again?";
 export const RESERVATION_GONE_REPLY =
   "I can't find that reservation anymore, so nothing was changed.";
 

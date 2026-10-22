@@ -53,7 +53,7 @@ describe("propose", () => {
       [result.action.id, "proposed"],
     ]);
     expect(readBack(result.action, testConfig())).toBe(
-      "To confirm: a table for 4 on Friday, November 6 at 7:00 PM under Ana Ruiz. Shall I book it?",
+      "To confirm: a table for 4 on Friday, November 6 at 7:00 PM under Ana Ruiz, contact ana@example.com. Shall I book it?",
     );
     expect(result.action.summary).toBe(readBack(result.action, testConfig()));
     expect(fx.deps.calendar.writes).toEqual([]);
@@ -171,6 +171,46 @@ describe("propose", () => {
       "To confirm: cancel your reservation for 4 on Friday, November 6 at 7:00 PM. Shall I cancel it?",
     );
   });
+
+  it("keeps the new pending action when auditing the superseded one fails", async () => {
+    const fx = agentFixture(testConfig(), []);
+    const first = await propose(
+      fx.deps,
+      fx.session,
+      "turn_1",
+      "book",
+      book(await fx.offer("2026-11-06", "19:00", 4)),
+    );
+    if (!first.ok) throw new Error(first.message);
+    fx.deps.audit.failWhen((e) => e.stage === "voided");
+    const second = await propose(
+      fx.deps,
+      fx.session,
+      "turn_2",
+      "book",
+      book(await fx.offer("2026-11-06", "20:00", 4)),
+    );
+    expect(second.ok).toBe(true);
+    if (!second.ok) return;
+    expect((await fx.deps.sessions.getPending("s1"))?.id).toBe(second.action.id);
+  });
+
+  it.each(["__proto__", "constructor", "toString", "hasOwnProperty"])(
+    "treats the prototype key %s as unknown provenance",
+    async (key) => {
+      const fx = agentFixture(testConfig(), [{ ...ANA, id: key }]);
+      expect(await propose(fx.deps, fx.session, "turn_1", "book", book(key))).toMatchObject({
+        ok: false,
+        error: "unknown_slot",
+      });
+      expect(
+        await propose(fx.deps, fx.session, "turn_1", "cancel", { reservationId: key }),
+      ).toMatchObject({
+        ok: false,
+        error: "unknown_reservation",
+      });
+    },
+  );
 
   it("rejects invalid args", async () => {
     const fx = agentFixture(testConfig());

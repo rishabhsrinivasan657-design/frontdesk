@@ -119,7 +119,8 @@ function modelStep(m: Model, step: Step): void {
   if (m.pending) {
     if (m.now >= m.pending.expiresAt) {
       m.pending = undefined;
-      runModel = step.user !== "ruleYes";
+      // A yes (rule or model) to an expired action gets the timeout reply, not the model.
+      runModel = VERDICT[step.user] !== "confirm";
     } else {
       const verdict = VERDICT[step.user];
       if (verdict === "confirm") {

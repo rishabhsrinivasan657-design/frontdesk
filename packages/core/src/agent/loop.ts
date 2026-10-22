@@ -1,9 +1,4 @@
-import {
-  type Classification,
-  type Decision,
-  classifyConfirmation,
-  ruleDecision,
-} from "../gate/classify.js";
+import { type Classification, type Decision, classifyConfirmation } from "../gate/classify.js";
 import { confirmAndExecute, voidPending } from "../gate/execute.js";
 import { propose } from "../gate/propose.js";
 import { EXPIRED_REPLY } from "../gate/summary.js";
@@ -73,6 +68,9 @@ interface Turn {
   replyInHistory: boolean;
   decision?: Decision;
   handoff?: HandoffReason;
+  /** The action proposed this turn, if any. */
+  proposedId?: string;
+  messages: ServerMessage[];
 }
 
 /**
@@ -80,10 +78,37 @@ interface Turn {
  * classification reaches `confirmAndExecute`. Otherwise the model runs with the tools;
  * a write tool only proposes, and the turn ends with the deterministic read-back.
  */
-export async function runTurn(
+export function runTurn(
   deps: AgentDeps,
   input: TurnInput,
   emit: (m: ServerMessage) => void = () => {},
+): Promise<TurnResult> {
+  return serialized(deps.sessions, input.sessionId, () => runTurnNow(deps, input, emit));
+}
+
+/**
+ * Turns on one session run one at a time: concurrent turns would each load, change and save
+ * the session, and the last save would drop the other's state (a handoff, a pending action).
+ * This covers one process; a multi-process host (M6) must also hold a per-session lock.
+ */
+const queues = new WeakMap<object, Map<string, Promise<unknown>>>();
+function serialized<T>(scope: object, sessionId: string, fn: () => Promise<T>): Promise<T> {
+  let byId = queues.get(scope);
+  if (!byId) queues.set(scope, (byId = new Map<string, Promise<unknown>>()));
+  const previous = byId.get(sessionId) ?? Promise.resolve();
+  const next = previous.then(fn, fn);
+  const settled = next.catch(() => undefined);
+  byId.set(sessionId, settled);
+  void settled.then(() => {
+    if (byId.get(sessionId) === settled) byId.delete(sessionId);
+  });
+  return next;
+}
+
+async function runTurnNow(
+  deps: AgentDeps,
+  input: TurnInput,
+  emit: (m: ServerMessage) => void,
 ): Promise<TurnResult> {
   const startedMs = deps.clock.now().getTime();
   const turnId = deps.ids("turn");
@@ -105,11 +130,28 @@ export async function runTurn(
     metrics: { llmTotalMs: 0, toolMs: [], tokensIn: 0, tokensOut: 0 },
     userInHistory: false,
     replyInHistory: false,
+    messages,
   };
 
+  try {
+    return await finishTurn(turn, startedMs);
+  } catch (error) {
+    // A read-back the caller never heard must not stay confirmable.
+    if (turn.proposedId) {
+      const pending = await deps.sessions.getPending(session.id).catch(() => undefined);
+      if (pending?.id === turn.proposedId) {
+        await voidPending(deps, session.id, turnId, "error").catch(() => undefined);
+      }
+    }
+    throw error;
+  }
+}
+
+async function finishTurn(turn: Turn, startedMs: number): Promise<TurnResult> {
+  const { deps, session, turnId, text } = turn;
   const reply = session.handoff ? alreadyHandedOffMessage(deps.config) : await handle(turn);
 
-  if (!turn.userInHistory) session.history.push({ role: "user", text: input.text });
+  if (!turn.userInHistory) session.history.push({ role: "user", text });
   if (!turn.replyInHistory) session.history.push({ role: "assistant", text: reply });
   for (const sentence of splitSentences(reply))
     turn.send({ type: "agent_sentence", turnId, text: sentence });
@@ -124,8 +166,8 @@ export async function runTurn(
   return {
     turnId,
     reply,
-    messages,
     flags: turn.flags,
+    messages: turn.messages,
     ...(turn.handoff ? { handoff: turn.handoff } : {}),
     ...(turn.decision ? { decision: turn.decision } : {}),
   };
@@ -170,12 +212,12 @@ async function resolvePending(turn: Turn, pending: PendingAction): Promise<strin
   if (deps.clock.now().getTime() >= Date.parse(pending.expiresAt)) {
     await voidPending(deps, session.id, turnId, "expired");
     voided("expired");
-    return ruleDecision(turn.text) === "confirm" ? EXPIRED_REPLY : undefined;
+    // A caller saying yes to an expired action must hear that nothing happened.
+    const late = await classify(turn, pending);
+    return late.decision === "confirm" ? EXPIRED_REPLY : undefined;
   }
 
-  const classification: Classification = await classifyConfirmation(deps.llm, pending, turn.text);
-  turn.decision = classification.decision;
-  if (classification.error) turn.flags.push("classifier_error");
+  const classification = await classify(turn, pending);
 
   switch (classification.decision) {
     case "confirm": {
@@ -209,6 +251,13 @@ async function resolvePending(turn: Turn, pending: PendingAction): Promise<strin
   }
 }
 
+async function classify(turn: Turn, pending: PendingAction): Promise<Classification> {
+  const classification = await classifyConfirmation(turn.deps.llm, pending, turn.text);
+  turn.decision = classification.decision;
+  if (classification.error) turn.flags.push("classifier_error");
+  return classification;
+}
+
 async function modelTurn(turn: Turn): Promise<string> {
   const { deps, session } = turn;
   session.history.push({ role: "user", text: turn.text });
@@ -239,6 +288,7 @@ async function modelTurn(turn: Turn): Promise<string> {
           const outcome = await propose(deps, session, turn.turnId, call.name, call.args);
           if (outcome.ok) {
             proposed = outcome.action;
+            turn.proposedId = outcome.action.id;
             result = {
               ok: true,
               data: { status: "awaiting_confirmation", summary: outcome.action.summary },

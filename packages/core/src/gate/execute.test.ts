@@ -210,6 +210,45 @@ describe("confirmAndExecute", () => {
   });
 });
 
+describe("confirmAndExecute against a changed reservation", () => {
+  it.each(["cancel", "reschedule"] as const)(
+    "refuses a %s when the reservation moved after the read-back",
+    async (kind) => {
+      const fx = agentFixture(testConfig());
+      await fx.find("Ana Ruiz", "ana@example.com");
+      const slotId = await fx.offer("2026-11-07", "19:00", 4);
+      const args =
+        kind === "cancel" ? { reservationId: ANA.id } : { reservationId: ANA.id, slotId };
+      const result = await propose(fx.deps, fx.session, "turn_1", kind, args);
+      if (!result.ok) throw new Error(result.message);
+      await fx.deps.calendar.moveReservation(ANA.id, {
+        start: new Date("2026-11-08T13:00:00-05:00"),
+        end: new Date("2026-11-08T14:30:00-05:00"),
+        tableId: "t4-3",
+      });
+      const writes = fx.deps.calendar.writes.length;
+      expect(await confirmAndExecute(fx.deps, "s1", result.action.id, "turn_2")).toMatchObject({
+        status: "failed",
+        reason: "reservation_changed",
+      });
+      expect(fx.deps.calendar.writes).toHaveLength(writes);
+      expect(stages(fx, result.action.id)).toEqual(["proposed", "confirmed", "failed"]);
+    },
+  );
+});
+
+describe("confirmAndExecute lock release", () => {
+  it("reports a write as executed even if releasing the lock fails", async () => {
+    const { fx, action } = await pendingBook();
+    fx.deps.locks = {
+      acquire: () => Promise.resolve({ release: () => Promise.reject(new Error("redis blip")) }),
+    } as unknown as typeof fx.deps.locks;
+    const outcome = await confirmAndExecute(fx.deps, "s1", action.id, "turn_2");
+    expect(outcome).toMatchObject({ status: "executed" });
+    expect(stages(fx, action.id)).toEqual(["proposed", "confirmed", "executed"]);
+  });
+});
+
 describe("voidPending", () => {
   it("clears and audits the pending action", async () => {
     const { fx, action } = await pendingBook();

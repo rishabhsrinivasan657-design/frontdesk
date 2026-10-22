@@ -8,6 +8,7 @@ import {
   CALENDAR_DOWN_REPLY,
   EXPIRED_REPLY,
   NOTHING_PENDING_REPLY,
+  RESERVATION_CHANGED_REPLY,
   RESERVATION_GONE_REPLY,
   executedReply,
   lateChangeReply,
@@ -21,6 +22,7 @@ export type FailureReason =
   | "late_change"
   | "not_pending"
   | "reservation_gone"
+  | "reservation_changed"
   | "audit_failed";
 
 export type ExecutionOutcome =
@@ -40,7 +42,7 @@ export type ExecutionOutcome =
       alternatives?: Slot[];
     };
 
-type VoidReason = "deny" | "change" | "expired" | "superseded" | "handoff";
+type VoidReason = "deny" | "change" | "expired" | "superseded" | "handoff" | "error";
 
 class SlotGone extends Error {
   constructor(
@@ -89,6 +91,7 @@ export async function confirmAndExecute(
   try {
     const result = await write(deps, action);
     if (result === "reservation_gone") return failed(result, RESERVATION_GONE_REPLY);
+    if (result === "reservation_changed") return failed(result, RESERVATION_CHANGED_REPLY);
     if (result === "late_change") return failed(result, lateChangeReply(deps.config));
     booking = result;
   } catch (error) {
@@ -164,13 +167,15 @@ function auditor(deps: GateDeps, action: PendingAction, turnId: string) {
 async function write(
   deps: GateDeps,
   action: PendingAction,
-): Promise<Booking | "reservation_gone" | "late_change"> {
+): Promise<Booking | "reservation_gone" | "reservation_changed" | "late_change"> {
   const { args } = action;
   const now = deps.clock.now();
   let current: Booking | undefined;
   if (args.kind !== "book") {
     current = await deps.calendar.getReservation(args.reservationId);
     if (!current) return "reservation_gone";
+    // The caller confirmed the reservation as read back; if it changed since, they didn't.
+    if (!sameReservation(current, action.reservation!)) return "reservation_changed";
     if (insideChangeWindow(deps.config, current.start, now)) return "late_change";
   }
   if (args.kind === "cancel") {
@@ -203,6 +208,16 @@ async function write(
     }
     return await deps.calendar.moveReservation(current!.id, placement);
   } finally {
-    await lease.release();
+    // The write (if any) already happened; the lease's TTL frees the slot if release fails.
+    await lease.release().catch(() => undefined);
   }
+}
+
+function sameReservation(a: Booking, b: Booking): boolean {
+  return (
+    new Date(a.start).getTime() === new Date(b.start).getTime() &&
+    new Date(a.end).getTime() === new Date(b.end).getTime() &&
+    a.tableId === b.tableId &&
+    a.partySize === b.partySize
+  );
 }

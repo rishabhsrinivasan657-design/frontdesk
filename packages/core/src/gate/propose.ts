@@ -53,16 +53,20 @@ export async function propose(
     });
     await deps.sessions.putPending(action);
     if (previous) {
-      await deps.audit.append({
-        at: now.toISOString(),
-        sessionId: session.id,
-        turnId,
-        actionId: previous.id,
-        kind: previous.args.kind,
-        stage: "voided",
-        args: previous.args,
-        reason: "superseded",
-      });
+      // The new action is already stored and will be read back; a failed note about the old
+      // one must not abort the turn and leave an unheard action confirmable.
+      await deps.audit
+        .append({
+          at: now.toISOString(),
+          sessionId: session.id,
+          turnId,
+          actionId: previous.id,
+          kind: previous.args.kind,
+          stage: "voided",
+          args: previous.args,
+          reason: "superseded",
+        })
+        .catch(() => undefined);
     }
     return { ok: true, action };
   } catch (error) {
@@ -81,7 +85,7 @@ async function resolve(
   const now = clock.now();
 
   const knownReservation = async (id: string): Promise<Booking | Failure> => {
-    if (!session.knownReservations[id]) {
+    if (!Object.hasOwn(session.knownReservations, id)) {
       return fail(
         "unknown_reservation",
         "Use a reservationId returned by find_reservation.",
@@ -93,8 +97,9 @@ async function resolve(
     return fresh;
   };
   const offeredSlot = (id: string): Slot | Failure =>
-    session.offeredSlots[id] ??
-    (fail("unknown_slot", "Use a slotId returned by check_availability.") as Failure);
+    Object.hasOwn(session.offeredSlots, id)
+      ? session.offeredSlots[id]!
+      : (fail("unknown_slot", "Use a slotId returned by check_availability.") as Failure);
   const stillFree = async (slot: Slot, excludeId?: string): Promise<Failure | undefined> =>
     (await recheckSlot(config, deps.calendar, slot, now, excludeId)).free
       ? undefined
