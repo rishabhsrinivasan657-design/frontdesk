@@ -36,6 +36,17 @@ describe("withPatience", () => {
     expect(slept).toEqual([6000]);
   });
 
+  it("waits a default backoff when the limit gives no retry time", async () => {
+    const slept: number[] = [];
+    const inner = new FakeProvider([
+      { error: new LLMError("rate_limited", "429 from Gemini", { status: 429 }) },
+      { generate: { ok: true } },
+    ]);
+    const llm = withPatience(inner, { sleep: (ms) => (slept.push(ms), Promise.resolve()) });
+    await llm.generate(REQ, z.object({ ok: z.boolean() }));
+    expect(slept).toEqual([20_000]);
+  });
+
   it("retries a stream that failed before yielding", async () => {
     const inner = new FakeProvider([{ error: limited(10) }, { stream: [text("hi")] }]);
     const llm = withPatience(inner, { sleep: () => Promise.resolve() });

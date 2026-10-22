@@ -16,7 +16,7 @@ import { RECORDINGS_DIR } from "./paths.js";
 import type { Mode } from "./report.js";
 import { withPatience } from "./wrappers.js";
 
-/** Chosen in M4 Part B by trying two local models (spec §15). */
+/** gemma3:4b beat mistral:latest as the caller in M4 Part B trials (spec §15). */
 export const DEFAULT_CALLER_MODEL = "gemma3:4b";
 
 /** Per-call Gemini timeout for live/record runs (the server keeps M2's 10 s). */
