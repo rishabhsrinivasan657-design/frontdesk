@@ -1,0 +1,8 @@
+node_modules
+dist-types
+*.tsbuildinfo
+.env
+coverage
+playwright-report
+.superpowers
+.DS_Store
