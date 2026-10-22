@@ -106,5 +106,6 @@ describe("runScenario", () => {
       caller: new FakeProvider([say("Hi, a table for 4?")]),
     });
     expect(run.status).toBe("error");
+    expect(run.error).toMatch(/invalid_output/);
   });
 });

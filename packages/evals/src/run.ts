@@ -92,6 +92,7 @@ export async function runScenario(scenario: Scenario, options: RunOptions): Prom
     run.error = error instanceof Error ? error.message : String(error);
   }
 
+  if (errors.length > 0 && !run.error) run.error = `LLM errors: ${[...new Set(errors)].join(", ")}`;
   run.status = errors.includes("stale_recording")
     ? "stale"
     : errors.includes("replay_miss")
