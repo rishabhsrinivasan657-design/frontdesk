@@ -33,3 +33,4 @@ export {
   type Price,
   type SpendCapOptions,
 } from "./wrappers/spend-cap.js";
+export { withRetry, type RetryOptions } from "./wrappers/retry.js";
