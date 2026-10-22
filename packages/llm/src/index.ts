@@ -16,3 +16,14 @@ export {
   type RecordingStore,
 } from "./recordings.js";
 export { ReplayProvider } from "./providers/replay.js";
+export type {
+  CacheStore,
+  RateLimitStore,
+  RateLimits,
+  SpendStore,
+  SpendTotals,
+  TakeOptions,
+  TakeResult,
+} from "./stores/types.js";
+export { MemoryCacheStore, MemoryRateLimitStore, MemorySpendStore } from "./stores/memory.js";
+export { withRateLimit, type RateLimitOptions } from "./wrappers/rate-limit.js";
