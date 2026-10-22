@@ -6,3 +6,13 @@ export {
   type GeminiModels,
   type GeminiProviderOptions,
 } from "./providers/gemini.js";
+export {
+  FsRecordingStore,
+  MemoryRecordingStore,
+  requestKey,
+  templateHash,
+  type CallMode,
+  type Recording,
+  type RecordingStore,
+} from "./recordings.js";
+export { ReplayProvider } from "./providers/replay.js";
