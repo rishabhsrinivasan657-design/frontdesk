@@ -27,11 +27,17 @@ describe("enqueueConfirmation", () => {
           jobId: "confirm-act_1",
           attempts: 5,
           backoff: { type: "exponential", delay: 2000 },
-          removeOnComplete: true,
+          removeOnComplete: { age: 86_400 },
           removeOnFail: false,
         },
       },
     ]);
+  });
+
+  it("accepts a shorter backoff delay (tests only)", async () => {
+    const queue = new FakeQueue();
+    await enqueueConfirmation(queue, email, { backoffDelayMs: 5 });
+    expect(queue.added[0]!.opts).toMatchObject({ backoff: { type: "exponential", delay: 5 } });
   });
 
   it("QueueMailer enqueues instead of sending", async () => {

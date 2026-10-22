@@ -42,6 +42,14 @@ export function parseConfirmationJob(data: unknown): ConfirmationEmail {
   return z.object({ email: confirmationEmail }).parse(data).email;
 }
 
+/** How long a sent job's id is kept, so a duplicate enqueue for the same action is ignored. */
+export const DEDUPE_WINDOW_S = 86_400;
+
+export interface EnqueueOptions {
+  /** Overrides the backoff base delay. Tests only. */
+  backoffDelayMs?: number;
+}
+
 /**
  * Queues one confirmation email. The job id is the action id, so a second enqueue
  * for the same action (a retried request, a duplicate "yes") adds nothing.
@@ -49,6 +57,7 @@ export function parseConfirmationJob(data: unknown): ConfirmationEmail {
 export async function enqueueConfirmation(
   queue: ConfirmationQueue,
   email: ConfirmationEmail,
+  opts: EnqueueOptions = {},
 ): Promise<void> {
   await queue.add(
     CONFIRMATION_QUEUE,
@@ -56,8 +65,9 @@ export async function enqueueConfirmation(
     {
       jobId: `confirm-${email.actionId}`,
       attempts: EMAIL_ATTEMPTS,
-      backoff: EMAIL_BACKOFF,
-      removeOnComplete: true,
+      backoff: { ...EMAIL_BACKOFF, delay: opts.backoffDelayMs ?? EMAIL_BACKOFF.delay },
+      removeOnComplete: { age: DEDUPE_WINDOW_S },
+      // Failed jobs stay for inspection; their handoff ticket is the follow-up.
       removeOnFail: false,
     },
   );
@@ -65,9 +75,12 @@ export async function enqueueConfirmation(
 
 /** The `Mailer` the api gives the gate: "sending" means queueing for the worker. */
 export class QueueMailer implements Mailer {
-  constructor(private readonly queue: ConfirmationQueue) {}
+  constructor(
+    private readonly queue: ConfirmationQueue,
+    private readonly opts: EnqueueOptions = {},
+  ) {}
 
   sendConfirmation(email: ConfirmationEmail): Promise<void> {
-    return enqueueConfirmation(this.queue, email);
+    return enqueueConfirmation(this.queue, email, this.opts);
   }
 }
