@@ -48,3 +48,5 @@ export {
   type ClientMessage,
   type ServerMessage,
 } from "./protocol/messages.js";
+export * from "./agent/index.js";
+export * from "./gate/index.js";
