@@ -16,3 +16,25 @@ export {
   type RecordingStore,
 } from "./recordings.js";
 export { ReplayProvider } from "./providers/replay.js";
+export type {
+  CacheStore,
+  RateLimitStore,
+  RateLimits,
+  SpendStore,
+  SpendTotals,
+  TakeOptions,
+  TakeResult,
+} from "./stores/types.js";
+export { MemoryCacheStore, MemoryRateLimitStore, MemorySpendStore } from "./stores/memory.js";
+export { withRateLimit, type RateLimitOptions } from "./wrappers/rate-limit.js";
+export {
+  projectCostUsd,
+  withSpendCap,
+  type Price,
+  type SpendCapOptions,
+} from "./wrappers/spend-cap.js";
+export { withRetry, type RetryOptions } from "./wrappers/retry.js";
+export { withCache, type CacheOptions } from "./wrappers/cache.js";
+export { withRecorder, type RecorderOptions } from "./wrappers/recorder.js";
+export { RedisCacheStore, RedisRateLimitStore, RedisSpendStore } from "./stores/redis.js";
+export { createLLM, type CreateLLMDeps } from "./create.js";

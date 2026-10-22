@@ -1,10 +1,12 @@
 import { resolve } from "node:path";
-import type { LLMChunk, LLMRequest, ToolCall, ToolSpec } from "@frontdesk/core";
+import type { LLMChunk, LLMProvider, LLMRequest, ToolCall, ToolSpec } from "@frontdesk/core";
 import { config } from "dotenv";
 import { beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { collect } from "../test-request.js";
-import { GeminiProvider } from "./gemini.js";
+import { createLLM } from "../create.js";
+import { MemoryRecordingStore } from "../recordings.js";
+import { MemoryCacheStore, MemoryRateLimitStore, MemorySpendStore } from "../stores/memory.js";
 
 // Live Gemini smoke test: runs only via `pnpm test:live` (LLM_LIVE=1) with GEMINI_API_KEY in .env.
 config({ path: resolve(import.meta.dirname, "../../../../.env"), quiet: true });
@@ -40,10 +42,18 @@ it.runIf(live && !apiKey)("requires GEMINI_API_KEY in .env when LLM_LIVE=1", () 
 });
 
 describe.skipIf(!live || !apiKey)(`gemini live (${model})`, () => {
-  // Built lazily so skipped runs never construct an SDK client.
-  let provider: GeminiProvider;
+  // The full wrapper stack (memory stores), built lazily so skipped runs never construct a client.
+  let provider: LLMProvider;
   beforeAll(() => {
-    provider = new GeminiProvider({ model, apiKey });
+    provider = createLLM(
+      { ...process.env, LLM_PROVIDER: "gemini", LLM_MODEL: model, LLM_RECORD: "0" },
+      {
+        rate: new MemoryRateLimitStore(),
+        spend: new MemorySpendStore(),
+        cache: new MemoryCacheStore(),
+        recordings: new MemoryRecordingStore(),
+      },
+    );
   });
 
   it("streams a short reply", async () => {

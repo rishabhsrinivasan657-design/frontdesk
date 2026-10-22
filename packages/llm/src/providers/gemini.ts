@@ -24,7 +24,11 @@ export interface GeminiProviderOptions {
   apiKey?: string;
   /** Injected SDK client (tests); takes precedence over apiKey. */
   client?: GeminiModels;
+  /** Per-request timeout; a stalled call becomes a retryable 504. */
+  timeoutMs?: number;
 }
+
+const DEFAULT_TIMEOUT_MS = 10_000;
 
 /** LLMProvider over the official @google/genai SDK (spec §7). */
 export class GeminiProvider implements LLMProvider {
@@ -33,7 +37,12 @@ export class GeminiProvider implements LLMProvider {
 
   constructor(options: GeminiProviderOptions) {
     this.model = options.model;
-    this.client = options.client ?? new GoogleGenAI({ apiKey: options.apiKey }).models;
+    this.client =
+      options.client ??
+      new GoogleGenAI({
+        apiKey: options.apiKey,
+        httpOptions: { timeout: options.timeoutMs ?? DEFAULT_TIMEOUT_MS },
+      }).models;
   }
 
   async *stream(req: LLMRequest): AsyncIterable<LLMChunk> {
@@ -204,6 +213,11 @@ function toLLMError(error: unknown): unknown {
       retryAfterMs: retryAfterMs(error.message),
       cause: error,
     });
+  }
+  // The SDK enforces its timeout by aborting the fetch.
+  const name = (error as { name?: unknown } | null)?.name;
+  if (name === "AbortError" || name === "TimeoutError") {
+    return new LLMError("upstream", "Gemini request timed out", { status: 504, cause: error });
   }
   // fetch reports network failures as TypeError; Node socket errors carry an errno code.
   const errno = (error as { code?: unknown } | null)?.code;
