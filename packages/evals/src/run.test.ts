@@ -96,4 +96,15 @@ describe("runScenario", () => {
     });
     expect(run.status).toBe("error");
   });
+
+  it("marks a run with a swallowed classifier failure as error", async () => {
+    // The loop treats a failed confirmation classification as "unrelated" and carries on, but
+    // nothing was recorded for that call, so the run could never replay.
+    const run = await runScenario(scenario({ expect: { maxTurns: 1 } }), {
+      config,
+      agent: new FakeProvider([{ error: new LLMError("invalid_output", "not JSON") }]),
+      caller: new FakeProvider([say("Hi, a table for 4?")]),
+    });
+    expect(run.status).toBe("error");
+  });
 });

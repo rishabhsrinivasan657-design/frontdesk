@@ -37,9 +37,6 @@ export interface RunOptions {
   now?: () => number;
 }
 
-/** LLM failures that mean the run says nothing about the agent (outage, quota, bad config). */
-const BROKEN: readonly LLMErrorCode[] = ["upstream", "spend_cap", "config"];
-
 /**
  * Plays one scenario: the caller speaks first after the greeting, then caller and agent
  * alternate until the caller is done, the agent hands off, or `maxTurns` caller turns pass.
@@ -101,7 +98,9 @@ export async function runScenario(scenario: Scenario, options: RunOptions): Prom
       ? "missing"
       : errors.includes("rate_limited")
         ? "quota"
-        : run.endedBy === "error" || errors.some((c) => BROKEN.includes(c))
+        : // Any other LLM failure the loop swallowed (outage, bad output) left an unrecorded
+          // call or a fallback path: the run says nothing reliable about the agent.
+          run.endedBy === "error" || errors.length > 0
           ? "error"
           : "ok";
   return run;
