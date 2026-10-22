@@ -94,6 +94,9 @@ export async function main(argv: string[], io: CliIO): Promise<number> {
     io.stderr(
       `${scenario.id}: ${score.status}${score.status === "ok" ? (score.success ? " ✓" : " ✗") : ""}${run.error ? ` (${run.error})` : ""}`,
     );
+    if (options.verbose) {
+      io.stderr(run.transcript.map((line) => `  ${line.role}: ${line.text}`).join("\n"));
+    }
     scores.push(score);
   }
 

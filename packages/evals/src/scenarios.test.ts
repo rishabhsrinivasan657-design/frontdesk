@@ -45,6 +45,7 @@ describe("committed scenarios", () => {
       { date: "2026-11-07", time: "20:00", partySize: 6 },
       { config, calendar: deps.calendar, clock: deps.clock, session },
     );
+    if (!result.ok) throw new Error(result.message);
     const slots = (result.data as { slots: { time: string }[] }).slots;
     expect(slots.map((x) => x.time)).not.toContain("20:00");
   });

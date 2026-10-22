@@ -16,7 +16,7 @@ const config = loadConfig();
 
 describe("parseArgs", () => {
   it("defaults to replay", () => {
-    expect(parseArgs([])).toEqual({ mode: "replay", save: false, check: false });
+    expect(parseArgs([])).toEqual({ mode: "replay", save: false, check: false, verbose: false });
   });
   it("reads every flag", () => {
     expect(
@@ -27,7 +27,9 @@ describe("parseArgs", () => {
       subset: "ci",
       save: true,
       check: true,
+      verbose: false,
     });
+    expect(parseArgs(["--verbose"]).verbose).toBe(true);
   });
   it.each([
     [["--live", "--record"], /choose one/],
@@ -108,6 +110,12 @@ describe("main", () => {
     const text = out.join("\n");
     expect(text).toContain("booking");
     expect(text).toContain("never-recorded: missing");
+  });
+
+  it("--verbose prints each transcript", async () => {
+    const { io, err } = await workspace([scenario()]);
+    expect(await main(["--verbose"], io)).toBe(0);
+    expect(err.join("\n")).toContain("caller: Bo Chen, bo@example.com");
   });
 
   it("--save refuses with --filter", async () => {
