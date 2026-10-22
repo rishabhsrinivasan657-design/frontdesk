@@ -1,0 +1,60 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm verify
+
+  infra:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgres://frontdesk:frontdesk@localhost:5432/frontdesk
+      EVAL_DATABASE_URL: postgres://frontdesk:frontdesk@localhost:5432/frontdesk_eval
+      REDIS_URL: redis://localhost:6379
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: frontdesk
+          POSTGRES_PASSWORD: frontdesk
+          POSTGRES_DB: frontdesk
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U frontdesk -d frontdesk"
+          --health-interval 2s --health-timeout 3s --health-retries 15
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 2s --health-timeout 3s --health-retries 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Service containers can't mount docker/postgres/init, so create the eval DB here.
+      - run: psql "$DATABASE_URL" -f docker/postgres/init/01-create-eval-db.sql
+      - run: pnpm test:infra
