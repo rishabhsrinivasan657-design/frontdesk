@@ -328,4 +328,18 @@ describe("GeminiProvider", () => {
       message: expect.stringContaining("SAFETY") as string,
     });
   });
+
+  it.each(["AbortError", "TimeoutError"])(
+    "maps a %s (request timeout) to a retryable 504",
+    async (name) => {
+      const { client } = fakeClient({ error: new DOMException("aborted", name) });
+      await expect(
+        collect(new GeminiProvider({ model: "m", client }).stream(testRequest())),
+      ).rejects.toMatchObject({
+        code: "upstream",
+        status: 504,
+        retryable: true,
+      });
+    },
+  );
 });
