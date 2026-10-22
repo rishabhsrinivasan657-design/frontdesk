@@ -1,3 +1,6 @@
+export { PgAuditLog, type AuditRow, type EmailAttempt } from "./audit-log.js";
 export { createDb, type Db } from "./client.js";
+export { PgConversations, type ConversationSource, type TurnRecord } from "./conversations.js";
+export { PgHandoffQueue } from "./handoff-queue.js";
 export { migrate } from "./migrate.js";
 export * as schema from "./schema.js";
