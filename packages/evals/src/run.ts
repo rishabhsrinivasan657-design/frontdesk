@@ -65,6 +65,11 @@ export async function runScenario(scenario: Scenario, options: RunOptions): Prom
         callerRequest(scenario, run.transcript),
         CallerTurnSchema,
       );
+      // A bare "done" is the simulator signalling the end, not words a caller said.
+      if (value.done && /^\s*(done\W*)?$/i.test(value.say)) {
+        run.endedBy = "caller_done";
+        break;
+      }
       run.transcript.push({ role: "caller", text: value.say });
       run.turns += 1;
 

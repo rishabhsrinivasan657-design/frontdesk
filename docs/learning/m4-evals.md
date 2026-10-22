@@ -44,7 +44,8 @@ M4 is how we _prove_ the receptionist behaves. It lives in `packages/evals`. A s
 - **The caller** is `gemma3:4b` (set `EVAL_CALLER_MODEL` to try another). `mistral:latest` hung up too early and ignored its persona's details.
 - **Two lessons from the live runs:**
   - Small callers often say "yes" and hang up in the same message, so the harness always delivers the caller's last message.
-  - The agent offers a human too readily, and a vague reply then counts as "yes". That's where most of the baseline's failures come from, and it's a job for M9.
+  - Small callers also end with a bare `{"say": "done"}`. That's a signal to the harness, not something a caller said, so it is never sent to the agent. (Sending it once made the agent read "done" as "yes, get me a human".)
+  - The agent offers a human too readily and sometimes hands off a prank instead of refusing it. Those are the baseline's two remaining failures (86.7% success), and they're a job for M9.
 - **To re-record after changing a prompt or tool:** delete `packages/evals/recordings/`, run `pnpm eval --record` (you need `GEMINI_API_KEY` in `.env` and Ollama running), check that `pnpm eval` gives the same result twice, then run `pnpm eval --subset ci --save`. If the daily quota runs out, the CLI tells you which categories to re-run tomorrow with `--filter`.
 
 ## 3. Potential holes and the tests that guard them

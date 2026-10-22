@@ -42,6 +42,20 @@ describe("runScenario", () => {
     expect(run.world.deps.calendar.writes.map((w) => w.op)).toEqual(["create"]);
   });
 
+  it("doesn't send a bare 'done' as the caller's words", async () => {
+    const run = await runScenario(scenario(), {
+      config,
+      agent: new FakeProvider([{ stream: [text("Would you like a human to call you?")] }]),
+      caller: new FakeProvider([say("When do you open Sunday?"), say(" Done. ", true)]),
+    });
+    expect(run.endedBy).toBe("caller_done");
+    expect(run.turns).toBe(1);
+    expect(run.transcript.at(-1)).toEqual({
+      role: "agent",
+      text: "Would you like a human to call you?",
+    });
+  });
+
   it("ends on handoff", async () => {
     const run = await runScenario(scenario({ expect: { outcome: "handoff" } }), {
       config,
