@@ -36,3 +36,5 @@ export {
 export { withRetry, type RetryOptions } from "./wrappers/retry.js";
 export { withCache, type CacheOptions } from "./wrappers/cache.js";
 export { withRecorder, type RecorderOptions } from "./wrappers/recorder.js";
+export { RedisCacheStore, RedisRateLimitStore, RedisSpendStore } from "./stores/redis.js";
+export { createLLM, type CreateLLMDeps } from "./create.js";
