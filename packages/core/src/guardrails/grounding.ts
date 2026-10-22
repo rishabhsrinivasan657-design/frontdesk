@@ -42,11 +42,11 @@ const PATTERNS: {
   },
   {
     kind: "date",
-    re: /\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+([0-3]?\d)(?:st|nd|rd|th)?\b/gi,
+    re: /\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\.?\s+([0-3]?\d)(?:st|nd|rd|th)?\b/gi,
     value: (m) => {
       const day = Number(m[2]);
       if (day < 1 || day > 31) return undefined;
-      return `${pad(MONTHS.indexOf(m[1]!.toLowerCase()) + 1)}-${pad(day)}`;
+      return `${pad(MONTHS.indexOf(m[1]!.slice(0, 3).toLowerCase()) + 1)}-${pad(day)}`;
     },
   },
   { kind: "price", re: /\$\s?(\d+(?:\.\d{1,2})?)/g, value: (m) => String(Number(m[1])) },
@@ -96,6 +96,8 @@ export function buildFacts(config: BusinessConfig, session: SessionState, now: D
     add("number", `${n} ${unit}`);
     if (unit === "min" && n % 60 === 0) add("number", `${n / 60} h`);
     if (unit === "h") add("number", `${n * 60} min`);
+    if (unit === "d") add("number", `${n * 24} h`);
+    if (unit === "h" && n % 24 === 0) add("number", `${n / 24} d`);
     if (unit === "d" && n % 7 === 0) add("number", `${n / 7} w`);
   };
   const addWhen = (at: DateTime) => {
@@ -143,6 +145,17 @@ export function buildFacts(config: BusinessConfig, session: SessionState, now: D
     addWhen(DateTime.fromISO(slot.start, { zone }));
     addNumber(slot.partySize, "people");
   }
+  // What the agent asked check_availability about is a fact too ("7:30 PM is taken, but…").
+  for (const message of session.history) {
+    if (message.role !== "assistant") continue;
+    for (const call of message.toolCalls ?? []) {
+      if (call.name !== "check_availability") continue;
+      const { date, time, partySize } = call.args;
+      if (typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)) add("date", date.slice(5));
+      if (typeof time === "string" && /^\d{2}:\d{2}$/.test(time)) add("time", time);
+      if (typeof partySize === "number") addNumber(partySize, "people");
+    }
+  }
   for (const booking of Object.values(session.knownReservations)) {
     addWhen(DateTime.fromJSDate(new Date(booking.start), { zone }));
     addNumber(booking.partySize, "people");
@@ -154,10 +167,19 @@ export function ungrounded(text: string, facts: Set<string>): Claim[] {
   return extractClaims(text).filter((c) => !facts.has(`${c.kind}:${c.value}`));
 }
 
-/** Remembers the values the caller stated, so echoing them back counts as grounded. */
+const PARTY = /\b(?:for|party of|table for|group of)\s+(\d{1,2})\b(?!\s*(?:[ap]\.?\s?m\b|:))/gi;
+
+/**
+ * Remembers the dates and party sizes the caller stated, so echoing them back counts as
+ * grounded. Times and prices are not taken from the caller: those must come from tools or
+ * config, or the caller's own words could ground a false "yes, 11pm works".
+ */
 export function recordCallerValues(session: SessionState, text: string): void {
-  for (const c of extractClaims(text)) {
-    const key = `${c.kind}:${c.value}`;
+  const echoes = extractClaims(text)
+    .filter((c) => c.kind === "date" || (c.kind === "number" && c.value.endsWith(" people")))
+    .map((c) => `${c.kind}:${c.value}`);
+  for (const m of text.matchAll(PARTY)) echoes.push(`number:${Number(m[1])} people`);
+  for (const key of echoes) {
     if (!session.callerValues.includes(key)) session.callerValues.push(key);
   }
 }

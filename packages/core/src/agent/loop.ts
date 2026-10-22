@@ -91,6 +91,8 @@ interface Turn {
   decision?: Decision;
   handoff?: HandoffReason;
   waitedForRateLimit?: boolean;
+  /** A pending action survived this turn's classification (still awaiting the caller). */
+  pendingKept?: boolean;
   /** The action proposed this turn, if any. */
   proposedId?: string;
   messages: ServerMessage[];
@@ -284,6 +286,7 @@ async function resolvePending(turn: Turn, pending: PendingAction): Promise<strin
       voided(classification.decision);
       return undefined;
     case "unrelated":
+      turn.pendingKept = true;
       return undefined;
   }
 }
@@ -391,10 +394,14 @@ function checkDraft(turn: Turn, draft: string): { meta: Meta } | { regenerate: C
 function finalReply(turn: Turn, meta: Meta): string {
   if (meta.missing) turn.flags.push("meta_missing");
   const reply = meta.body || FALLBACK_REPLY;
-  if (meta.onTopic) return reply;
   const session = turn.session;
+  if (meta.onTopic) {
+    session.counters.offTopic = 0;
+    return reply;
+  }
   session.counters.offTopic += 1;
-  if (session.counters.offTopic < OFF_TOPIC_LIMIT) return reply;
+  // While a read-back waits, a "yes" must mean that action, so the offer waits too.
+  if (session.counters.offTopic < OFF_TOPIC_LIMIT || turn.pendingKept) return reply;
   session.counters.offTopic = 0;
   session.humanOffered = true;
   return `${reply} ${HUMAN_OFFER}`;

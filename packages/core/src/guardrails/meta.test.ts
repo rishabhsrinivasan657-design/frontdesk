@@ -22,6 +22,24 @@ describe("parseMeta", () => {
     });
   });
 
+  it("reads a meta line that shares a line with the reply", () => {
+    expect(parseMeta('@meta {"confidence":0.4,"onTopic":true} We open at 5pm.')).toMatchObject({
+      confidence: 0.4,
+      body: "We open at 5pm.",
+      missing: false,
+    });
+  });
+
+  it.each([
+    'Sure.\n@meta {"confidence":0.2,"onTopic":true}',
+    '```\n@meta {"confidence":0.2,"onTopic":true}\n```\nSure.',
+    '@META {"confidence":0.2,"onTopic":true}\nSure.',
+  ])("finds a misplaced meta line, honors it and never speaks it: %j", (draft) => {
+    const meta = parseMeta(draft);
+    expect(meta.confidence).toBe(0.2);
+    expect(meta.body).toBe("Sure.");
+  });
+
   it.each([
     '@meta {"confidence":2,"onTopic":true}\nHi.',
     "@meta not json\nHi.",

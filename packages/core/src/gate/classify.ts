@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { PendingAction } from "../agent/types.js";
-import { stripDelimiters, wrapCallerText } from "../guardrails/untrusted.js";
+import { escapeAngles, wrapCallerText } from "../guardrails/untrusted.js";
 import type { LLMProvider } from "../llm/types.js";
 
 export type Decision = "confirm" | "deny" | "change" | "unrelated";
@@ -106,9 +106,7 @@ export async function classifyConfirmation(
       {
         purpose: "confirmation",
         template: CONFIRMATION_TEMPLATE,
-        system: CONFIRMATION_TEMPLATE.text.replace("{summary}", () =>
-          stripDelimiters(action.summary),
-        ),
+        system: CONFIRMATION_TEMPLATE.text.replace("{summary}", () => escapeAngles(action.summary)),
         messages: [{ role: "user", text: wrapCallerText(text) }],
         temperature: 0,
       },

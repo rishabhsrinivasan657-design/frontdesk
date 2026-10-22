@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { newSession } from "../agent/types.js";
 import { testConfig } from "../config/test-config.js";
-import { buildFacts, extractClaims, ungrounded } from "./grounding.js";
+import { buildFacts, extractClaims, recordCallerValues, ungrounded } from "./grounding.js";
 
 const NOW = new Date("2026-11-04T14:00:00-05:00");
 const values = (text: string) => extractClaims(text).map((c) => `${c.kind}:${c.value}`);
@@ -60,11 +60,53 @@ describe("ungrounded", () => {
     expect(bad("Cancel up to 6 hours before.")).toEqual(["6 hours"]);
   });
 
-  it("accepts values the caller stated", () => {
+  it("accepts dates and party sizes the caller stated, but not their times or prices", () => {
     const withCaller = newSession("s2", NOW);
-    withCaller.callerValues.push(...values("8pm for 4"));
-    expect(ungrounded("Let me check 8:00 PM.", buildFacts(testConfig(), withCaller, NOW))).toEqual(
-      [],
-    );
+    recordCallerValues(withCaller, "November 9, a table for 5, around 8:15pm, is it $40?");
+    const facts = buildFacts(testConfig(), withCaller, NOW);
+    expect(ungrounded("November 9 for 5 people", facts)).toEqual([]);
+    expect(ungrounded("8:15 PM works and it's $40", facts).map((c) => c.raw)).toEqual([
+      "8:15 PM",
+      "$40",
+    ]);
+  });
+
+  it("grounds the date, time and party size the agent asked check_availability about", () => {
+    const asked = newSession("s4", NOW);
+    asked.history.push({
+      role: "assistant",
+      text: "",
+      toolCalls: [
+        {
+          id: "c1",
+          name: "check_availability",
+          args: { date: "2026-11-09", time: "19:30", partySize: 5 },
+        },
+      ],
+    });
+    expect(
+      ungrounded(
+        "7:30 PM on November 9 for 5 people is taken.",
+        buildFacts(testConfig(), asked, NOW),
+      ),
+    ).toEqual([]);
+  });
+
+  it.each(["separate 2", "Market 5", "Decaf 2 please", "Marinara 3", "Junior 3"])(
+    "does not read %j as a date",
+    (text) => {
+      expect(extractClaims(text)).toEqual([]);
+    },
+  );
+
+  it("treats 1 day and 24 hours as the same duration", () => {
+    const config = testConfig();
+    config.policies.freeChangeUntilHoursBefore = 24;
+    expect(
+      ungrounded(
+        "Changes are free until 1 day before.",
+        buildFacts(config, newSession("s3", NOW), NOW),
+      ),
+    ).toEqual([]);
   });
 });
