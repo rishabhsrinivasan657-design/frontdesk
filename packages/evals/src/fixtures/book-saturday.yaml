@@ -1,0 +1,9 @@
+id: book-saturday
+category: booking
+persona: "Bo Chen, email bo@example.com"
+goal: "A table for 4 this Saturday at 7pm"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: booked
+  calendar: [{ name: Bo Chen, start: 2026-11-07T19:00, party: 4 }]
