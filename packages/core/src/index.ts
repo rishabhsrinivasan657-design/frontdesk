@@ -42,3 +42,9 @@ export {
   type SessionState,
   type TranscriptEntry,
 } from "./agent/types.js";
+export {
+  ClientMessageSchema,
+  ServerMessageSchema,
+  type ClientMessage,
+  type ServerMessage,
+} from "./protocol/messages.js";
