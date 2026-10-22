@@ -6,6 +6,7 @@ import { LLMError } from "../llm/errors.js";
 import type { ToolCall } from "../llm/types.js";
 import { type Calendar, type CalendarReader, CalendarUnavailableError } from "../ports/calendar.js";
 import type { ServerMessage } from "../protocol/messages.js";
+import { looksLikeInjection, wantsHuman, wrapCallerText } from "../guardrails/untrusted.js";
 import type { AgentDeps } from "./deps.js";
 import { alreadyHandedOffMessage, handOff } from "./handoff.js";
 import { TURN_TEMPLATE, renderSystemPrompt } from "./prompt.js";
@@ -151,7 +152,7 @@ async function finishTurn(turn: Turn, startedMs: number): Promise<TurnResult> {
   const { deps, session, turnId, text } = turn;
   const reply = session.handoff ? alreadyHandedOffMessage(deps.config) : await handle(turn);
 
-  if (!turn.userInHistory) session.history.push({ role: "user", text });
+  if (!turn.userInHistory) session.history.push({ role: "user", text: wrapCallerText(text) });
   if (!turn.replyInHistory) session.history.push({ role: "assistant", text: reply });
   for (const sentence of splitSentences(reply))
     turn.send({ type: "agent_sentence", turnId, text: sentence });
@@ -175,6 +176,9 @@ async function finishTurn(turn: Turn, startedMs: number): Promise<TurnResult> {
 
 async function handle(turn: Turn): Promise<string> {
   try {
+    if (looksLikeInjection(turn.text)) turn.flags.push("injection_pattern");
+    if (wantsHuman(turn.text))
+      throw new HandoffSignal("human_requested", "Caller asked for a person.");
     const pending = await turn.deps.sessions.getPending(turn.session.id);
     if (pending) {
       const resolved = await resolvePending(turn, pending);
@@ -260,7 +264,7 @@ async function classify(turn: Turn, pending: PendingAction): Promise<Classificat
 
 async function modelTurn(turn: Turn): Promise<string> {
   const { deps, session } = turn;
-  session.history.push({ role: "user", text: turn.text });
+  session.history.push({ role: "user", text: wrapCallerText(turn.text) });
   turn.userInHistory = true;
   const system = renderSystemPrompt(deps.config, deps.clock.now());
   const reader = readOnlyCalendar(deps.calendar);

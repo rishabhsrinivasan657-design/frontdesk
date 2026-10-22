@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { PendingAction } from "../agent/types.js";
+import { stripDelimiters, wrapCallerText } from "../guardrails/untrusted.js";
 import type { LLMProvider } from "../llm/types.js";
 
 export type Decision = "confirm" | "deny" | "change" | "unrelated";
@@ -59,11 +60,6 @@ function normalize(text: string): string {
     .trim();
 }
 
-/** Removes anything that could close or open a delimiter block early. */
-function stripTags(text: string): string {
-  return text.replace(/<\/?\s*(pending_request|caller_message)[^>]*>/gi, "");
-}
-
 /** A clear yes or no, by exact whole-message match; anything else goes to the LLM. */
 export function ruleDecision(text: string): "confirm" | "deny" | undefined {
   const normalized = normalize(text);
@@ -110,10 +106,10 @@ export async function classifyConfirmation(
       {
         purpose: "confirmation",
         template: CONFIRMATION_TEMPLATE,
-        system: CONFIRMATION_TEMPLATE.text.replace("{summary}", () => stripTags(action.summary)),
-        messages: [
-          { role: "user", text: `<caller_message>\n${stripTags(text)}\n</caller_message>` },
-        ],
+        system: CONFIRMATION_TEMPLATE.text.replace("{summary}", () =>
+          stripDelimiters(action.summary),
+        ),
+        messages: [{ role: "user", text: wrapCallerText(text) }],
         temperature: 0,
       },
       ClassifierOutput,
