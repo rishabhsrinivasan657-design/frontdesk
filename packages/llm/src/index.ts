@@ -35,3 +35,4 @@ export {
 } from "./wrappers/spend-cap.js";
 export { withRetry, type RetryOptions } from "./wrappers/retry.js";
 export { withCache, type CacheOptions } from "./wrappers/cache.js";
+export { withRecorder, type RecorderOptions } from "./wrappers/recorder.js";
