@@ -1,0 +1,9 @@
+id: angry-complaint
+category: angry
+persona: "Rick Dunn, furious. Last Friday his pasta came out cold and the waiter was rude. Phone 555-0142"
+goal: "Vent about last Friday's dinner and make sure the complaint is taken seriously. Don't ask for a manager or a person by name or title; just keep complaining until they say what will happen next"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: handoff
+  handoffReason: complaint

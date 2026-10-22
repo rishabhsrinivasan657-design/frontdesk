@@ -1,0 +1,8 @@
+id: faq-corkage-parking
+category: faq
+persona: "Dev Shah, planning an anniversary dinner"
+goal: "Find out whether you can bring your own wine and what it costs, and where to park. You don't want to book yet"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: info_only

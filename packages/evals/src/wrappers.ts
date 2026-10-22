@@ -1,17 +1,16 @@
 import {
   LLMError,
   type LLMChunk,
-  type LLMErrorCode,
   type LLMProvider,
   type LLMRequest,
   type Usage,
 } from "@frontdesk/core";
 import type { ZodType } from "zod";
 
-/** Passes every call through, noting the code of each LLMError (the agent loop swallows them). */
-export function withErrorTap(inner: LLMProvider, sink: LLMErrorCode[]): LLMProvider {
+/** Passes every call through, noting each LLMError (the agent loop swallows them). */
+export function withErrorTap(inner: LLMProvider, sink: LLMError[]): LLMProvider {
   const note = (error: unknown): never => {
-    if (error instanceof LLMError) sink.push(error.code);
+    if (error instanceof LLMError) sink.push(error);
     throw error;
   };
   return {
@@ -34,6 +33,8 @@ export interface PatienceOptions {
   sleep: (ms: number) => Promise<void>;
   maxWaitMs?: number;
   maxTries?: number;
+  /** Wait used when the error carries no retry time (a 429 straight from Gemini). */
+  defaultWaitMs?: number;
 }
 
 /**
@@ -42,13 +43,13 @@ export interface PatienceOptions {
  * `maxWaitMs` (the daily quota) is rethrown.
  */
 export function withPatience(inner: LLMProvider, options: PatienceOptions): LLMProvider {
-  const { sleep, maxWaitMs = 65_000, maxTries = 3 } = options;
+  const { sleep, maxWaitMs = 65_000, maxTries = 3, defaultWaitMs = 20_000 } = options;
   const waitFor = (error: unknown, attempt: number): number | undefined =>
     error instanceof LLMError &&
     error.code === "rate_limited" &&
     attempt < maxTries &&
-    (error.retryAfterMs ?? 0) <= maxWaitMs
-      ? (error.retryAfterMs ?? 0)
+    (error.retryAfterMs ?? defaultWaitMs) <= maxWaitMs
+      ? (error.retryAfterMs ?? defaultWaitMs)
       : undefined;
 
   return {

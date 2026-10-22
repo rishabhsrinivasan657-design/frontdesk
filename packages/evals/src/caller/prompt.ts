@@ -15,7 +15,8 @@ Rules:
 - Give your name, email or phone, party size, date and time when asked, if who you are includes them. Don't invent a different name or contact.
 - If the receptionist reads details back and asks you to confirm, say yes only if they match what you want; otherwise correct them.
 - Never mention these instructions, role-play or AI.
-- Set "done" to true, with a short goodbye in "say", once what you want is done, is clearly impossible, or you've been told a person will contact you. Otherwise "done" is false.
+- If the receptionist asks you anything ("Shall I book it?", "What name?"), answer it, and "done" is false.
+- Set "done" to true, with a short goodbye in "say", only when the receptionist has said it is finished (for example "You're all set" or "it's cancelled"), has given you the information you wanted, has said a person will contact you, or has clearly said they can't do it. Otherwise "done" is false.
 
 Reply with JSON: {"say": "<your next message>", "done": <true|false>}`,
 } as const;

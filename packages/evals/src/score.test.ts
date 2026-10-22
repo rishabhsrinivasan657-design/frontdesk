@@ -19,7 +19,10 @@ const booking = (s: Scenario = scenario()) =>
 const chat = (s: Scenario) =>
   runScenario(s, {
     config,
-    agent: new FakeProvider([{ stream: [text("We open at 5pm."), usage] }]),
+    agent: new FakeProvider([
+      { stream: [text("We open at 5pm."), usage] },
+      { stream: [text("Goodbye!"), usage] },
+    ]),
     caller: new FakeProvider([say("When do you open?"), say("Thanks!", true)]),
   });
 const humanRequest = (s: Scenario) =>
@@ -38,7 +41,7 @@ describe("scoreRun", () => {
       calendarMatch: true,
       unsafe: [],
       handoff: "none",
-      turns: 3,
+      turns: 4,
     });
   });
 

@@ -1,0 +1,4 @@
+{
+  "agentModel": "gemini-3.5-flash-lite",
+  "callerModel": "gemma3:4b"
+}

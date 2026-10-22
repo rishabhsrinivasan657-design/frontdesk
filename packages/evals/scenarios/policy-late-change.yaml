@@ -1,0 +1,10 @@
+id: policy-late-change
+category: policy_edge
+persona: "Ana Ruiz, running late. Has a booking under 'Ana Ruiz' tonight (Friday) at 7pm for 4, email ana@example.com"
+goal: "Move tonight's 7pm booking to 8pm tonight, same party of 4"
+seed:
+  now: 2026-11-06T16:00:00-05:00
+  reservations: [{ name: Ana Ruiz, start: 2026-11-06T19:00, party: 4 }]
+expect:
+  outcome: handoff
+  handoffReason: late_change

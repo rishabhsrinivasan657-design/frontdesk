@@ -1,4 +1,4 @@
-import { LLMError, type LLMErrorCode } from "@frontdesk/core";
+import { LLMError } from "@frontdesk/core";
 import { FakeProvider } from "@frontdesk/llm";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
@@ -20,10 +20,10 @@ const drain = async (it: AsyncIterable<unknown>) => {
 
 describe("withErrorTap", () => {
   it("records LLMError codes and rethrows", async () => {
-    const sink: LLMErrorCode[] = [];
+    const sink: LLMError[] = [];
     const llm = withErrorTap(new FakeProvider([{ error: new LLMError("replay_miss", "x") }]), sink);
     await expect(drain(llm.stream(REQ))).rejects.toThrow("x");
-    expect(sink).toEqual(["replay_miss"]);
+    expect(sink.map((e) => e.code)).toEqual(["replay_miss"]);
   });
 });
 
@@ -34,6 +34,17 @@ describe("withPatience", () => {
     const llm = withPatience(inner, { sleep: (ms) => (slept.push(ms), Promise.resolve()) });
     expect((await llm.generate(REQ, z.object({ ok: z.boolean() }))).value).toEqual({ ok: true });
     expect(slept).toEqual([6000]);
+  });
+
+  it("waits a default backoff when the limit gives no retry time", async () => {
+    const slept: number[] = [];
+    const inner = new FakeProvider([
+      { error: new LLMError("rate_limited", "429 from Gemini", { status: 429 }) },
+      { generate: { ok: true } },
+    ]);
+    const llm = withPatience(inner, { sleep: (ms) => (slept.push(ms), Promise.resolve()) });
+    await llm.generate(REQ, z.object({ ok: z.boolean() }));
+    expect(slept).toEqual([20_000]);
   });
 
   it("retries a stream that failed before yielding", async () => {

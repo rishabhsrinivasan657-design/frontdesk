@@ -36,7 +36,7 @@ function oneOf<T extends string>(name: string, value: string, allowed: readonly 
 
 /**
  * Builds the LLM stack from env (spec §7): LLM_PROVIDER, LLM_MODEL, LLM_TIER,
- * SPEND_CAP_USD_MONTHLY, LLM_RECORD, GEMINI_API_KEY. Gemini is wrapped outermost first:
+ * SPEND_CAP_USD_MONTHLY, LLM_RECORD, LLM_TIMEOUT_MS (per Gemini call), GEMINI_API_KEY. Gemini is wrapped outermost first:
  * spend cap → rate limiter → retry → cache → recorder. Replay is never wrapped.
  * Throws LLMConfigError so the process refuses to start on a bad config.
  */
@@ -62,6 +62,13 @@ export function createLLM(
       `SPEND_CAP_USD_MONTHLY must be a number ≥ 0 (got ${JSON.stringify(capText)})`,
     );
   }
+  const timeoutText = env.LLM_TIMEOUT_MS;
+  const timeoutMs = timeoutText ? Number(timeoutText) : undefined;
+  if (timeoutMs !== undefined && !(Number.isFinite(timeoutMs) && timeoutMs > 0)) {
+    throw new LLMConfigError(
+      `LLM_TIMEOUT_MS must be a number of milliseconds > 0 (got ${JSON.stringify(timeoutText)})`,
+    );
+  }
   if (tier === "paid" && capUsd === 0) {
     throw new LLMConfigError(
       "LLM_TIER=paid refuses to start with SPEND_CAP_USD_MONTHLY=0; set a cap in USD",
@@ -77,6 +84,7 @@ export function createLLM(
     model,
     apiKey: env.GEMINI_API_KEY,
     client: deps.geminiClient,
+    timeoutMs,
   });
   // Record mode skips the cache: a cached answer would never reach the recorder.
   if (env.LLM_RECORD === "1") llm = withRecorder(llm, { store: deps.recordings });

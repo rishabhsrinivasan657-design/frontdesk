@@ -1,7 +1,7 @@
 import {
   type BusinessConfig,
   type HandoffReason,
-  type LLMErrorCode,
+  type LLMError,
   type LLMProvider,
   greeting,
   runTurn,
@@ -39,13 +39,14 @@ export interface RunOptions {
 
 /**
  * Plays one scenario: the caller speaks first after the greeting, then caller and agent
- * alternate until the caller is done, the agent hands off, or `maxTurns` caller turns pass.
+ * alternate until the caller is done (after the agent answers their last message), the agent
+ * hands off, or `maxTurns` caller turns pass.
  */
 export async function runScenario(scenario: Scenario, options: RunOptions): Promise<ScenarioRun> {
   const { config, now = () => performance.now() } = options;
-  const errors: LLMErrorCode[] = [];
-  const caller = withErrorTap(options.caller, errors);
-  const world = seedWorld(scenario, config, withErrorTap(options.agent, errors));
+  const tapped: LLMError[] = [];
+  const caller = withErrorTap(options.caller, tapped);
+  const world = seedWorld(scenario, config, withErrorTap(options.agent, tapped));
   const run: ScenarioRun = {
     scenario,
     status: "ok",
@@ -64,7 +65,8 @@ export async function runScenario(scenario: Scenario, options: RunOptions): Prom
         callerRequest(scenario, run.transcript),
         CallerTurnSchema,
       );
-      if (value.done && run.turns > 0) {
+      // A bare "done" is the simulator signalling the end, not words a caller said.
+      if (value.done && /^\s*(done\W*)?$/i.test(value.say)) {
         run.endedBy = "caller_done";
         break;
       }
@@ -86,12 +88,21 @@ export async function runScenario(scenario: Scenario, options: RunOptions): Prom
         run.endedBy = "handoff";
         break;
       }
+      // The caller's last words ("yes, book it, bye") still reach the agent before hanging up.
+      if (value.done) {
+        run.endedBy = "caller_done";
+        break;
+      }
     }
   } catch (error) {
     run.endedBy = "error";
     run.error = error instanceof Error ? error.message : String(error);
   }
 
+  const errors = tapped.map((e) => e.code);
+  if (tapped.length > 0 && !run.error) {
+    run.error = `LLM errors: ${[...new Set(tapped.map((e) => `${e.code} (${e.message})`))].join("; ")}`;
+  }
   run.status = errors.includes("stale_recording")
     ? "stale"
     : errors.includes("replay_miss")

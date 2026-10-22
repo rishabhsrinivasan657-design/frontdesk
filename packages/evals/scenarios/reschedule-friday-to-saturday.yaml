@@ -1,0 +1,10 @@
+id: reschedule-friday-to-saturday
+category: reschedule
+persona: "Ana Ruiz, busy parent, terse. Has a booking under 'Ana Ruiz' this Friday at 7pm for 4, email ana@example.com"
+goal: "Move the booking from Friday to Saturday (November 7) at the same time, 7pm, still 4 people"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+  reservations: [{ name: Ana Ruiz, start: 2026-11-06T19:00, party: 4 }]
+expect:
+  outcome: rescheduled
+  calendar: [{ name: Ana Ruiz, start: 2026-11-07T19:00, party: 4 }]

@@ -18,12 +18,42 @@ describe("runScenario", () => {
     });
     expect(run.status).toBe("ok");
     expect(run.endedBy).toBe("caller_done");
-    expect(run.turns).toBe(3);
-    expect(run.latencyMs).toEqual([100, 100, 100]);
+    expect(run.turns).toBe(4);
+    expect(run.latencyMs).toEqual([100, 100, 100, 100]);
     expect(run.world.deps.calendar.writes.map((w) => w.op)).toEqual(["create"]);
     expect(run.tokensIn).toBeGreaterThan(0);
     expect(run.transcript[0]).toEqual({ role: "agent", text: config.agent.greeting });
-    expect(run.transcript.filter((l) => l.role === "caller")).toHaveLength(3);
+    expect(run.transcript.filter((l) => l.role === "caller")).toHaveLength(4);
+  });
+
+  it("sends the caller's last message before ending", async () => {
+    // Small models often say "yes" and hang up in the same breath.
+    const run = await runScenario(scenario(), {
+      config,
+      agent: new FakeProvider(bookingAgentSteps()),
+      caller: new FakeProvider([
+        say("Hi, a table for 4 this Saturday at 7pm?"),
+        say("Bo Chen, bo@example.com"),
+        say("Yes", true),
+      ]),
+    });
+    expect(run.endedBy).toBe("caller_done");
+    expect(run.turns).toBe(3);
+    expect(run.world.deps.calendar.writes.map((w) => w.op)).toEqual(["create"]);
+  });
+
+  it("doesn't send a bare 'done' as the caller's words", async () => {
+    const run = await runScenario(scenario(), {
+      config,
+      agent: new FakeProvider([{ stream: [text("Would you like a human to call you?")] }]),
+      caller: new FakeProvider([say("When do you open Sunday?"), say(" Done. ", true)]),
+    });
+    expect(run.endedBy).toBe("caller_done");
+    expect(run.turns).toBe(1);
+    expect(run.transcript.at(-1)).toEqual({
+      role: "agent",
+      text: "Would you like a human to call you?",
+    });
   });
 
   it("ends on handoff", async () => {
@@ -106,5 +136,6 @@ describe("runScenario", () => {
       caller: new FakeProvider([say("Hi, a table for 4?")]),
     });
     expect(run.status).toBe("error");
+    expect(run.error).toMatch(/invalid_output/);
   });
 });

@@ -92,6 +92,8 @@ describe("createLLM", () => {
     [{ LLM_TIER: "gold" }, /LLM_TIER/],
     [{ SPEND_CAP_USD_MONTHLY: "-1" }, /SPEND_CAP_USD_MONTHLY/],
     [{ SPEND_CAP_USD_MONTHLY: "lots" }, /SPEND_CAP_USD_MONTHLY/],
+    [{ LLM_TIMEOUT_MS: "0" }, /LLM_TIMEOUT_MS/],
+    [{ LLM_TIMEOUT_MS: "soon" }, /LLM_TIMEOUT_MS/],
   ])("rejects invalid env %o", (env, message) => {
     expect(() => createLLM(env, deps().d)).toThrow(message);
   });

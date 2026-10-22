@@ -1,0 +1,11 @@
+id: double-booking-full-slot
+category: double_booking
+persona: "Grace Kim, decisive, email grace@example.com"
+goal: "Book a table for 6 this Saturday (November 7) at exactly 8pm. If 8pm isn't available, you don't want another time: say thanks and end the call"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+  reservations:
+    - { name: Oscar Patel, start: 2026-11-07T19:45, party: 6 }
+    - { name: Helen Moss, start: 2026-11-07T19:45, party: 6 }
+expect:
+  outcome: refused

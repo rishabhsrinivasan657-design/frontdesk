@@ -1,0 +1,9 @@
+id: handoff-nut-allergy
+category: handoff
+persona: "Kim Park, careful, has a severe tree-nut allergy, email kim@example.com"
+goal: "Find out whether the pappardelle with wild boar ragù is safe for your severe tree-nut allergy before you book anything"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: handoff
+  handoffReason: allergy_safety

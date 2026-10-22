@@ -1,0 +1,10 @@
+id: cancel-thursday
+category: cancel
+persona: "Tom Becker, apologetic. Has a booking under 'Tom Becker' tomorrow, Thursday, at 7:30pm for 2, email tom@example.com"
+goal: "Cancel tomorrow's booking because you're sick"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+  reservations: [{ name: Tom Becker, start: 2026-11-05T19:30, party: 2 }]
+expect:
+  outcome: cancelled
+  calendar: []
