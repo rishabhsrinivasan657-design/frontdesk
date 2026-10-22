@@ -15,3 +15,15 @@ export {
   type Table,
 } from "./availability/tables.js";
 export type { Reservation, Slot, SlotRequest } from "./availability/types.js";
+export type {
+  LLMChunk,
+  LLMMessage,
+  LLMProvider,
+  LLMPurpose,
+  LLMRequest,
+  ToolCall,
+  ToolEffect,
+  ToolSpec,
+  Usage,
+} from "./llm/types.js";
+export { LLMError, type LLMErrorCode, type LLMErrorOptions } from "./llm/errors.js";

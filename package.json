@@ -10,6 +10,7 @@
     "typecheck": "tsc -b && tsc -p tests",
     "test": "vitest run --project unit",
     "test:infra": "vitest run --project infra",
+    "test:live": "LLM_LIVE=1 vitest run --project live",
     "lint": "eslint . --max-warnings 0",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

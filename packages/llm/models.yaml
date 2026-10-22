@@ -1,0 +1,21 @@
+# Model catalog for the LLM layer (spec §7, §15). Limits live here, not in code.
+#
+# Verified 2026-10-22:
+# - Free-tier availability and paid prices: https://ai.google.dev/gemini-api/docs/pricing (updated 2026-10-19)
+# - https://ai.google.dev/gemini-api/docs/rate-limits (updated 2026-10-15) no longer publishes
+#   free-tier numbers; it points to AI Studio. Limits are per project, and RPD resets at
+#   midnight Pacific. The rpm/rpd below come from secondary sources: confirm in AI Studio.
+#
+# pricePerMTok is USD per 1M text tokens on the paid tier (output includes thinking).
+models:
+  gemini-3.5-flash-lite:
+    provider: gemini
+    freeTier: { rpm: 10, rpd: 500 }
+    pricePerMTok: { input: 0.3, output: 2.5 }
+    source: "secondary (ScriptByAI, 2026-10); confirm in AI Studio"
+  gemini-3.6-flash:
+    provider: gemini
+    freeTier: { rpm: 5, rpd: 20 }
+    # Rises to 1.50 / 7.50 on 2027-01-01.
+    pricePerMTok: { input: 0.75, output: 3.75 }
+    source: "secondary (ScriptByAI, 2026-10); confirm in AI Studio"

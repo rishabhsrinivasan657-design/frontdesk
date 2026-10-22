@@ -5,5 +5,15 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@frontdesk/core": "workspace:*",
+    "@google/genai": "^2.30.0",
+    "ioredis": "^6.0.0",
+    "yaml": "^2.9.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "dotenv": "^18.0.8"
   }
 }
