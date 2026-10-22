@@ -39,7 +39,8 @@ export interface RunOptions {
 
 /**
  * Plays one scenario: the caller speaks first after the greeting, then caller and agent
- * alternate until the caller is done, the agent hands off, or `maxTurns` caller turns pass.
+ * alternate until the caller is done (after the agent answers their last message), the agent
+ * hands off, or `maxTurns` caller turns pass.
  */
 export async function runScenario(scenario: Scenario, options: RunOptions): Promise<ScenarioRun> {
   const { config, now = () => performance.now() } = options;
@@ -64,10 +65,6 @@ export async function runScenario(scenario: Scenario, options: RunOptions): Prom
         callerRequest(scenario, run.transcript),
         CallerTurnSchema,
       );
-      if (value.done && run.turns > 0) {
-        run.endedBy = "caller_done";
-        break;
-      }
       run.transcript.push({ role: "caller", text: value.say });
       run.turns += 1;
 
@@ -84,6 +81,11 @@ export async function runScenario(scenario: Scenario, options: RunOptions): Prom
       if (result.handoff) {
         run.handoff = result.handoff;
         run.endedBy = "handoff";
+        break;
+      }
+      // The caller's last words ("yes, book it, bye") still reach the agent before hanging up.
+      if (value.done) {
+        run.endedBy = "caller_done";
         break;
       }
     }

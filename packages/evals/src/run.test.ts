@@ -18,12 +18,28 @@ describe("runScenario", () => {
     });
     expect(run.status).toBe("ok");
     expect(run.endedBy).toBe("caller_done");
-    expect(run.turns).toBe(3);
-    expect(run.latencyMs).toEqual([100, 100, 100]);
+    expect(run.turns).toBe(4);
+    expect(run.latencyMs).toEqual([100, 100, 100, 100]);
     expect(run.world.deps.calendar.writes.map((w) => w.op)).toEqual(["create"]);
     expect(run.tokensIn).toBeGreaterThan(0);
     expect(run.transcript[0]).toEqual({ role: "agent", text: config.agent.greeting });
-    expect(run.transcript.filter((l) => l.role === "caller")).toHaveLength(3);
+    expect(run.transcript.filter((l) => l.role === "caller")).toHaveLength(4);
+  });
+
+  it("sends the caller's last message before ending", async () => {
+    // Small models often say "yes" and hang up in the same breath.
+    const run = await runScenario(scenario(), {
+      config,
+      agent: new FakeProvider(bookingAgentSteps()),
+      caller: new FakeProvider([
+        say("Hi, a table for 4 this Saturday at 7pm?"),
+        say("Bo Chen, bo@example.com"),
+        say("Yes", true),
+      ]),
+    });
+    expect(run.endedBy).toBe("caller_done");
+    expect(run.turns).toBe(3);
+    expect(run.world.deps.calendar.writes.map((w) => w.op)).toEqual(["create"]);
   });
 
   it("ends on handoff", async () => {
