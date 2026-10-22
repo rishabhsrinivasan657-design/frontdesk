@@ -37,11 +37,16 @@ export class GeminiProvider implements LLMProvider {
   }
 
   async *stream(req: LLMRequest): AsyncIterable<LLMChunk> {
+    const params = this.params(req);
     let usage: Usage | undefined;
     let callCount = 0;
+    let produced = false;
+    let finishReason: string | undefined;
     try {
-      const responses = await this.client.generateContentStream(this.params(req));
+      const responses = await this.client.generateContentStream(params);
       for await (const response of responses) {
+        throwIfBlocked(response);
+        finishReason = response.candidates?.[0]?.finishReason ?? finishReason;
         for (const part of partsOf(response)) {
           if (part.thought) continue;
           if (part.functionCall) {
@@ -56,8 +61,10 @@ export class GeminiProvider implements LLMProvider {
               },
             };
             callCount += 1;
+            produced = true;
           } else if (part.text) {
             yield { type: "text", text: part.text };
+            produced = true;
           }
         }
         usage = usageOf(response) ?? usage;
@@ -65,26 +72,31 @@ export class GeminiProvider implements LLMProvider {
     } catch (error) {
       throw toLLMError(error);
     }
+    // An empty reply (e.g. a safety stop) must surface as an error, never as silence.
+    if (!produced) throw emptyResponse(finishReason);
     yield { type: "usage", usage: usage ?? { inputTokens: 0, outputTokens: 0 } };
   }
 
   async generate<T>(req: LLMRequest, schema: ZodType<T>): Promise<{ value: T; usage: Usage }> {
+    // Built outside the try: a schema that can't become JSON Schema is a local bug, not upstream.
+    const params = this.params(req);
+    params.config = {
+      ...params.config,
+      responseMimeType: "application/json",
+      responseJsonSchema: z.toJSONSchema(schema),
+    };
     let response: GenerateContentResponse;
     try {
-      const params = this.params(req);
-      params.config = {
-        ...params.config,
-        responseMimeType: "application/json",
-        responseJsonSchema: z.toJSONSchema(schema),
-      };
       response = await this.client.generateContent(params);
     } catch (error) {
       throw toLLMError(error);
     }
+    throwIfBlocked(response);
     const text = partsOf(response)
       .filter((p) => !p.thought && p.text)
       .map((p) => p.text)
       .join("");
+    if (!text) throw emptyResponse(response.candidates?.[0]?.finishReason);
     let json: unknown;
     try {
       json = JSON.parse(text);
@@ -161,18 +173,62 @@ function usageOf(response: GenerateContentResponse): Usage | undefined {
   };
 }
 
-function toLLMError(error: unknown): LLMError {
+function throwIfBlocked(response: GenerateContentResponse): void {
+  const reason = response.promptFeedback?.blockReason;
+  if (reason) throw new LLMError("upstream", `Gemini blocked the prompt: ${reason}`);
+}
+
+function emptyResponse(finishReason: string | undefined): LLMError {
+  return new LLMError(
+    "upstream",
+    `Gemini returned an empty response (finishReason: ${finishReason ?? "none"})`,
+  );
+}
+
+const NETWORK_CODES = new Set([
+  "ECONNRESET",
+  "ECONNREFUSED",
+  "ETIMEDOUT",
+  "EPIPE",
+  "EAI_AGAIN",
+  "UND_ERR_SOCKET",
+]);
+
+/** Maps SDK and network failures to LLMError; anything else is a local bug and is rethrown as-is. */
+function toLLMError(error: unknown): unknown {
   if (error instanceof LLMError) return error;
   if (error instanceof ApiError) {
     const code = error.status === 429 ? "rate_limited" : "upstream";
     return new LLMError(code, `Gemini API error ${error.status}: ${error.message}`, {
       status: error.status,
+      retryAfterMs: retryAfterMs(error.message),
       cause: error,
     });
   }
-  // Network-level failures (fetch TypeError, resets) are treated as a retryable 503.
-  return new LLMError("upstream", `Gemini request failed: ${String(error)}`, {
-    status: 503,
-    cause: error,
-  });
+  // fetch reports network failures as TypeError; Node socket errors carry an errno code.
+  const errno = (error as { code?: unknown } | null)?.code;
+  if (error instanceof TypeError || (typeof errno === "string" && NETWORK_CODES.has(errno))) {
+    return new LLMError("upstream", `Gemini request failed: ${String(error)}`, {
+      status: 503,
+      cause: error,
+    });
+  }
+  return error;
+}
+
+/** Reads google.rpc.RetryInfo.retryDelay (e.g. "34s") from an API error body. */
+function retryAfterMs(message: string): number | undefined {
+  let body: unknown;
+  try {
+    body = JSON.parse(message);
+  } catch {
+    return undefined;
+  }
+  const details = (body as { error?: { details?: { retryDelay?: unknown }[] } }).error?.details;
+  for (const detail of details ?? []) {
+    const match =
+      typeof detail.retryDelay === "string" && /^(\d+(?:\.\d+)?)s$/.exec(detail.retryDelay);
+    if (match) return Math.round(Number(match[1]) * 1000);
+  }
+  return undefined;
 }

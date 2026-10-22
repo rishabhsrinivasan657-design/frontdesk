@@ -1,14 +1,15 @@
 import { resolve } from "node:path";
 import type { LLMChunk, LLMRequest, ToolCall, ToolSpec } from "@frontdesk/core";
 import { config } from "dotenv";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { collect } from "../test-request.js";
 import { GeminiProvider } from "./gemini.js";
 
 // Live Gemini smoke test: runs only via `pnpm test:live` (LLM_LIVE=1) with GEMINI_API_KEY in .env.
 config({ path: resolve(import.meta.dirname, "../../../../.env"), quiet: true });
-const enabled = process.env.LLM_LIVE === "1" && Boolean(process.env.GEMINI_API_KEY);
+const live = process.env.LLM_LIVE === "1";
+const apiKey = process.env.GEMINI_API_KEY;
 const model = process.env.LLM_MODEL || "gemini-3.5-flash-lite";
 
 const getTime: ToolSpec = {
@@ -33,8 +34,17 @@ function request(overrides: Partial<LLMRequest>): LLMRequest {
 const text = (chunks: LLMChunk[]) =>
   chunks.flatMap((c) => (c.type === "text" ? [c.text] : [])).join("");
 
-describe.skipIf(!enabled)(`gemini live (${model})`, () => {
-  const provider = new GeminiProvider({ model, apiKey: process.env.GEMINI_API_KEY });
+// With the flag but no key, fail loudly: a silent skip would read as "live passed".
+it.runIf(live && !apiKey)("requires GEMINI_API_KEY in .env when LLM_LIVE=1", () => {
+  throw new Error("LLM_LIVE=1 but GEMINI_API_KEY is not set: add it to the git-ignored .env");
+});
+
+describe.skipIf(!live || !apiKey)(`gemini live (${model})`, () => {
+  // Built lazily so skipped runs never construct an SDK client.
+  let provider: GeminiProvider;
+  beforeAll(() => {
+    provider = new GeminiProvider({ model, apiKey });
+  });
 
   it("streams a short reply", async () => {
     const chunks = await collect(

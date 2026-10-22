@@ -1,4 +1,4 @@
-import type { LLMRequest, ToolSpec } from "@frontdesk/core";
+import { LLMError, type LLMRequest, type ToolSpec } from "@frontdesk/core";
 import {
   ApiError,
   type GenerateContentParameters,
@@ -55,7 +55,7 @@ const lookupFaq: ToolSpec = {
 
 describe("GeminiProvider", () => {
   it("maps a multi-turn request with tool history to contents", async () => {
-    const { client, params } = fakeClient({ stream: [] });
+    const { client, params } = fakeClient({ stream: [response([{ text: "ok" }])] });
     const req: LLMRequest = testRequest({
       system: "Be brief.",
       temperature: 0.2,
@@ -249,5 +249,83 @@ describe("GeminiProvider", () => {
     await expect(
       collect(new GeminiProvider({ model: "m", client }).stream(testRequest())),
     ).rejects.toMatchObject({ code: "upstream", status: 503, retryable: true });
+  });
+
+  it("generate throws invalid_output naming the failing field", async () => {
+    const { client } = fakeClient({ generate: response([{ text: '{"answer":"maybe"}' }]) });
+    await expect(
+      new GeminiProvider({ model: "m", client }).generate(testRequest(), Answer),
+    ).rejects.toThrow(/answer/);
+  });
+
+  it("reports a local schema conversion failure without calling Gemini or marking it retryable", async () => {
+    const { client, params } = fakeClient({ generate: response([{ text: "{}" }]) });
+    const provider = new GeminiProvider({ model: "m", client });
+    const error: unknown = await provider
+      .generate(testRequest(), z.object({ at: z.date() }))
+      .catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(Error);
+    expect(error instanceof LLMError && error.retryable).toBe(false);
+    expect(params).toHaveLength(0);
+  });
+
+  it("does not treat an unexpected local error as a retryable network failure", async () => {
+    const { client } = fakeClient({ error: new RangeError("bug") });
+    const error: unknown = await collect(
+      new GeminiProvider({ model: "m", client }).stream(testRequest()),
+    ).catch((e: unknown) => e);
+    expect(error instanceof LLMError && error.retryable).toBe(false);
+  });
+
+  it.each([
+    ["34s", 34000],
+    ["1.5s", 1500],
+  ])("429 carries retryAfterMs from RetryInfo %s", async (retryDelay, ms) => {
+    const body = {
+      error: {
+        code: 429,
+        status: "RESOURCE_EXHAUSTED",
+        details: [{ "@type": "type.googleapis.com/google.rpc.RetryInfo", retryDelay }],
+      },
+    };
+    const { client } = fakeClient({
+      error: new ApiError({ message: JSON.stringify(body), status: 429 }),
+    });
+    await expect(
+      collect(new GeminiProvider({ model: "m", client }).stream(testRequest())),
+    ).rejects.toMatchObject({
+      code: "rate_limited",
+      retryAfterMs: ms,
+    });
+  });
+
+  it("a blocked prompt throws a non-retryable upstream error naming the reason", async () => {
+    const blocked = { promptFeedback: { blockReason: "SAFETY" } } as GenerateContentResponse;
+    const stream = fakeClient({ stream: [blocked] }).client;
+    await expect(
+      collect(new GeminiProvider({ model: "m", client: stream }).stream(testRequest())),
+    ).rejects.toMatchObject({
+      code: "upstream",
+      retryable: false,
+      message: expect.stringContaining("SAFETY") as string,
+    });
+    const generate = fakeClient({ generate: blocked }).client;
+    await expect(
+      new GeminiProvider({ model: "m", client: generate }).generate(testRequest(), Answer),
+    ).rejects.toMatchObject({ code: "upstream", retryable: false });
+  });
+
+  it("a stream that ends with no text and no tool call throws instead of going silent", async () => {
+    const empty = {
+      candidates: [{ content: { role: "model", parts: [] }, finishReason: "SAFETY" }],
+    } as unknown as GenerateContentResponse;
+    const { client } = fakeClient({ stream: [empty] });
+    await expect(
+      collect(new GeminiProvider({ model: "m", client }).stream(testRequest())),
+    ).rejects.toMatchObject({
+      code: "upstream",
+      retryable: false,
+      message: expect.stringContaining("SAFETY") as string,
+    });
   });
 });
