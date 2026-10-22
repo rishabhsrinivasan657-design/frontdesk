@@ -7,9 +7,12 @@
     "node": ">=24"
   },
   "scripts": {
-    "typecheck": "tsc -b"
+    "typecheck": "tsc -b",
+    "test": "vitest run --project unit",
+    "test:infra": "vitest run --project infra"
   },
   "devDependencies": {
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.5"
   }
 }
