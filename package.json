@@ -16,7 +16,9 @@
     "format:check": "prettier --check .",
     "infra:up": "docker compose up -d --wait",
     "infra:down": "docker compose down",
-    "verify": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test"
+    "verify": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test",
+    "eval": "pnpm --filter @frontdesk/evals eval",
+    "eval:ci": "pnpm eval --subset ci --check"
   },
   "devDependencies": {
     "@types/node": "^24.19.2",
