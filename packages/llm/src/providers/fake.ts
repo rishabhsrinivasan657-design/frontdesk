@@ -19,6 +19,8 @@ export class FakeProvider implements LLMProvider {
     readonly model = "fake",
   ) {}
 
+  // Scripted chunks are synchronous; the generator stays async to match the interface.
+  // eslint-disable-next-line @typescript-eslint/require-await
   async *stream(req: LLMRequest): AsyncIterable<LLMChunk> {
     const step = this.take("stream", req);
     if ("generate" in step) throw this.mismatch("stream", "generate");
