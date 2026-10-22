@@ -341,6 +341,37 @@ describe("runTurn", () => {
     expect(s.llm.calls).toHaveLength(1);
   });
 
+  it("regenerates an ungrounded reply once and keeps the grounded retry", async () => {
+    const s = setup();
+    queue(
+      s.llm,
+      [text(`${meta(0.9)}Cacio e pepe is $18.`)],
+      [text(`${meta(0.9)}Cacio e pepe is $22.`)],
+    );
+    const result = await s.turn("how much is the cacio e pepe?");
+    expect(result.reply).toBe("Cacio e pepe is $22.");
+    expect(result.flags).toContain("grounding_regenerated");
+    expect(s.llm.calls[1]!.req.system).toContain("$18");
+    const session = await s.deps.sessions.load("s1");
+    expect(JSON.stringify(session!.history)).not.toContain("$18");
+  });
+
+  it("hands off when the retry is still ungrounded and never speaks the bad value", async () => {
+    const s = setup();
+    queue(s.llm, [text(`${meta(0.9)}Cacio e pepe is $18.`)]);
+    const result = await s.turn("how much is the cacio e pepe?");
+    expect(result.handoff).toBe("grounding_failed");
+    expect(JSON.stringify(result.messages)).not.toContain("$18");
+  });
+
+  it("treats the caller's own values as grounded", async () => {
+    const s = setup();
+    queue(s.llm, [text(`${meta(0.9)}Let me check 8:00 PM for you.`)]);
+    const result = await s.turn("anything at 8pm?");
+    expect(result.reply).toBe("Let me check 8:00 PM for you.");
+    expect(result.flags).not.toContain("grounding_regenerated");
+  });
+
   it("offers recorded alternatives when the slot is taken at confirmation", async () => {
     const s = setup();
     await proposeBooking(s);

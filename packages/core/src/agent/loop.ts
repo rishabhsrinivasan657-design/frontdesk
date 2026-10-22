@@ -17,8 +17,16 @@ import {
   OFF_TOPIC_LIMIT,
   RATE_LIMIT_MAX_WAIT_MS,
   TOOL_FAILURE_LIMIT,
+  type Meta,
   parseMeta,
 } from "../guardrails/meta.js";
+import {
+  type Claim,
+  buildFacts,
+  groundingNote,
+  recordCallerValues,
+  ungrounded,
+} from "../guardrails/grounding.js";
 import { looksLikeInjection, wantsHuman, wrapCallerText } from "../guardrails/untrusted.js";
 import type { AgentDeps } from "./deps.js";
 import { alreadyHandedOffMessage, handOff } from "./handoff.js";
@@ -191,6 +199,7 @@ async function finishTurn(turn: Turn, startedMs: number): Promise<TurnResult> {
 async function handle(turn: Turn): Promise<string> {
   try {
     if (looksLikeInjection(turn.text)) turn.flags.push("injection_pattern");
+    recordCallerValues(turn.session, turn.text);
     if (wantsHuman(turn.text)) {
       throw new HandoffSignal("human_requested", "Caller asked for a person.");
     }
@@ -290,20 +299,28 @@ async function modelTurn(turn: Turn): Promise<string> {
   const { deps, session } = turn;
   session.history.push({ role: "user", text: wrapCallerText(turn.text) });
   turn.userInHistory = true;
-  const system = renderSystemPrompt(deps.config, deps.clock.now());
+  let system = renderSystemPrompt(deps.config, deps.clock.now());
   const reader = readOnlyCalendar(deps.calendar);
+  let rounds = MAX_TOOL_ROUNDS;
 
-  for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+  for (let round = 0; round < rounds; round++) {
     const { text, calls } = await streamWithWait(turn, system);
-    session.history.push({
-      role: "assistant",
-      text,
-      ...(calls.length ? { toolCalls: calls } : {}),
-    });
     if (calls.length === 0) {
+      const checked = checkDraft(turn, text);
+      if ("regenerate" in checked) {
+        // Spec §6: regenerate once with a note; the bad draft never reaches the history.
+        if (turn.flags.includes("grounding_regenerated"))
+          throw new HandoffSignal("grounding_failed");
+        turn.flags.push("grounding_regenerated");
+        system = `${system}\n${groundingNote(checked.regenerate)}`;
+        rounds += 1;
+        continue;
+      }
+      session.history.push({ role: "assistant", text });
       turn.replyInHistory = true;
-      return finalReply(turn, text);
+      return finalReply(turn, checked.meta);
     }
+    session.history.push({ role: "assistant", text, toolCalls: calls });
 
     let proposed: PendingAction | undefined;
     for (const call of calls) {
@@ -361,11 +378,18 @@ function countToolResult(turn: Turn, ok: boolean): void {
   if (counters.toolFailuresInARow >= TOOL_FAILURE_LIMIT) throw new HandoffSignal("tool_failures");
 }
 
-/** Applies the model's meta line: low confidence hands off; off-topic turns count toward an offer. */
-function finalReply(turn: Turn, draft: string): string {
+/** Low confidence hands off; then every stated value must be grounded (spec §6). */
+function checkDraft(turn: Turn, draft: string): { meta: Meta } | { regenerate: Claim[] } {
   const meta = parseMeta(draft);
-  if (meta.missing) turn.flags.push("meta_missing");
   if (meta.confidence < CONFIDENCE_THRESHOLD) throw new HandoffSignal("low_confidence");
+  const facts = buildFacts(turn.deps.config, turn.session, turn.deps.clock.now());
+  const claims = ungrounded(meta.body, facts);
+  return claims.length > 0 ? { regenerate: claims } : { meta };
+}
+
+/** Applies the accepted draft's meta line: off-topic turns count toward offering a human. */
+function finalReply(turn: Turn, meta: Meta): string {
+  if (meta.missing) turn.flags.push("meta_missing");
   const reply = meta.body || FALLBACK_REPLY;
   if (meta.onTopic) return reply;
   const session = turn.session;
