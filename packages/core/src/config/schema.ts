@@ -13,20 +13,20 @@ export const HANDOFF_TRIGGERS = [
   "late_change",
 ] as const;
 
-const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
-const DATE = /^\d{4}-\d{2}-\d{2}$/;
+export const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
+export const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
-/** "HH:mm" → minutes since midnight. Assumes the value already matched TIME. */
+/** "HH:mm" → minutes since midnight. Assumes the value already matched TIME_PATTERN. */
 export function minutesOfDay(time: string): number {
   const [h, m] = time.split(":").map(Number);
   return h! * 60 + m!;
 }
 
 const positiveInt = z.number().int().positive();
-const time = z.string().regex(TIME, 'must be "HH:mm" (00:00–23:59)');
+const time = z.string().regex(TIME_PATTERN, 'must be "HH:mm" (00:00–23:59)');
 const isoDate = z
   .string()
-  .regex(DATE, 'must be "YYYY-MM-DD"')
+  .regex(DATE_PATTERN, 'must be "YYYY-MM-DD"')
   .refine((d) => DateTime.fromISO(d).isValid, "is not a real calendar date");
 
 const interval = z.strictObject({ open: time, close: time });
