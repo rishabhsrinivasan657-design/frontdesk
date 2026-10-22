@@ -94,6 +94,8 @@ interface Model {
   rCancelled: boolean;
   rMoved: boolean;
   handedOff: boolean;
+  /** Failed tool calls in a row; 2 hand off (spec §6). */
+  failures: number;
   now: number;
   writes: ("create" | "move" | "cancel")[];
 }
@@ -139,8 +141,18 @@ function modelStep(m: Model, step: Step): void {
     }
   }
   if (!runModel) return;
+  const handOff = () => {
+    m.pending = undefined;
+    m.handedOff = true;
+  };
+  const toolResult = (ok: boolean) => {
+    m.failures = ok ? 0 : m.failures + 1;
+    if (m.failures >= 2) handOff();
+  };
   const propose = (kind: PendingKind) => {
-    if (feasible(m, kind)) m.pending = { kind, expiresAt: m.now + PENDING_MS };
+    const ok = feasible(m, kind);
+    if (ok) m.pending = { kind, expiresAt: m.now + PENDING_MS };
+    toolResult(ok);
   };
   switch (step.move) {
     case "bookS":
@@ -149,11 +161,13 @@ function modelStep(m: Model, step: Step): void {
       return propose("cancelR");
     case "rescheduleRtoS2":
       return propose("rescheduleR");
+    case "checkAvailability":
+      return toolResult(true);
+    case "bookUnoffered":
+      return toolResult(false);
     case "handoff":
-      m.pending = undefined;
-      m.handedOff = true;
-      return;
-    default:
+      return handOff();
+    case "text":
       return;
   }
 }
@@ -183,6 +197,7 @@ export async function run(initial: Initial, steps: Step[]): Promise<void> {
     rCancelled: false,
     rMoved: false,
     handedOff: false,
+    failures: 0,
     now: deps.clock.now().getTime(),
     writes: [],
   };

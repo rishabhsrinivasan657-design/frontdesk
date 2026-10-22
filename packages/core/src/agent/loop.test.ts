@@ -231,6 +231,116 @@ describe("runTurn", () => {
     expect(s.deps.calendar.writes).toEqual([]);
   });
 
+  const meta = (confidence: number, onTopic = true) =>
+    `@meta ${JSON.stringify({ confidence, onTopic })}\n`;
+
+  it("strips the meta line from the reply", async () => {
+    const s = setup();
+    queue(s.llm, [text(`${meta(0.9)}Street parking only.`)]);
+    const result = await s.turn("parking?");
+    expect(result.reply).toBe("Street parking only.");
+    expect(result.flags).not.toContain("meta_missing");
+  });
+
+  it("flags a reply without a meta line", async () => {
+    const s = setup();
+    queue(s.llm, [text("Street parking only.")]);
+    expect((await s.turn("parking?")).flags).toContain("meta_missing");
+  });
+
+  it("hands off below the 0.5 confidence threshold without speaking the draft", async () => {
+    const s = setup();
+    queue(s.llm, [text(`${meta(0.49)}I think maybe we have a patio?`)]);
+    const result = await s.turn("do you have a patio?");
+    expect(result.handoff).toBe("low_confidence");
+    expect(result.reply).not.toContain("patio");
+  });
+
+  it("does not hand off at exactly 0.5 confidence", async () => {
+    const s = setup();
+    queue(s.llm, [text(`${meta(0.5)}Yes, a seasonal patio.`)]);
+    expect((await s.turn("do you have a patio?")).handoff).toBeUndefined();
+  });
+
+  it("offers a human after the third off-topic turn and hands off on yes", async () => {
+    const s = setup();
+    const redirect = `${meta(0.9, false)}I can only help with Casa Fiorella.`;
+    queue(s.llm, [text(redirect)]);
+    const first = await s.turn("what's the weather?");
+    const second = await s.turn("who won the game?");
+    const third = await s.turn("tell me a joke");
+    expect(first.reply).toBe("I can only help with Casa Fiorella.");
+    expect(second.reply).toBe("I can only help with Casa Fiorella.");
+    expect(third.reply).toBe(
+      "I can only help with Casa Fiorella. If you'd like, I can connect you with someone from our team.",
+    );
+    const calls = s.llm.calls.length;
+    const yes = await s.turn("yes");
+    expect(yes.handoff).toBe("human_requested");
+    expect(s.llm.calls).toHaveLength(calls);
+    expect(s.deps.handoffs.tickets.map((t) => t.reason)).toEqual(["human_requested"]);
+  });
+
+  it("drops the human offer if the caller moves on", async () => {
+    const s = setup();
+    queue(s.llm, [text(`${meta(0.9, false)}I can only help with Casa Fiorella.`)]);
+    for (const t of ["a", "b", "c"]) await s.turn(t);
+    queue(s.llm, [text(`${meta(0.9)}Sure, what date?`)]);
+    await s.turn("actually, a table please");
+    queue(s.llm, [text(`${meta(0.9)}Great.`)]);
+    expect((await s.turn("yes")).handoff).toBeUndefined();
+  });
+
+  it("hands off after two failed tool attempts in a row", async () => {
+    const s = setup();
+    queue(s.llm, [call("check_availability", { date: "tomorrow", partySize: 2 })], [text("Hmm.")]);
+    expect((await s.turn("tomorrow for 2")).handoff).toBeUndefined();
+    queue(s.llm, [call("book", { ...BOOK, slotId: "made-up" })]);
+    expect((await s.turn("just book it")).handoff).toBe("tool_failures");
+  });
+
+  it("resets the failure count after a successful tool call", async () => {
+    const s = setup();
+    queue(s.llm, [call("check_availability", { date: "tomorrow", partySize: 2 })], [text("Hmm.")]);
+    await s.turn("tomorrow for 2");
+    queue(s.llm, [call("check_availability", CHECK)], [text("7pm is open.")]);
+    await s.turn("Saturday 7pm for 4");
+    queue(s.llm, [call("book", { ...BOOK, slotId: "made-up" })], [text("Let me check that.")]);
+    expect((await s.turn("book it")).handoff).toBeUndefined();
+  });
+
+  it("waits once for a short rate limit, then answers", async () => {
+    const s = setup();
+    let first = true;
+    s.llm.onStream(() => {
+      if (first) {
+        first = false;
+        throw new LLMError("rate_limited", "slow", { status: 429, retryAfterMs: 2000 });
+      }
+      return [text(`${meta(0.9)}Street parking only.`)];
+    });
+    const before = s.deps.clock.now().getTime();
+    const result = await s.turn("parking?");
+    expect(result.messages[0]).toMatchObject({ type: "agent_sentence", text: "One moment." });
+    expect(s.deps.clock.now().getTime() - before).toBe(2000);
+    expect(result.reply).toBe("Street parking only.");
+    expect(result.handoff).toBeUndefined();
+  });
+
+  it("hands off when the rate limit persists after one wait", async () => {
+    const s = setup();
+    s.llm.failWith(new LLMError("rate_limited", "slow", { status: 429, retryAfterMs: 2000 }));
+    expect((await s.turn("parking?")).handoff).toBe("rate_limited");
+    expect(s.llm.calls).toHaveLength(2);
+  });
+
+  it("hands off at once when the rate limit wait is too long", async () => {
+    const s = setup();
+    s.llm.failWith(new LLMError("rate_limited", "slow", { status: 429, retryAfterMs: 10_000 }));
+    expect((await s.turn("parking?")).handoff).toBe("rate_limited");
+    expect(s.llm.calls).toHaveLength(1);
+  });
+
   it("offers recorded alternatives when the slot is taken at confirmation", async () => {
     const s = setup();
     await proposeBooking(s);

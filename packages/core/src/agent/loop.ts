@@ -1,4 +1,9 @@
-import { type Classification, type Decision, classifyConfirmation } from "../gate/classify.js";
+import {
+  type Classification,
+  type Decision,
+  classifyConfirmation,
+  ruleDecision,
+} from "../gate/classify.js";
 import { confirmAndExecute, voidPending } from "../gate/execute.js";
 import { propose } from "../gate/propose.js";
 import { EXPIRED_REPLY } from "../gate/summary.js";
@@ -6,6 +11,14 @@ import { LLMError } from "../llm/errors.js";
 import type { ToolCall } from "../llm/types.js";
 import { type Calendar, type CalendarReader, CalendarUnavailableError } from "../ports/calendar.js";
 import type { ServerMessage } from "../protocol/messages.js";
+import {
+  CONFIDENCE_THRESHOLD,
+  HUMAN_OFFER,
+  OFF_TOPIC_LIMIT,
+  RATE_LIMIT_MAX_WAIT_MS,
+  TOOL_FAILURE_LIMIT,
+  parseMeta,
+} from "../guardrails/meta.js";
 import { looksLikeInjection, wantsHuman, wrapCallerText } from "../guardrails/untrusted.js";
 import type { AgentDeps } from "./deps.js";
 import { alreadyHandedOffMessage, handOff } from "./handoff.js";
@@ -69,6 +82,7 @@ interface Turn {
   replyInHistory: boolean;
   decision?: Decision;
   handoff?: HandoffReason;
+  waitedForRateLimit?: boolean;
   /** The action proposed this turn, if any. */
   proposedId?: string;
   messages: ServerMessage[];
@@ -177,9 +191,19 @@ async function finishTurn(turn: Turn, startedMs: number): Promise<TurnResult> {
 async function handle(turn: Turn): Promise<string> {
   try {
     if (looksLikeInjection(turn.text)) turn.flags.push("injection_pattern");
-    if (wantsHuman(turn.text))
+    if (wantsHuman(turn.text)) {
       throw new HandoffSignal("human_requested", "Caller asked for a person.");
+    }
     const pending = await turn.deps.sessions.getPending(turn.session.id);
+    // The offer stands for the next reply only (after 3 off-topic turns).
+    const offered = turn.session.humanOffered;
+    turn.session.humanOffered = false;
+    if (offered && !pending && ruleDecision(turn.text) === "confirm") {
+      throw new HandoffSignal(
+        "human_requested",
+        "Accepted the offer of a person after off-topic turns.",
+      );
+    }
     if (pending) {
       const resolved = await resolvePending(turn, pending);
       if (resolved !== undefined) return resolved;
@@ -270,7 +294,7 @@ async function modelTurn(turn: Turn): Promise<string> {
   const reader = readOnlyCalendar(deps.calendar);
 
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-    const { text, calls } = await streamRound(turn, system);
+    const { text, calls } = await streamWithWait(turn, system);
     session.history.push({
       role: "assistant",
       text,
@@ -278,7 +302,7 @@ async function modelTurn(turn: Turn): Promise<string> {
     });
     if (calls.length === 0) {
       turn.replyInHistory = true;
-      return text.trim() || FALLBACK_REPLY;
+      return finalReply(turn, text);
     }
 
     let proposed: PendingAction | undefined;
@@ -310,6 +334,7 @@ async function modelTurn(turn: Turn): Promise<string> {
         });
       }
       turn.metrics.toolMs.push(deps.clock.now().getTime() - started);
+      countToolResult(turn, result.ok);
       session.history.push({ role: "tool", callId: call.id, name: call.name, result });
     }
 
@@ -325,7 +350,48 @@ async function modelTurn(turn: Turn): Promise<string> {
       return proposed.summary;
     }
   }
+  countToolResult(turn, false);
   return FALLBACK_REPLY;
+}
+
+/** Spec §6: 2 failed tool attempts in a row hand off; any success resets the count. */
+function countToolResult(turn: Turn, ok: boolean): void {
+  const counters = turn.session.counters;
+  counters.toolFailuresInARow = ok ? 0 : counters.toolFailuresInARow + 1;
+  if (counters.toolFailuresInARow >= TOOL_FAILURE_LIMIT) throw new HandoffSignal("tool_failures");
+}
+
+/** Applies the model's meta line: low confidence hands off; off-topic turns count toward an offer. */
+function finalReply(turn: Turn, draft: string): string {
+  const meta = parseMeta(draft);
+  if (meta.missing) turn.flags.push("meta_missing");
+  if (meta.confidence < CONFIDENCE_THRESHOLD) throw new HandoffSignal("low_confidence");
+  const reply = meta.body || FALLBACK_REPLY;
+  if (meta.onTopic) return reply;
+  const session = turn.session;
+  session.counters.offTopic += 1;
+  if (session.counters.offTopic < OFF_TOPIC_LIMIT) return reply;
+  session.counters.offTopic = 0;
+  session.humanOffered = true;
+  return `${reply} ${HUMAN_OFFER}`;
+}
+
+/** Spec §7/§11: on a short rate limit say "one moment", wait once, retry; otherwise hand off. */
+async function streamWithWait(
+  turn: Turn,
+  system: string,
+): Promise<{ text: string; calls: ToolCall[] }> {
+  try {
+    return await streamRound(turn, system);
+  } catch (error) {
+    const wait =
+      error instanceof LLMError && error.code === "rate_limited" ? error.retryAfterMs : undefined;
+    if (turn.waitedForRateLimit || wait === undefined || wait > RATE_LIMIT_MAX_WAIT_MS) throw error;
+    turn.waitedForRateLimit = true;
+    turn.send({ type: "agent_sentence", turnId: turn.turnId, text: "One moment." });
+    await turn.deps.clock.sleep(wait);
+    return streamRound(turn, system);
+  }
 }
 
 async function streamRound(
