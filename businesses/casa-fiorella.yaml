@@ -1,0 +1,105 @@
+# Casa Fiorella: a fictional family Italian trattoria (spec §2).
+# Swapping this file (plus Google credentials) repoints Front Desk at another business.
+
+business:
+  name: Casa Fiorella
+  phone: "+1-555-010-4477"
+  email: hello@casafiorella.example.com
+  address: 112 Mulberry Lane, Brooklyn, NY 11201
+  timezone: America/New_York
+
+hours:
+  sun: [{ open: "12:00", close: "21:00" }] # brunch menu until 15:00
+  mon: []
+  tue: [{ open: "17:00", close: "22:00" }]
+  wed: [{ open: "17:00", close: "22:00" }]
+  thu: [{ open: "17:00", close: "22:00" }]
+  fri: [{ open: "17:00", close: "23:00" }]
+  sat: [{ open: "17:00", close: "23:00" }]
+
+closures:
+  - { date: "2026-11-26", reason: Thanksgiving }
+  - { date: "2026-12-25", reason: Christmas }
+  - { date: "2027-01-01", reason: New Year's Day }
+
+seating:
+  tables:
+    - { size: 2, count: 8 }
+    - { size: 4, count: 6 }
+    - { size: 6, count: 2 }
+  holdMinutes: { default: 90, partyOf5Plus: 120 }
+  slotIntervalMinutes: 15
+  lastSeatingBeforeCloseMinutes: 60
+
+policies:
+  bookingWindowDays: 30
+  minLeadMinutes: 60
+  maxPartyForAgent: 8
+  freeChangeUntilHoursBefore: 4
+  graceMinutes: 15
+
+privateRoom: { name: La Cantina, min: 10, max: 30, agentMayBook: false }
+
+menu:
+  - { item: Burrata with roasted peppers, price: 16, tags: [vegetarian, gf] }
+  - { item: Arancini, price: 12, tags: [vegetarian] }
+  - { item: Cacio e pepe, price: 22, tags: [vegetarian] }
+  - { item: Rigatoni alla vodka, price: 24, tags: [vegetarian] }
+  - { item: Pappardelle with wild boar ragù, price: 29, tags: [] }
+  - { item: Eggplant parmigiana, price: 25, tags: [vegetarian] }
+  - { item: Grilled branzino, price: 34, tags: [gf] }
+  - { item: Roasted vegetable farro bowl, price: 21, tags: [vegan] }
+  - { item: Tiramisù, price: 11, tags: [vegetarian] }
+  - { item: Lemon sorbetto, price: 9, tags: [vegan, gf] }
+  - { item: Sunday brunch frittata, price: 18, tags: [vegetarian, gf] }
+
+faq:
+  - id: parking
+    q: Is there parking?
+    a: There's metered street parking on Mulberry Lane and a public garage one block east on Court Street.
+    keywords: [parking, park, car, garage]
+  - id: kids
+    q: Do you have high chairs or a kids' menu?
+    a: Yes. We have high chairs and booster seats, and a kids' menu with smaller pasta and pizza plates.
+    keywords: [kids, children, high chair, booster, kids menu]
+  - id: dietary
+    q: Do you have gluten-free or vegan options?
+    a: Yes, the menu marks gluten-free and vegan dishes. For a specific allergy, I'll note it on the reservation and our team can talk you through it.
+    keywords: [gluten, gluten-free, vegan, vegetarian, dietary]
+  - id: corkage
+    q: Can I bring my own wine?
+    a: Yes, corkage is $25 per bottle, with a limit of two bottles per table.
+    keywords: [corkage, byob, wine, bottle]
+  - id: patio
+    q: Do you have outdoor seating?
+    a: Our patio is open seasonally, usually May through September, weather permitting. Patio tables are first come, first served.
+    keywords: [patio, outdoor, outside, terrace]
+  - id: gift-cards
+    q: Do you sell gift cards?
+    a: Yes, gift cards are available at the host stand in any amount.
+    keywords: [gift card, gift certificate, voucher]
+  - id: dress-code
+    q: Is there a dress code?
+    a: No dress code. Come as you are.
+    keywords: [dress code, attire, wear, formal]
+  - id: accessibility
+    q: Is the restaurant accessible?
+    a: Yes. The entrance and main dining room are step-free, and we have an accessible restroom.
+    keywords: [accessible, wheelchair, step-free, accessibility]
+  - id: hours
+    q: When are you open?
+    a: Tuesday to Thursday 5 to 10 pm, Friday and Saturday 5 to 11 pm, and Sunday noon to 9 pm with brunch until 3 pm. We're closed Mondays.
+    keywords: [hours, open, close, brunch]
+
+handoffTriggers:
+  - private_event
+  - party_too_large
+  - allergy_safety
+  - complaint
+  - human_requested
+  - late_change
+
+agent:
+  persona: You are the host at Casa Fiorella, a warm family trattoria. Be friendly, brief, and precise.
+  greeting: Thanks for calling Casa Fiorella! How can I help you today?
+  voice: { lang: en-US, rate: 1.0 }
