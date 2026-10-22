@@ -42,7 +42,10 @@
               "maximum": 50
             }
           },
-          "required": ["date", "partySize"],
+          "required": [
+            "date",
+            "partySize"
+          ],
           "additionalProperties": false
         },
         "effect": "read"
@@ -65,7 +68,10 @@
               "maxLength": 100
             }
           },
-          "required": ["name", "contact"],
+          "required": [
+            "name",
+            "contact"
+          ],
           "additionalProperties": false
         },
         "effect": "read"
@@ -83,7 +89,9 @@
               "maxLength": 200
             }
           },
-          "required": ["query"],
+          "required": [
+            "query"
+          ],
           "additionalProperties": false
         },
         "effect": "read"
@@ -101,7 +109,9 @@
               "maxLength": 100
             }
           },
-          "required": ["name"],
+          "required": [
+            "name"
+          ],
           "additionalProperties": false
         },
         "effect": "read"
@@ -142,7 +152,12 @@
               "maxLength": 500
             }
           },
-          "required": ["slotId", "name", "contact", "partySize"],
+          "required": [
+            "slotId",
+            "name",
+            "contact",
+            "partySize"
+          ],
           "additionalProperties": false
         },
         "effect": "write"
@@ -167,7 +182,10 @@
               "description": "A slotId returned by check_availability"
             }
           },
-          "required": ["reservationId", "slotId"],
+          "required": [
+            "reservationId",
+            "slotId"
+          ],
           "additionalProperties": false
         },
         "effect": "write"
@@ -186,7 +204,9 @@
               "description": "A reservationId returned by find_reservation"
             }
           },
-          "required": ["reservationId"],
+          "required": [
+            "reservationId"
+          ],
           "additionalProperties": false
         },
         "effect": "write"
@@ -215,7 +235,10 @@
               "maxLength": 500
             }
           },
-          "required": ["reason", "summary"],
+          "required": [
+            "reason",
+            "summary"
+          ],
           "additionalProperties": false
         },
         "effect": "read"
@@ -227,13 +250,13 @@
       {
         "type": "tool_call",
         "call": {
-          "id": "call_203350",
+          "id": "call_320283",
           "name": "find_reservation",
           "args": {
             "name": "Tom Becker",
             "contact": "Tom Becker"
           },
-          "signature": "EmAKXgFpFH0ToV40ActmILO4opGUBsN1Mh4R42RLKKe/jltmk2vlDih9Fhijph6NLflTQNFPBqYqTEItdWWbz9fuWbLXSK/V/k0PCX8TpXZIoWWmQYllWK0VVfI8HxlsquM="
+          "signature": "EmAKXgFpFH0TKYQteZwdPqEKuV0l2UT5iPwKRMrDv1mHqwx5G0hSa8DMaBgNe5DbTI98NSxUwQ2gbRtiYBYCuOfLOKnaGLe+wWAurn1Ay2bU6yb9HIEozIJW/1oyW/GkgQc="
         }
       },
       {
@@ -245,5 +268,5 @@
       }
     ]
   },
-  "recordedAt": "2026-10-22T20:37:54.096Z"
+  "recordedAt": "2026-10-22T20:45:45.061Z"
 }

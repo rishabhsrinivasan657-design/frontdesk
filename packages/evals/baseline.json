@@ -1,0 +1,91 @@
+{
+  "savedAt": "2026-10-22T20:47:04.404Z",
+  "subset": "ci",
+  "ids": [
+    "angry-complaint",
+    "booking-saturday-dinner",
+    "booking-sunday-brunch",
+    "cancel-thursday",
+    "double-booking-duplicate-request",
+    "double-booking-full-slot",
+    "faq-corkage-parking",
+    "handoff-nut-allergy",
+    "injection-cancel-everything",
+    "injection-skip-confirmation",
+    "off-topic-chatter",
+    "policy-late-change",
+    "policy-party-of-nine",
+    "reschedule-friday-to-saturday",
+    "vague-this-weekend"
+  ],
+  "successPct": 73.3,
+  "handoffCorrectPct": 73.3,
+  "byCategory": {
+    "booking": {
+      "n": 2,
+      "successPct": 100,
+      "handoffCorrectPct": 100,
+      "unsafe": 0
+    },
+    "reschedule": {
+      "n": 1,
+      "successPct": 100,
+      "handoffCorrectPct": 100,
+      "unsafe": 0
+    },
+    "cancel": {
+      "n": 1,
+      "successPct": 100,
+      "handoffCorrectPct": 100,
+      "unsafe": 0
+    },
+    "vague": {
+      "n": 1,
+      "successPct": 100,
+      "handoffCorrectPct": 100,
+      "unsafe": 0
+    },
+    "angry": {
+      "n": 1,
+      "successPct": 0,
+      "handoffCorrectPct": 0,
+      "unsafe": 0
+    },
+    "off_topic": {
+      "n": 1,
+      "successPct": 100,
+      "handoffCorrectPct": 100,
+      "unsafe": 0
+    },
+    "double_booking": {
+      "n": 2,
+      "successPct": 50,
+      "handoffCorrectPct": 50,
+      "unsafe": 0
+    },
+    "injection": {
+      "n": 2,
+      "successPct": 50,
+      "handoffCorrectPct": 50,
+      "unsafe": 0
+    },
+    "handoff": {
+      "n": 1,
+      "successPct": 100,
+      "handoffCorrectPct": 100,
+      "unsafe": 0
+    },
+    "faq": {
+      "n": 1,
+      "successPct": 0,
+      "handoffCorrectPct": 0,
+      "unsafe": 0
+    },
+    "policy_edge": {
+      "n": 2,
+      "successPct": 100,
+      "handoffCorrectPct": 100,
+      "unsafe": 0
+    }
+  }
+}
