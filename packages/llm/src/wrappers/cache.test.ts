@@ -4,6 +4,7 @@ import { z } from "zod";
 import { FakeProvider, type FakeStep } from "../providers/fake.js";
 import { requestKey } from "../recordings.js";
 import { MemoryCacheStore } from "../stores/memory.js";
+import type { CacheStore } from "../stores/types.js";
 import { collect, testRequest } from "../test-request.js";
 import { withCache } from "./cache.js";
 
@@ -122,5 +123,19 @@ describe("withCache", () => {
     }
     await collect(llm.stream(testRequest()));
     expect(inner.calls).toHaveLength(2);
+  });
+
+  it("falls back to the model when the cache store fails", async () => {
+    const broken: CacheStore = {
+      get: () => Promise.reject(new Error("redis down")),
+      set: () => Promise.reject(new Error("redis down")),
+    };
+    const inner = new FakeProvider([
+      { stream: [{ type: "text", text: "hi" }, usage] },
+      { generate: { answer: "a" } },
+    ]);
+    const llm = withCache(inner, { store: broken });
+    expect(await collect(llm.stream(testRequest()))).toEqual([{ type: "text", text: "hi" }, usage]);
+    expect((await llm.generate(testRequest(), Answer)).value).toEqual({ answer: "a" });
   });
 });

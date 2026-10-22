@@ -113,4 +113,11 @@ describe("createLLM", () => {
     expect((await collect(replay.stream(testRequest()))).length).toBeGreaterThan(0);
     expect(takes()).toBe(1); // only the recording run touched the rate limiter
   });
+
+  it("record mode bypasses the cache so a warm cache cannot skip a recording", async () => {
+    const { d } = deps();
+    await collect(createLLM({}, d).stream(testRequest())); // warms the cache
+    await collect(createLLM({ LLM_RECORD: "1" }, d).stream(testRequest()));
+    expect((await d.recordings.hashesFor("test")).size).toBe(1);
+  });
 });

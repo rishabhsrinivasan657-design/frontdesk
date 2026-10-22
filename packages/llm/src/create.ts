@@ -78,8 +78,9 @@ export function createLLM(
     apiKey: env.GEMINI_API_KEY,
     client: deps.geminiClient,
   });
+  // Record mode skips the cache: a cached answer would never reach the recorder.
   if (env.LLM_RECORD === "1") llm = withRecorder(llm, { store: deps.recordings });
-  llm = withCache(llm, { store: deps.cache });
+  else llm = withCache(llm, { store: deps.cache });
   llm = withRetry(llm, deps.retry);
   llm = withRateLimit(llm, { store: deps.rate, limits: spec.freeTier });
   return withSpendCap(llm, { store: deps.spend, tier, capUsd, price: spec.pricePerMTok });

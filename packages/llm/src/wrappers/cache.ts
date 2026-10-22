@@ -28,6 +28,10 @@ function hasWriteCall(req: LLMRequest, chunks: LLMChunk[]): boolean {
 export function withCache(inner: LLMProvider, options: CacheOptions): LLMProvider {
   const { store, ttlSec = 86_400 } = options;
   const keyFor = (...args: Parameters<typeof requestKey>) => `llm:cache:${requestKey(...args)}`;
+  // The cache is an optimization: a store outage degrades to a miss, never a failed turn.
+  const read = (key: string) => store.get(key).catch(() => undefined);
+  const write = (key: string, value: string) =>
+    store.set(key, value, ttlSec).catch(() => undefined);
 
   return {
     model: inner.model,
@@ -37,7 +41,7 @@ export function withCache(inner: LLMProvider, options: CacheOptions): LLMProvide
         return;
       }
       const key = keyFor("stream", inner.model, req);
-      const hit = await store.get(key);
+      const hit = await read(key);
       if (hit !== undefined) {
         yield* (JSON.parse(hit) as { chunks: LLMChunk[] }).chunks;
         yield { type: "usage", usage: ZERO_USAGE };
@@ -49,18 +53,18 @@ export function withCache(inner: LLMProvider, options: CacheOptions): LLMProvide
         yield chunk;
       }
       // Decided only once the stream completed: a write call may arrive in the last chunk.
-      if (!hasWriteCall(req, chunks)) await store.set(key, JSON.stringify({ chunks }), ttlSec);
+      if (!hasWriteCall(req, chunks)) await write(key, JSON.stringify({ chunks }));
     },
     async generate<T>(req: LLMRequest, schema: ZodType<T>): Promise<{ value: T; usage: Usage }> {
       if (bypasses(req)) return inner.generate(req, schema);
       const key = keyFor("generate", inner.model, req, schema);
-      const hit = await store.get(key);
+      const hit = await read(key);
       if (hit !== undefined) {
         const { value } = JSON.parse(hit) as { value: unknown };
         return { value: parseOutput(schema, value), usage: ZERO_USAGE };
       }
       const result = await inner.generate(req, schema);
-      await store.set(key, JSON.stringify({ value: result.value }), ttlSec);
+      await write(key, JSON.stringify({ value: result.value }));
       return result;
     },
   };
