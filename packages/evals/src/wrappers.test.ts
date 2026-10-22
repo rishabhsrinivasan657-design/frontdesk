@@ -1,4 +1,4 @@
-import { LLMError, type LLMErrorCode } from "@frontdesk/core";
+import { LLMError } from "@frontdesk/core";
 import { FakeProvider } from "@frontdesk/llm";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
@@ -20,10 +20,10 @@ const drain = async (it: AsyncIterable<unknown>) => {
 
 describe("withErrorTap", () => {
   it("records LLMError codes and rethrows", async () => {
-    const sink: LLMErrorCode[] = [];
+    const sink: LLMError[] = [];
     const llm = withErrorTap(new FakeProvider([{ error: new LLMError("replay_miss", "x") }]), sink);
     await expect(drain(llm.stream(REQ))).rejects.toThrow("x");
-    expect(sink).toEqual(["replay_miss"]);
+    expect(sink.map((e) => e.code)).toEqual(["replay_miss"]);
   });
 });
 

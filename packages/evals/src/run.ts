@@ -1,7 +1,7 @@
 import {
   type BusinessConfig,
   type HandoffReason,
-  type LLMErrorCode,
+  type LLMError,
   type LLMProvider,
   greeting,
   runTurn,
@@ -43,9 +43,9 @@ export interface RunOptions {
  */
 export async function runScenario(scenario: Scenario, options: RunOptions): Promise<ScenarioRun> {
   const { config, now = () => performance.now() } = options;
-  const errors: LLMErrorCode[] = [];
-  const caller = withErrorTap(options.caller, errors);
-  const world = seedWorld(scenario, config, withErrorTap(options.agent, errors));
+  const tapped: LLMError[] = [];
+  const caller = withErrorTap(options.caller, tapped);
+  const world = seedWorld(scenario, config, withErrorTap(options.agent, tapped));
   const run: ScenarioRun = {
     scenario,
     status: "ok",
@@ -92,7 +92,10 @@ export async function runScenario(scenario: Scenario, options: RunOptions): Prom
     run.error = error instanceof Error ? error.message : String(error);
   }
 
-  if (errors.length > 0 && !run.error) run.error = `LLM errors: ${[...new Set(errors)].join(", ")}`;
+  const errors = tapped.map((e) => e.code);
+  if (tapped.length > 0 && !run.error) {
+    run.error = `LLM errors: ${[...new Set(tapped.map((e) => `${e.code} (${e.message})`))].join("; ")}`;
+  }
   run.status = errors.includes("stale_recording")
     ? "stale"
     : errors.includes("replay_miss")

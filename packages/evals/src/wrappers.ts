@@ -1,17 +1,16 @@
 import {
   LLMError,
   type LLMChunk,
-  type LLMErrorCode,
   type LLMProvider,
   type LLMRequest,
   type Usage,
 } from "@frontdesk/core";
 import type { ZodType } from "zod";
 
-/** Passes every call through, noting the code of each LLMError (the agent loop swallows them). */
-export function withErrorTap(inner: LLMProvider, sink: LLMErrorCode[]): LLMProvider {
+/** Passes every call through, noting each LLMError (the agent loop swallows them). */
+export function withErrorTap(inner: LLMProvider, sink: LLMError[]): LLMProvider {
   const note = (error: unknown): never => {
-    if (error instanceof LLMError) sink.push(error.code);
+    if (error instanceof LLMError) sink.push(error);
     throw error;
   };
   return {
