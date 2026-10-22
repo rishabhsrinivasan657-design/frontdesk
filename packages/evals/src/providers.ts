@@ -19,6 +19,9 @@ import { withPatience } from "./wrappers.js";
 /** Chosen in M4 Part B by trying two local models (spec §15). */
 export const DEFAULT_CALLER_MODEL = "gemma3:4b";
 
+/** Per-call Gemini timeout for live/record runs (the server keeps M2's 10 s). */
+export const EVAL_TIMEOUT_MS = 30_000;
+
 export interface Manifest {
   agentModel: string;
   callerModel: string;
@@ -77,7 +80,13 @@ export async function buildProviders(
 
   const record = mode === "record";
   const gemini = createLLM(
-    { ...env, LLM_PROVIDER: "gemini", LLM_RECORD: record ? "1" : "0" },
+    {
+      ...env,
+      LLM_PROVIDER: "gemini",
+      LLM_RECORD: record ? "1" : "0",
+      // Evals don't gate on latency; a slow-but-valid answer beats a timeout in a recording.
+      LLM_TIMEOUT_MS: env.LLM_TIMEOUT_MS || String(EVAL_TIMEOUT_MS),
+    },
     {
       rate: new MemoryRateLimitStore(),
       spend: new MemorySpendStore(),
