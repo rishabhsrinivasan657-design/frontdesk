@@ -352,4 +352,64 @@ describe("openChat", () => {
     expect(log.started.map((c) => c.id)).toEqual([chat.sessionId]);
     expect(log.turns.map((t) => t.turnIndex)).toEqual([2]);
   });
+
+  it("a resume after the old socket closed mid-turn still waits for that turn", async () => {
+    const gated = gatedLLM();
+    gated.openNow();
+    const { ctx } = context(gated.llm);
+    const a = new FakeSocket();
+    const chat = await openChat(a, ctx);
+    await chat.onMessage(say(BOOK));
+    gated.hold();
+    const proposing = chat.onMessage(say(DETAILS));
+    // A page reload: the old socket closes cleanly before the new one connects.
+    chat.close();
+    const b = new FakeSocket();
+    const resuming = openChat(b, ctx, chat.sessionId);
+    await new Promise((r) => setTimeout(r, 10));
+    expect(b.sent).toEqual([]);
+    gated.release();
+    await proposing;
+    await resuming;
+    expect(b.ofType("session")[0]?.pending?.kind).toBe("book");
+  });
+
+  it("a reload during the very first turn keeps the session", async () => {
+    const gated = gatedLLM();
+    const { ctx } = context(gated.llm);
+    const a = new FakeSocket();
+    const chat = await openChat(a, ctx);
+    const first = chat.onMessage(say(BOOK));
+    chat.close();
+    const b = new FakeSocket();
+    const resuming = openChat(b, ctx, chat.sessionId);
+    gated.release();
+    await first;
+    const resumed = await resuming;
+    expect(resumed.sessionId).toBe(chat.sessionId);
+    expect(b.ofType("session")[0]?.transcript).toHaveLength(2);
+  });
+
+  it("takes the next message the moment turn_metrics is sent, even while saving", async () => {
+    const { ctx, deps } = context();
+    const save = deps.sessions.save.bind(deps.sessions);
+    deps.sessions.save = async (state) => {
+      await new Promise((r) => setTimeout(r, 30));
+      await save(state);
+    };
+    let next: Promise<void> | undefined;
+    const socket = new FakeSocket();
+    const send = socket.send.bind(socket);
+    let chat!: Awaited<ReturnType<typeof openChat>>;
+    socket.send = (text: string) => {
+      send(text);
+      // The browser unlocks on turn_metrics and the caller replies at once.
+      if (!next && text.includes('"turn_metrics"')) next = chat.onMessage(say(DETAILS));
+    };
+    chat = await openChat(socket, ctx);
+    await chat.onMessage(say(BOOK));
+    await next;
+    expect(socket.ofType("error")).toEqual([]);
+    expect(socket.ofType("pending_action")).toHaveLength(1);
+  });
 });
