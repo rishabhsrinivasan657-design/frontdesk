@@ -8,6 +8,7 @@ import { createConfirmationQueue, QueueMailer } from "@frontdesk/worker";
 import { Redis } from "ioredis";
 import { loadBusinessConfig } from "./business-config.js";
 import type { ChatContext } from "./chat/connection.js";
+import { SessionHub } from "./chat/hub.js";
 import { offsetClock } from "./clock.js";
 import { buildLLM } from "./llm/build.js";
 import { RedisSessionStore } from "./redis/session-store.js";
@@ -74,6 +75,7 @@ export async function buildDeps(
       price,
       newSessionId: () => `sess_${randomUUID()}`,
       logger: { error: (obj, msg) => console.error(msg, obj) },
+      hub: new SessionHub(),
     },
     summary: `calendar=${google ? "google" : "in-memory"} llm=${llm.model}${fixedNow ? " now=fixed" : ""}`,
     async close() {

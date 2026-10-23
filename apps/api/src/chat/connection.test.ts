@@ -4,16 +4,42 @@ import { ScriptedLLM } from "../llm/scripted.js";
 import { BOOK, DETAILS, memoryDeps } from "../test-deps.js";
 import { type ChatContext, type ChatSocket, openChat } from "./connection.js";
 import { InMemoryConversationLog } from "./conversation-log.js";
+import { SessionHub } from "./hub.js";
 
 class FakeSocket implements ChatSocket {
   readonly sent: ServerMessage[] = [];
+  closedWith: number | undefined;
   send(text: string): void {
-    this.sent.push(JSON.parse(text) as ServerMessage);
+    if (this.closedWith === undefined) this.sent.push(JSON.parse(text) as ServerMessage);
   }
-  close(): void {}
+  close(code?: number): void {
+    this.closedWith = code ?? 1000;
+  }
   ofType<T extends ServerMessage["type"]>(type: T): Extract<ServerMessage, { type: T }>[] {
     return this.sent.filter((m): m is Extract<ServerMessage, { type: T }> => m.type === type);
   }
+}
+
+/** ScriptedLLM whose turn streams wait until `release()` (or `hold()` again). */
+function gatedLLM() {
+  let open = true;
+  let release!: () => void;
+  let gate = Promise.resolve();
+  const inner = new ScriptedLLM();
+  const llm: LLMProvider = {
+    model: "gated",
+    async *stream(req: LLMRequest): AsyncIterable<LLMChunk> {
+      if (!open) await gate;
+      yield* inner.stream(req);
+    },
+    generate: (req, schema) => inner.generate(req, schema),
+  };
+  const hold = () => {
+    open = false;
+    gate = new Promise<void>((r) => (release = () => ((open = true), r())));
+  };
+  hold();
+  return { llm, hold, release: () => release(), openNow: () => release() };
 }
 
 let n = 0;
@@ -27,6 +53,7 @@ function context(llm?: LLMProvider) {
     price: { input: 0.1, output: 0.4 },
     newSessionId: () => `sess_${++n}`,
     logger,
+    hub: new SessionHub(),
   };
   return { ctx, deps, log, logger };
 }
@@ -176,17 +203,7 @@ describe("openChat", () => {
   });
 
   it("answers busy while a turn is in flight", async () => {
-    let release!: () => void;
-    const gate = new Promise<void>((r) => (release = r));
-    const inner = new ScriptedLLM();
-    const slow: LLMProvider = {
-      model: "slow",
-      async *stream(req: LLMRequest): AsyncIterable<LLMChunk> {
-        await gate;
-        yield* inner.stream(req);
-      },
-      generate: (req, schema) => inner.generate(req, schema),
-    };
+    const { llm: slow, release } = gatedLLM();
     const { ctx } = context(slow);
     const socket = new FakeSocket();
     const chat = await openChat(socket, ctx);
@@ -264,5 +281,47 @@ describe("openChat", () => {
         handoffReason: "human_requested",
       }),
     ]);
+  });
+
+  it("a second socket on the same session closes the first", async () => {
+    const { ctx } = context();
+    const a = new FakeSocket();
+    const chat = await openChat(a, ctx);
+    await chat.onMessage(say(BOOK));
+    const b = new FakeSocket();
+    await openChat(b, ctx, chat.sessionId);
+    expect(a.closedWith).toBe(4000);
+    expect(b.closedWith).toBeUndefined();
+  });
+
+  it("a resume during an in-flight turn waits and includes the pending action", async () => {
+    const gated = gatedLLM();
+    gated.openNow();
+    const { ctx } = context(gated.llm);
+    const a = new FakeSocket();
+    const chat = await openChat(a, ctx);
+    await chat.onMessage(say(BOOK));
+    gated.hold();
+    const proposing = chat.onMessage(say(DETAILS));
+    const b = new FakeSocket();
+    const resuming = openChat(b, ctx, chat.sessionId);
+    await new Promise((r) => setTimeout(r, 10));
+    expect(b.sent).toEqual([]);
+    gated.release();
+    await proposing;
+    await resuming;
+    const [session] = b.ofType("session");
+    expect(session?.pending?.kind).toBe("book");
+    expect(session?.transcript).toHaveLength(4);
+  });
+
+  it("the replaced socket's messages are ignored", async () => {
+    const { ctx, log } = context();
+    const a = new FakeSocket();
+    const first = await openChat(a, ctx);
+    await first.onMessage(say(BOOK));
+    await openChat(new FakeSocket(), ctx, first.sessionId);
+    await first.onMessage(say("Hello"));
+    expect(log.turns).toHaveLength(1);
   });
 });

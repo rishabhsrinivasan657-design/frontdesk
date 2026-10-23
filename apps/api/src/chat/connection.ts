@@ -10,6 +10,7 @@ import {
 import type { Price } from "@frontdesk/llm";
 import { toTurnRecord } from "../metrics/turn-record.js";
 import type { ConversationLog } from "./conversation-log.js";
+import type { SessionHub } from "./hub.js";
 
 export interface ChatContext {
   deps: AgentDeps;
@@ -19,6 +20,7 @@ export interface ChatContext {
   /** A fresh, unguessable session id: it is the caller's only credential for reconnecting. */
   newSessionId: () => string;
   logger: { error(obj: unknown, msg: string): void };
+  hub: SessionHub;
 }
 
 export interface ChatSocket {
@@ -29,6 +31,8 @@ export interface ChatSocket {
 export interface Chat {
   sessionId: string;
   onMessage(raw: string): Promise<void>;
+  /** The socket closed: frees the session for the next one. */
+  close(): void;
 }
 
 export const SERVER_ERROR_MESSAGE = "Sorry, something went wrong. Please try again.";
@@ -53,9 +57,10 @@ export async function openChat(
   const send = (m: ServerMessage) => socket.send(JSON.stringify(m));
   const existing = requestedSessionId ? await deps.sessions.load(requestedSessionId) : undefined;
   const sessionId = existing?.id ?? ctx.newSessionId();
+  const claim = ctx.hub.claim(sessionId, socket);
+  // A turn still running on the replaced socket must be saved before its state is restored.
+  await claim.previousTurn;
   send(await sessionMessage(deps, sessionId, existing !== undefined));
-
-  let busy = false;
 
   /** Runs one turn; resolves once its last message is sent, before the turn is stored. */
   async function runOne(text: string): Promise<{ result: TurnResult; firstOutputMs?: number }> {
@@ -72,7 +77,10 @@ export async function openChat(
 
   return {
     sessionId,
+    close: () => claim.release(),
     async onMessage(raw: string) {
+      // A newer socket took over this session; this one is closing.
+      if (!claim.isCurrent()) return;
       let json: unknown;
       try {
         json = JSON.parse(raw);
@@ -87,11 +95,12 @@ export async function openChat(
       const message = parsed.data;
       // interrupt and tts_started belong to voice (M7).
       if (message.type !== "user_text") return;
-      if (busy) {
+      if (claim.busy()) {
         send({ type: "error", code: "busy", message: "Still answering your last message." });
         return;
       }
-      busy = true;
+      // Busy until the reply is complete; the turn is stored after, while the next may start.
+      const end = claim.begin();
       let turn: Awaited<ReturnType<typeof runOne>>;
       try {
         turn = await runOne(message.text);
@@ -100,8 +109,7 @@ export async function openChat(
         send({ type: "error", code: "server_error", message: SERVER_ERROR_MESSAGE });
         return;
       } finally {
-        // The caller has the whole reply: their next message may start while this one is stored.
-        busy = false;
+        end();
       }
       await record(
         ctx,

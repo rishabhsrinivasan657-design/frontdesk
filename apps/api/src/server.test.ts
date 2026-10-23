@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type ChatContext } from "./chat/connection.js";
 import { InMemoryConversationLog } from "./chat/conversation-log.js";
+import { SessionHub } from "./chat/hub.js";
 import { buildServer } from "./server.js";
 import { BOOK, DETAILS, memoryDeps } from "./test-deps.js";
 import { TestClient } from "./ws-client.js";
@@ -19,6 +20,7 @@ async function start() {
     price: { input: 0, output: 0 },
     newSessionId: () => `sess_${++n}`,
     logger: { error: vi.fn() },
+    hub: new SessionHub(),
   };
   app = buildServer({ chat, webOrigins: [ORIGIN], logger: false });
   const address = await app.listen({ port: 0, host: "127.0.0.1" });
@@ -78,6 +80,16 @@ describe("api server", () => {
     expect(session.pending?.actionId).toBe(pending.actionId);
     await second.turn("Yes, please");
     expect((await second.next("action_result")).status).toBe("executed");
+  });
+
+  it("a reconnect while the old socket is open replaces it", async () => {
+    const { url } = await start();
+    const first = await connect(url);
+    const { sessionId } = await first.next("session");
+    await first.turn(BOOK);
+    const second = await connect(`${url}?sessionId=${encodeURIComponent(sessionId)}`);
+    expect((await second.next("session")).resumed).toBe(true);
+    expect(await first.closed).toBe(4000);
   });
 
   it("closes the socket on a frame over 16 KiB", async () => {

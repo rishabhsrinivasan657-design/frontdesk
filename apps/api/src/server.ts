@@ -40,6 +40,9 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
           opts.chat.logger.error({ err: error }, "opening the chat failed");
           socket.close(1011, "unavailable");
         });
+        socket.on("close", () => {
+          void ready.then((chat) => chat.close()).catch(() => undefined);
+        });
         socket.on("message", (data: Buffer) => {
           const raw = data.toString("utf8");
           void ready
