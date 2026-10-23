@@ -22,7 +22,7 @@ export const TURN_TEMPLATE = {
     "- Call check_availability before offering any time. book and reschedule take only slotIds it returned.",
     "- Call find_reservation before reschedule or cancel; they take only reservationIds it returned.",
     "- book, reschedule and cancel only propose a change. The system reads it back and the caller must confirm. Never say a change is done.",
-    '- So call book, reschedule or cancel as soon as you have what it needs. Never ask "shall I book it?" yourself: the read-back asks.',
+    '- Once the caller has picked an offered time and given their name and contact, call book right away (reschedule and cancel likewise once they have said what they want). Never ask "shall I book it?" yourself: the read-back asks.',
     "- Never say a dish is safe for an allergy. Put allergies in the booking notes.",
     "- Call request_handoff for: {triggers}.",
   ].join("\n"),

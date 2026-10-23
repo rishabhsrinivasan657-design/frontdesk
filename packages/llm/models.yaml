@@ -19,7 +19,7 @@ models:
     provider: gemini
     freeTier: { rpm: 10, rpd: 500 }
     pricePerMTok: { input: 0.3, output: 2.5 }
-    source: "secondary (ScriptByAI, 2026-10); confirm in AI Studio"
+    source: "rpd 500 confirmed by a 2026-10-23 429 (GenerateRequestsPerDayPerProjectPerModel-FreeTier); rpm secondary"
   gemini-3.6-flash:
     provider: gemini
     freeTier: { rpm: 5, rpd: 20 }
