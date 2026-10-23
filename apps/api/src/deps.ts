@@ -59,7 +59,8 @@ export async function buildDeps(
     clock,
     ids,
     llm,
-    sessions: new RedisSessionStore(redis),
+    // expiresAt comes from this clock, so the pending TTL must too.
+    sessions: new RedisSessionStore(redis, { now: () => clock.now().getTime() }),
     locks: new RedisSlotLock(redis),
     audit: new PgAuditLog(pg.db),
     handoffs: new PgHandoffQueue(pg.db),

@@ -87,6 +87,31 @@ describe("api against Redis and Postgres", () => {
     expect(job?.data.email.to).toBe("bo@example.com");
   });
 
+  it("confirms after reconnecting when the api clock is far from real time", async () => {
+    const past = await buildDeps({ ...env, FRONTDESK_NOW: "2020-01-08T14:00:00-05:00" });
+    const server = buildServer({ chat: past.chat, webOrigins: [], logger: false });
+    const pastUrl =
+      (await server.listen({ port: 0, host: "127.0.0.1" })).replace("http", "ws") + "/ws";
+    try {
+      const first = await TestClient.connect(pastUrl);
+      const { sessionId } = await first.next("session");
+      // 2020-01-08 is a Wednesday; Saturday the 11th at 19:00 is open.
+      await first.turn("A table for 4 on 2020-01-11 at 19:00");
+      await first.turn(DETAILS);
+      const pending = await first.next("pending_action");
+      first.close();
+      await first.closed;
+      const again = await TestClient.connect(`${pastUrl}?sessionId=${sessionId}`);
+      expect((await again.next("session")).pending?.actionId).toBe(pending.actionId);
+      await again.turn("Yes, please");
+      expect((await again.next("action_result")).status).toBe("executed");
+      again.close();
+    } finally {
+      await server.close();
+      await past.close();
+    }
+  });
+
   it("handoff writes a handoffs row and ends the conversation", async () => {
     const client = await TestClient.connect(url);
     const { sessionId } = await client.next("session");

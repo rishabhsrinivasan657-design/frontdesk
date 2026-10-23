@@ -13,11 +13,15 @@ afterAll(async () => {
   redis.disconnect();
 });
 
-runSessionStoreContract("redis", () => Promise.resolve(new RedisSessionStore(redis, { prefix })));
+// The contract's pending actions expire at a fixed 2026 time; measure TTLs from the same clock.
+const FIXTURE_NOW = Date.parse("2026-11-04T14:00:00-05:00");
+runSessionStoreContract("redis", () =>
+  Promise.resolve(new RedisSessionStore(redis, { prefix, now: () => FIXTURE_NOW })),
+);
 
 describe("RedisSessionStore", () => {
   it("takePending is atomic under 20 concurrent calls", async () => {
-    const store = new RedisSessionStore(redis, { prefix });
+    const store = new RedisSessionStore(redis, { prefix, now: () => FIXTURE_NOW });
     const id = uniqueId("sess");
     await store.putPending(pendingFor(id, "act_1"));
     const taken = await Promise.all(
