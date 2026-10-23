@@ -400,13 +400,14 @@ describe("openChat", () => {
     let next: Promise<void> | undefined;
     const socket = new FakeSocket();
     const send = socket.send.bind(socket);
-    let chat!: Awaited<ReturnType<typeof openChat>>;
+    const opened: { chat?: Awaited<ReturnType<typeof openChat>> } = {};
     socket.send = (text: string) => {
       send(text);
       // The browser unlocks on turn_metrics and the caller replies at once.
-      if (!next && text.includes('"turn_metrics"')) next = chat.onMessage(say(DETAILS));
+      if (!next && text.includes('"turn_metrics"')) next = opened.chat?.onMessage(say(DETAILS));
     };
-    chat = await openChat(socket, ctx);
+    const chat = await openChat(socket, ctx);
+    opened.chat = chat;
     await chat.onMessage(say(BOOK));
     await next;
     expect(socket.ofType("error")).toEqual([]);
