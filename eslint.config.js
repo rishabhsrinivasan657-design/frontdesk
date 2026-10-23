@@ -32,13 +32,24 @@ const CORE_BANNED_GLOBALS = [
 ];
 
 export default tseslint.config(
-  { ignores: ["**/dist-types/**", "**/*.tsbuildinfo", "**/node_modules/**", "pnpm-lock.yaml"] },
   {
-    files: ["**/*.ts"],
+    ignores: [
+      "**/dist-types/**",
+      "**/*.tsbuildinfo",
+      "**/node_modules/**",
+      "pnpm-lock.yaml",
+      "**/.next/**",
+      "**/next-env.d.ts",
+    ],
+  },
+  {
+    files: ["**/*.ts", "**/*.tsx"],
     extends: [tseslint.configs.recommendedTypeChecked],
     languageOptions: {
       parserOptions: {
-        projectService: { allowDefaultProject: ["*.ts", "packages/db/drizzle.config.ts"] },
+        projectService: {
+          allowDefaultProject: ["*.ts", "packages/db/drizzle.config.ts", "apps/web/next.config.ts"],
+        },
         tsconfigRootDir: import.meta.dirname,
       },
     },

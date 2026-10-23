@@ -1,12 +1,29 @@
 {
   "files": [],
   "references": [
-    { "path": "./apps/api" },
-    { "path": "./apps/worker" },
-    { "path": "./packages/core" },
-    { "path": "./packages/llm" },
-    { "path": "./packages/integrations" },
-    { "path": "./packages/db" },
-    { "path": "./packages/evals" }
+    {
+      "path": "./apps/api"
+    },
+    {
+      "path": "./apps/worker"
+    },
+    {
+      "path": "./apps/web"
+    },
+    {
+      "path": "./packages/core"
+    },
+    {
+      "path": "./packages/llm"
+    },
+    {
+      "path": "./packages/integrations"
+    },
+    {
+      "path": "./packages/db"
+    },
+    {
+      "path": "./packages/evals"
+    }
   ]
 }
