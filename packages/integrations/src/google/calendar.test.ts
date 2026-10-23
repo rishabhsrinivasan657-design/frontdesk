@@ -1,5 +1,5 @@
 import { CalendarUnavailableError, type NewBooking } from "@frontdesk/core";
-import type { calendar_v3 } from "googleapis";
+import type { calendar_v3 } from "@googleapis/calendar";
 import { describe, expect, it } from "vitest";
 import { createGoogleCalendar, type EventsApi, GoogleCalendar } from "./calendar.js";
 import { toEvent } from "./event-mapping.js";

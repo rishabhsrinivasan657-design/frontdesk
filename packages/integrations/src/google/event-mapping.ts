@@ -1,5 +1,5 @@
 import { type Booking, type NewBooking, normalizeContact } from "@frontdesk/core";
-import type { calendar_v3 } from "googleapis";
+import type { calendar_v3 } from "@googleapis/calendar";
 
 /** Marks events Front Desk created, so other events on the calendar are never read as bookings. */
 export const FRONTDESK_MARK = "frontdesk";

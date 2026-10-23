@@ -147,15 +147,18 @@ importers:
       '@frontdesk/core':
         specifier: workspace:*
         version: link:../core
+      '@googleapis/calendar':
+        specifier: ^20.1.0
+        version: 20.1.0
+      '@googleapis/gmail':
+        specifier: ^22.0.2
+        version: 22.0.2
       dotenv:
         specifier: ^18.0.8
         version: 18.0.8
       google-auth-library:
         specifier: ^11.3.1
         version: 11.3.1
-      googleapis:
-        specifier: ^187.0.0
-        version: 187.0.0
     devDependencies:
       tsx:
         specifier: ^4.23.15
@@ -684,6 +687,14 @@ packages:
     peerDependenciesMeta:
       '@modelcontextprotocol/sdk':
         optional: true
+
+  '@googleapis/calendar@20.1.0':
+    resolution: {integrity: sha512-bPO9wts48OAEhJn5UfgPC4FuyW/D6ufUzdXx0JHfeJIqg+O5bHvX/TenaAdbJuGhluhn5FLlyl6HzuhE4rFJqw==}
+    engines: {node: '>=22.0.0'}
+
+  '@googleapis/gmail@22.0.2':
+    resolution: {integrity: sha512-/Yg6UwLZaI74jY4Q8RhAFlEw4q+71c47oKlqr3ArGTG4HERa0S5NgzmTjECcV720tATnz9bpIvAnJ91VVnNHVA==}
+    engines: {node: '>=22.0.0'}
 
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -1396,10 +1407,6 @@ packages:
   googleapis-common@9.3.1:
     resolution: {integrity: sha512-wtv/e7JYgmtpIPcSez2EFD/Wx49DPsRX2rj15D7hTwc7tDsP82dcwoX/I4+zE38mu6S9PcghizzzADLf+ZMunA==}
     engines: {node: '>=22'}
-
-  googleapis@187.0.0:
-    resolution: {integrity: sha512-5hpTXGmBIJK43TmZQqQpVxu6IvM/NVy9e2ePbVWSkXSS46+221td6xgtcK9wEKr+MbxusPa0twIYcdGtNgwSWQ==}
-    engines: {node: '>=22.0.0'}
 
   gopd@1.2.0:
     resolution: {integrity: sha512-ZUKRh6/kUFoAiTAtTYPZJ3hw9wNxx+BIBOijnlG9PnrJsCcSjs1wyyD6vJpaYtgnzDrKYRSqf3OO6Rfa93xsRg==}
@@ -2263,6 +2270,18 @@ snapshots:
       - supports-color
       - utf-8-validate
 
+  '@googleapis/calendar@20.1.0':
+    dependencies:
+      googleapis-common: 9.3.1
+    transitivePeerDependencies:
+      - supports-color
+
+  '@googleapis/gmail@22.0.2':
+    dependencies:
+      googleapis-common: 9.3.1
+    transitivePeerDependencies:
+      - supports-color
+
   '@humanfs/core@0.19.2':
     dependencies:
       '@humanfs/types': 0.15.0
@@ -2928,13 +2947,6 @@ snapshots:
       google-logging-utils: 2.1.0
       qs: 6.16.1
       url-template: 2.0.8
-    transitivePeerDependencies:
-      - supports-color
-
-  googleapis@187.0.0:
-    dependencies:
-      google-auth-library: 11.3.1
-      googleapis-common: 9.3.1
     transitivePeerDependencies:
       - supports-color
 

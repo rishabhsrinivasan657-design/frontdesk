@@ -1,5 +1,5 @@
 import type { ConfirmationEmail, Mailer } from "@frontdesk/core";
-import { type gmail_v1, google } from "googleapis";
+import { type gmail_v1, gmail as gmailClient } from "@googleapis/gmail";
 import { createOAuthClient, GOOGLE_API_OPTIONS } from "./client.js";
 import type { GoogleEnv } from "./env.js";
 import { googleFailure } from "./errors.js";
@@ -25,6 +25,6 @@ export class GmailMailer implements Mailer {
 }
 
 export function createGmailMailer(env: GoogleEnv, timeZone: string): GmailMailer {
-  const api = google.gmail({ version: "v1", auth: createOAuthClient(env), ...GOOGLE_API_OPTIONS });
+  const api = gmailClient({ version: "v1", auth: createOAuthClient(env), ...GOOGLE_API_OPTIONS });
   return new GmailMailer({ messages: api.users.messages, timeZone });
 }

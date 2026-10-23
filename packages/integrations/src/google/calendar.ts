@@ -5,7 +5,7 @@ import {
   type NewBooking,
   normalizeContact,
 } from "@frontdesk/core";
-import { type calendar_v3, google } from "googleapis";
+import { type calendar_v3, calendar as calendarClient } from "@googleapis/calendar";
 import { createOAuthClient, GOOGLE_API_OPTIONS } from "./client.js";
 import type { GoogleEnv } from "./env.js";
 import { googleFailure, isUnavailable } from "./errors.js";
@@ -158,7 +158,7 @@ class GoneError extends Error {
 
 /** The real adapter for `env`'s demo calendar. `tag` isolates a test run's events. */
 export function createGoogleCalendar(env: GoogleEnv, opts: { tag?: string } = {}): GoogleCalendar {
-  const api = google.calendar({
+  const api = calendarClient({
     version: "v3",
     auth: createOAuthClient(env),
     ...GOOGLE_API_OPTIONS,

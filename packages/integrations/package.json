@@ -11,9 +11,10 @@
   },
   "dependencies": {
     "@frontdesk/core": "workspace:*",
+    "@googleapis/calendar": "^20.1.0",
+    "@googleapis/gmail": "^22.0.2",
     "dotenv": "^18.0.8",
-    "google-auth-library": "^11.3.1",
-    "googleapis": "^187.0.0"
+    "google-auth-library": "^11.3.1"
   },
   "devDependencies": {
     "tsx": "^4.23.15"
