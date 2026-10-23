@@ -1,7 +1,7 @@
 import { CalendarUnavailableError, type NewBooking } from "@frontdesk/core";
 import type { calendar_v3 } from "googleapis";
 import { describe, expect, it } from "vitest";
-import { type EventsApi, GoogleCalendar } from "./calendar.js";
+import { createGoogleCalendar, type EventsApi, GoogleCalendar } from "./calendar.js";
 import { toEvent } from "./event-mapping.js";
 
 const ana: NewBooking = {
@@ -122,5 +122,30 @@ describe("GoogleCalendar", () => {
       get: () => Promise.resolve({ data: { id: "x", summary: "Dentist", status: "confirmed" } }),
     });
     expect(await calendar(events).getReservation("x")).toBeUndefined();
+  });
+
+  it("an untagged adapter ignores events from test runs", async () => {
+    const testEvent = { ...toEvent(ana, "test-run"), id: "t", status: "confirmed" };
+    const { events } = fakeEvents({
+      list: () => Promise.resolve({ data: { items: [testEvent] } }),
+      get: () => Promise.resolve({ data: testEvent }),
+    });
+    expect(await calendar(events).listReservations({ from: ana.start, to: ana.end })).toEqual([]);
+    expect(await calendar(events).getReservation("t")).toBeUndefined();
+    expect(await calendar(events, "test-run").getReservation("t")).toMatchObject({ id: "t" });
+  });
+});
+
+describe("createGoogleCalendar", () => {
+  it("bounds each call at 10 s with no hidden retries", () => {
+    const cal = createGoogleCalendar({
+      clientId: "id",
+      clientSecret: "secret",
+      refreshToken: "refresh",
+      calendarId: "demo@group.calendar.google.com",
+    });
+    const options = (cal as unknown as { events: { context: { _options: unknown } } }).events
+      .context._options;
+    expect(options).toMatchObject({ timeout: 10_000, retry: false });
   });
 });

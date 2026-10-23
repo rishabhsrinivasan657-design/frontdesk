@@ -33,10 +33,14 @@ export function toEvent(b: NewBooking, tag?: string): calendar_v3.Schema$Event {
   };
 }
 
-/** The booking an event holds, or undefined for cancelled or non-Front Desk events. */
-export function fromEvent(e: calendar_v3.Schema$Event): Booking | undefined {
+/**
+ * The booking an event holds, or undefined for cancelled or non-Front Desk events, and for
+ * events whose run tag differs from `tag` (so a leaked test event never blocks a real slot).
+ */
+export function fromEvent(e: calendar_v3.Schema$Event, tag?: string): Booking | undefined {
   const p = e.extendedProperties?.private;
   if (e.status === "cancelled" || p?.[FRONTDESK_MARK] !== "1") return undefined;
+  if ((p[RUN_TAG] ?? undefined) !== tag) return undefined;
   const start = e.start?.dateTime;
   const end = e.end?.dateTime;
   const partySize = Number(p.partySize);

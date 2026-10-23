@@ -48,6 +48,9 @@ runCalendarContract(
         from: new Date("2026-01-01T00:00:00Z"),
         to: new Date("2028-01-01T00:00:00Z"),
       });
+      // An insert whose response was lost (e.g. a timeout) never reached `created`:
+      // delete anything still tagged with this run before failing on it.
+      for (const b of leftovers) await calendar.cancelReservation(b.id).catch(() => undefined);
       expect(leftovers, "test events left on the demo calendar").toEqual([]);
     },
   },

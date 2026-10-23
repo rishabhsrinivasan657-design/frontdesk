@@ -4,7 +4,12 @@ const NETWORK_CODES = new Set([
   "ENOTFOUND",
   "ETIMEDOUT",
   "EAI_AGAIN",
+  // gaxios 8 rejects a timed-out request with code "TimeoutError" (an AbortError as cause).
+  "TimeoutError",
+  "AbortError",
 ]);
+/** Calendar reports some rate limits as 403 with these reasons rather than 429. */
+const RATE_LIMIT_REASONS = new Set(["rateLimitExceeded", "userRateLimitExceeded"]);
 
 interface GoogleishError {
   name?: unknown;
@@ -46,11 +51,12 @@ export function googleFailure(error: unknown, what: string): Error {
   return new Error(`${what} failed: ${detail.trim()}`);
 }
 
-/** True for outages worth handing off on: network errors, timeouts, 429 and 5xx. */
+/** True for outages worth handing off on: network errors, timeouts, rate limits and 5xx. */
 export function isUnavailable(error: unknown): boolean {
   const e = (asObject(error) ?? {}) as GoogleishError;
   if (e.name === "AbortError" || e.name === "TimeoutError") return true;
   if (typeof e.code === "string" && NETWORK_CODES.has(e.code)) return true;
   const status = statusOf(e);
+  if (status === 403) return RATE_LIMIT_REASONS.has(reasonOf(e) ?? "");
   return status !== undefined && (status === 429 || status >= 500);
 }

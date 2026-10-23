@@ -14,7 +14,21 @@ function gaxiosError(status: number | undefined, data: unknown, code?: string) {
   });
 }
 
+/** What gaxios 8 actually rejects with on a timeout: code "TimeoutError", an AbortError as cause. */
+function gaxiosTimeout() {
+  return Object.assign(new Error("The operation was aborted."), {
+    code: "TimeoutError",
+    cause: Object.assign(new Error("aborted"), { name: "AbortError" }),
+  });
+}
+
 describe("googleFailure", () => {
+  it("describes a timeout", () => {
+    expect(googleFailure(gaxiosTimeout(), "Calendar").message).toBe(
+      "Calendar failed: network TimeoutError",
+    );
+  });
+
   it("names the operation, status and Google's reason", () => {
     const e = gaxiosError(404, { error: { code: 404, errors: [{ reason: "notFound" }] } });
     expect(googleFailure(e, "Calendar events.get").message).toBe(
@@ -51,7 +65,18 @@ describe("isUnavailable", () => {
     ["503", gaxiosError(503, {}), true],
     ["429", gaxiosError(429, {}), true],
     ["network", gaxiosError(undefined, undefined, "ENOTFOUND"), true],
-    ["timeout", Object.assign(new Error("t"), { name: "TimeoutError" }), true],
+    ["timeout (gaxios 8 shape)", gaxiosTimeout(), true],
+    [
+      "403 rateLimitExceeded",
+      gaxiosError(403, { error: { errors: [{ reason: "rateLimitExceeded" }] } }),
+      true,
+    ],
+    [
+      "403 userRateLimitExceeded",
+      gaxiosError(403, { error: { errors: [{ reason: "userRateLimitExceeded" }] } }),
+      true,
+    ],
+    ["403 forbidden", gaxiosError(403, { error: { errors: [{ reason: "forbidden" }] } }), false],
     ["404", gaxiosError(404, {}), false],
     ["invalid_grant", gaxiosError(400, { error: "invalid_grant" }), false],
   ])("%s → %s", (_label, error, expected) => {

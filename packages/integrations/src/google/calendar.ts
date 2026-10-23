@@ -6,7 +6,7 @@ import {
   normalizeContact,
 } from "@frontdesk/core";
 import { type calendar_v3, google } from "googleapis";
-import { createOAuthClient } from "./client.js";
+import { createOAuthClient, GOOGLE_API_OPTIONS } from "./client.js";
 import type { GoogleEnv } from "./env.js";
 import { googleFailure, isUnavailable } from "./errors.js";
 import { FRONTDESK_MARK, fromEvent, RUN_TAG, toEvent } from "./event-mapping.js";
@@ -52,7 +52,7 @@ export class GoogleCalendar implements Calendar {
       const { data } = await this.call("events.get", () =>
         this.events.get({ calendarId: this.calendarId, eventId: id }),
       );
-      return fromEvent(data);
+      return fromEvent(data, this.tag);
     } catch (error) {
       if (error instanceof GoneError) return undefined;
       throw error;
@@ -125,7 +125,7 @@ export class GoogleCalendar implements Calendar {
         }),
       );
       for (const e of data.items ?? []) {
-        const b = fromEvent(e);
+        const b = fromEvent(e, this.tag);
         if (b) bookings.push(b);
       }
       pageToken = data.nextPageToken ?? undefined;
@@ -134,7 +134,7 @@ export class GoogleCalendar implements Calendar {
   }
 
   private booking(data: calendar_v3.Schema$Event, what: string): Booking {
-    const b = fromEvent(data);
+    const b = fromEvent(data, this.tag);
     if (!b) throw new Error(`Calendar ${what} returned an event that is not a booking`);
     return b;
   }
@@ -158,6 +158,10 @@ class GoneError extends Error {
 
 /** The real adapter for `env`'s demo calendar. `tag` isolates a test run's events. */
 export function createGoogleCalendar(env: GoogleEnv, opts: { tag?: string } = {}): GoogleCalendar {
-  const api = google.calendar({ version: "v3", auth: createOAuthClient(env), timeout: 10_000 });
+  const api = google.calendar({
+    version: "v3",
+    auth: createOAuthClient(env),
+    ...GOOGLE_API_OPTIONS,
+  });
   return new GoogleCalendar({ events: api.events, calendarId: env.calendarId, ...opts });
 }
