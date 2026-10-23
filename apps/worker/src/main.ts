@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import type { Clock, Mailer } from "@frontdesk/core";
+import { type Clock, type Mailer, parseBusinessConfig } from "@frontdesk/core";
 import { createDb, PgAuditLog, PgHandoffQueue } from "@frontdesk/db";
+import { createGmailMailer, readGoogleEnv } from "@frontdesk/integrations";
 import { config, parse } from "dotenv";
 import { startConfirmationWorker } from "./worker.js";
 
@@ -15,9 +16,15 @@ const clock: Clock = {
   sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
 };
 
+/** Gmail, with times rendered in the business's time zone. Refuses to start without credentials. */
 function realMailer(): Mailer {
-  // M5 part B wires GmailMailer here. Until then the worker must not pretend to send.
-  throw new Error("No real Mailer yet: the Gmail adapter arrives in M5 part B");
+  const google = readGoogleEnv();
+  if (!google) {
+    throw new Error("Google credentials missing from .env: follow docs/google-setup.md");
+  }
+  const configPath = resolve(root, env("BUSINESS_CONFIG") || "businesses/casa-fiorella.yaml");
+  const config = parseBusinessConfig(readFileSync(configPath, "utf8"));
+  return createGmailMailer(google, config.business.timezone);
 }
 
 const pg = createDb(env("DATABASE_URL"));

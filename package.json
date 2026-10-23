@@ -10,7 +10,8 @@
     "typecheck": "tsc -b && tsc -p tests",
     "test": "vitest run --project unit",
     "test:infra": "vitest run --project infra",
-    "test:live": "LLM_LIVE=1 vitest run --project live",
+    "test:live": "LLM_LIVE=1 vitest run --project live --exclude \"packages/integrations/**\"",
+    "test:google": "vitest run --project live packages/integrations",
     "lint": "eslint . --max-warnings 0",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -19,7 +20,8 @@
     "verify": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test",
     "eval": "pnpm --filter @frontdesk/evals eval",
     "eval:ci": "pnpm eval --subset ci --check",
-    "db:migrate": "pnpm --filter @frontdesk/db db:migrate"
+    "db:migrate": "pnpm --filter @frontdesk/db db:migrate",
+    "google:auth": "pnpm --filter @frontdesk/integrations google:auth"
   },
   "devDependencies": {
     "@types/node": "^24.19.2",
