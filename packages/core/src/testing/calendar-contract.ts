@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import type { Calendar, NewBooking } from "../ports/calendar.js";
 
 const at = (iso: string) => new Date(iso);
@@ -13,9 +13,22 @@ const ana: NewBooking = {
   notes: "",
 };
 
-/** Shared behavior every Calendar implementation must have (in-memory here, Google in M5). */
-export function runCalendarContract(name: string, make: () => Calendar | Promise<Calendar>): void {
-  describe(`${name} Calendar contract`, () => {
+export interface ContractOptions {
+  /** Runs after each test, e.g. to delete the events a real calendar test created. */
+  afterEach?: () => Promise<void>;
+  /** Skips the whole suite, e.g. when credentials for a real adapter are missing. */
+  skip?: boolean;
+}
+
+/** Shared behavior every Calendar implementation must have (in-memory and Google). */
+export function runCalendarContract(
+  name: string,
+  make: () => Calendar | Promise<Calendar>,
+  opts: ContractOptions = {},
+): void {
+  describe.skipIf(opts.skip ?? false)(`${name} Calendar contract`, () => {
+    if (opts.afterEach) afterEach(opts.afterEach);
+
     it("create then get returns the booking with an id", async () => {
       const cal = await make();
       const created = await cal.createReservation(ana);
