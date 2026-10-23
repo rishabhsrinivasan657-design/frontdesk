@@ -11,6 +11,10 @@ describe("model catalog", () => {
       pricePerMTok: { input: 0.3, output: 2.5 },
     });
     expect(catalog.get("gemini-3.6-flash")?.freeTier).toEqual({ rpm: 5, rpd: 20 });
+    expect(catalog.get("gemini-3.1-flash-lite")?.pricePerMTok).toEqual({
+      input: 0.25,
+      output: 1.5,
+    });
   });
 
   it("rejects a negative rpm with LLMConfigError naming the path", () => {

@@ -28,7 +28,8 @@ export interface GeminiProviderOptions {
   timeoutMs?: number;
 }
 
-const DEFAULT_TIMEOUT_MS = 10_000;
+// Free-tier calls often take 10–20 s (docs/learning/llm-latency.md); past this the turn hands off.
+const DEFAULT_TIMEOUT_MS = 20_000;
 
 /** LLMProvider over the official @google/genai SDK (spec §7). */
 export class GeminiProvider implements LLMProvider {

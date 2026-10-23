@@ -15,16 +15,17 @@ const ok = {
 } as GenerateContentResponse;
 const Answer = z.object({ answer: z.string() });
 
-/** Gemini client that fails with the given errors first, then answers. */
-function client(failures: Error[] = []): GeminiModels {
-  const next = () => {
+/** Gemini client that fails with the given errors first, then answers; `models` logs each call. */
+function client(failures: Error[] = [], models: string[] = []): GeminiModels {
+  const next = ({ model }: { model: string }) => {
+    models.push(model);
     const error = failures.shift();
     return error ? Promise.reject(error) : Promise.resolve(ok);
   };
   return {
     generateContent: next,
-    generateContentStream: () =>
-      next().then((r) =>
+    generateContentStream: (params) =>
+      next(params).then((r) =>
         (async function* () {
           await Promise.resolve();
           yield r;
@@ -67,7 +68,7 @@ describe("createLLM", () => {
     const { d, takes } = deps({
       geminiClient: client([new ApiError({ message: "busy", status: 503 })]),
     });
-    const llm = createLLM({ LLM_PROVIDER: "gemini" }, d);
+    const llm = createLLM({ LLM_PROVIDER: "gemini", LLM_HEDGE_MODEL: "none" }, d);
     expect((await llm.generate(testRequest(), Answer)).value).toEqual({ answer: "yes" });
     expect(takes()).toBe(1); // retry runs inside the rate limiter
     const month = new Date().toISOString().slice(0, 7);
@@ -94,6 +95,8 @@ describe("createLLM", () => {
     [{ SPEND_CAP_USD_MONTHLY: "lots" }, /SPEND_CAP_USD_MONTHLY/],
     [{ LLM_TIMEOUT_MS: "0" }, /LLM_TIMEOUT_MS/],
     [{ LLM_TIMEOUT_MS: "soon" }, /LLM_TIMEOUT_MS/],
+    [{ LLM_HEDGE_MODEL: "gpt-9" }, /LLM_HEDGE_MODEL.*"none"/],
+    [{ LLM_HEDGE_AFTER_MS: "-1" }, /LLM_HEDGE_AFTER_MS/],
   ])("rejects invalid env %o", (env, message) => {
     expect(() => createLLM(env, deps().d)).toThrow(message);
   });
@@ -121,5 +124,44 @@ describe("createLLM", () => {
     await collect(createLLM({}, d).stream(testRequest())); // warms the cache
     await collect(createLLM({ LLM_RECORD: "1" }, d).stream(testRequest()));
     expect((await d.recordings.hashesFor("test")).size).toBe(1);
+  });
+
+  describe("hedge", () => {
+    async function modelsCalled(env: Record<string, string>) {
+      const models: string[] = [];
+      const { d, takes } = deps({ geminiClient: client([], models) });
+      await createLLM(env, d).generate(testRequest(), Answer);
+      return { models: models.sort(), takes: takes() };
+    }
+
+    it("races gemini-3.1-flash-lite against the default model on the free tier", async () => {
+      expect(await modelsCalled({})).toEqual({
+        models: ["gemini-3.1-flash-lite", "gemini-3.5-flash-lite"],
+        takes: 2, // each model spends its own rate-limit bucket
+      });
+    });
+
+    it.each([
+      ["LLM_HEDGE_MODEL=none", { LLM_HEDGE_MODEL: "none" }],
+      ["the hedge model is the primary", { LLM_MODEL: "gemini-3.1-flash-lite" }],
+      ["the paid tier", { LLM_TIER: "paid", SPEND_CAP_USD_MONTHLY: "5" }],
+      ["record mode", { LLM_RECORD: "1" }],
+    ])("is off for %s", async (_name, env) => {
+      expect((await modelsCalled(env)).models).toHaveLength(1);
+    });
+
+    it("falls back to the hedge model when the primary fails", async () => {
+      const models: string[] = [];
+      const busy = new ApiError({ message: "overloaded", status: 503 });
+      const { d } = deps({ geminiClient: client([busy, busy, busy], models) });
+      const llm = createLLM({ LLM_HEDGE_AFTER_MS: "60000" }, d);
+      expect((await llm.generate(testRequest(), Answer)).value).toEqual({ answer: "yes" });
+      expect(models).toEqual([
+        "gemini-3.5-flash-lite",
+        "gemini-3.5-flash-lite",
+        "gemini-3.5-flash-lite",
+        "gemini-3.1-flash-lite",
+      ]);
+    });
   });
 });

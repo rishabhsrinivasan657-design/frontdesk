@@ -5,6 +5,7 @@ import { ReplayProvider } from "./providers/replay.js";
 import type { RecordingStore } from "./recordings.js";
 import type { CacheStore, RateLimitStore, SpendStore } from "./stores/types.js";
 import { withCache } from "./wrappers/cache.js";
+import { withHedge } from "./wrappers/hedge.js";
 import { withRateLimit } from "./wrappers/rate-limit.js";
 import { withRecorder } from "./wrappers/recorder.js";
 import { type RetryOptions, withRetry } from "./wrappers/retry.js";
@@ -24,6 +25,8 @@ export interface CreateLLMDeps {
 const PROVIDERS = ["gemini", "replay"] as const;
 const TIERS = ["free", "paid"] as const;
 const DEFAULT_MODEL = "gemini-3.5-flash-lite";
+/** Free-tier model that races the primary (docs/learning/llm-latency.md); "none" turns it off. */
+const DEFAULT_HEDGE_MODEL = "gemini-3.1-flash-lite";
 
 function oneOf<T extends string>(name: string, value: string, allowed: readonly T[]): T {
   if (!(allowed as readonly string[]).includes(value)) {
@@ -36,8 +39,10 @@ function oneOf<T extends string>(name: string, value: string, allowed: readonly 
 
 /**
  * Builds the LLM stack from env (spec §7): LLM_PROVIDER, LLM_MODEL, LLM_TIER,
- * SPEND_CAP_USD_MONTHLY, LLM_RECORD, LLM_TIMEOUT_MS (per Gemini call), GEMINI_API_KEY. Gemini is wrapped outermost first:
- * spend cap → rate limiter → retry → cache → recorder. Replay is never wrapped.
+ * SPEND_CAP_USD_MONTHLY, LLM_RECORD, LLM_TIMEOUT_MS (per Gemini call), LLM_HEDGE_MODEL,
+ * LLM_HEDGE_AFTER_MS, GEMINI_API_KEY. Gemini is wrapped outermost first:
+ * spend cap → [hedge across two models →] rate limiter → retry → cache → recorder. The hedge runs
+ * on the free tier outside record mode only. Replay is never wrapped.
  * Throws LLMConfigError so the process refuses to start on a bad config.
  */
 export function createLLM(
@@ -75,21 +80,62 @@ export function createLLM(
     );
   }
 
+  const hedge = hedgeModel(env, catalog, model);
+  const afterMs = hedgeAfterMs(env);
+
   if (provider === "replay") return new ReplayProvider(deps.recordings, model);
 
   if (!deps.geminiClient && !env.GEMINI_API_KEY) {
     throw new LLMConfigError("GEMINI_API_KEY is not set; add it to the git-ignored .env");
   }
-  let llm: LLMProvider = new GeminiProvider({
-    model,
-    apiKey: env.GEMINI_API_KEY,
-    client: deps.geminiClient,
-    timeoutMs,
-  });
-  // Record mode skips the cache: a cached answer would never reach the recorder.
-  if (env.LLM_RECORD === "1") llm = withRecorder(llm, { store: deps.recordings });
-  else llm = withCache(llm, { store: deps.cache });
-  llm = withRetry(llm, deps.retry);
-  llm = withRateLimit(llm, { store: deps.rate, limits: spec.freeTier });
+  const record = env.LLM_RECORD === "1";
+  const stack = (id: string, limits: ModelSpec["freeTier"]): LLMProvider => {
+    let llm: LLMProvider = new GeminiProvider({
+      model: id,
+      apiKey: env.GEMINI_API_KEY,
+      client: deps.geminiClient,
+      timeoutMs,
+    });
+    // Record mode skips the cache: a cached answer would never reach the recorder.
+    if (record) llm = withRecorder(llm, { store: deps.recordings });
+    else llm = withCache(llm, { store: deps.cache });
+    llm = withRetry(llm, deps.retry);
+    return withRateLimit(llm, { store: deps.rate, limits });
+  };
+
+  let llm = stack(model, spec.freeTier);
+  // Paid tier: the loser's tokens would be billed but never counted. Record mode: replay
+  // answers as one model, so a recording must come from one model.
+  if (hedge && tier === "free" && !record) {
+    llm = withHedge(llm, stack(hedge.id, hedge.spec.freeTier), { afterMs });
+  }
   return withSpendCap(llm, { store: deps.spend, tier, capUsd, price: spec.pricePerMTok });
+}
+
+function hedgeModel(
+  env: Record<string, string | undefined>,
+  catalog: Map<string, ModelSpec>,
+  primary: string,
+): { id: string; spec: ModelSpec } | undefined {
+  const id = env.LLM_HEDGE_MODEL || DEFAULT_HEDGE_MODEL;
+  if (id === "none" || id === primary) return undefined;
+  const spec = catalog.get(id);
+  if (!spec) {
+    throw new LLMConfigError(
+      `LLM_HEDGE_MODEL must be "none" or one of: ${[...catalog.keys()].join(", ")} (got ${JSON.stringify(id)})`,
+    );
+  }
+  return { id, spec };
+}
+
+function hedgeAfterMs(env: Record<string, string | undefined>): number {
+  const text = env.LLM_HEDGE_AFTER_MS;
+  if (!text) return 0;
+  const ms = Number(text);
+  if (!(Number.isFinite(ms) && ms >= 0)) {
+    throw new LLMConfigError(
+      `LLM_HEDGE_AFTER_MS must be a number of milliseconds >= 0 (got ${JSON.stringify(text)})`,
+    );
+  }
+  return ms;
 }
