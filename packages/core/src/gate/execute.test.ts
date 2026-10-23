@@ -37,7 +37,12 @@ describe("confirmAndExecute", () => {
     expect(created).toMatchObject({ tableId: slot.tableId, partySize: 4, name: "Bo Chen" });
     expect(stages(fx, action.id)).toEqual(["proposed", "confirmed", "executed"]);
     expect(fx.deps.mailer.sent).toHaveLength(1);
-    expect(fx.deps.mailer.sent[0]).toMatchObject({ kind: "book", to: "bo@example.com" });
+    expect(fx.deps.mailer.sent[0]).toMatchObject({
+      kind: "book",
+      to: "bo@example.com",
+      sessionId: "s1",
+      actionId: action.id,
+    });
   });
 
   it("refuses a wrong action id", async () => {

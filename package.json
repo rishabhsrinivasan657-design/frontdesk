@@ -18,7 +18,8 @@
     "infra:down": "docker compose down",
     "verify": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test",
     "eval": "pnpm --filter @frontdesk/evals eval",
-    "eval:ci": "pnpm eval --subset ci --check"
+    "eval:ci": "pnpm eval --subset ci --check",
+    "db:migrate": "pnpm --filter @frontdesk/db db:migrate"
   },
   "devDependencies": {
     "@types/node": "^24.19.2",

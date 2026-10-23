@@ -38,7 +38,7 @@ export default tseslint.config(
     extends: [tseslint.configs.recommendedTypeChecked],
     languageOptions: {
       parserOptions: {
-        projectService: { allowDefaultProject: ["*.ts"] },
+        projectService: { allowDefaultProject: ["*.ts", "packages/db/drizzle.config.ts"] },
         tsconfigRootDir: import.meta.dirname,
       },
     },

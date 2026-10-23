@@ -39,6 +39,7 @@ export const HANDOFF_REASONS = [
   "rate_limited",
   "llm_unavailable",
   "calendar_unavailable",
+  "email_failed",
 ] as const;
 export type HandoffReason = (typeof HANDOFF_REASONS)[number];
 

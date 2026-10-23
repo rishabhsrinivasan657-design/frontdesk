@@ -6,6 +6,9 @@ export interface ConfirmationEmail {
   to: string;
   booking: Booking;
   businessName: string;
+  /** The session and action this email confirms, so each send attempt can be audited. */
+  sessionId: string;
+  actionId: string;
 }
 
 /** Confirmation emails are a side effect of a confirmed write, never a tool (spec §6). */

@@ -3,3 +3,5 @@ pnpm-lock.yaml
 *.tsbuildinfo
 docs/superpowers
 packages/evals/recordings
+# Written by drizzle-kit; reformatting would fight the generator.
+packages/db/drizzle/meta

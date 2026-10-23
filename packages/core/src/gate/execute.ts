@@ -124,6 +124,8 @@ export async function confirmAndExecute(
         to: booking.contact,
         booking,
         businessName: deps.config.business.name,
+        sessionId: action.sessionId,
+        actionId: action.id,
       });
       emailed = true;
     } catch {
