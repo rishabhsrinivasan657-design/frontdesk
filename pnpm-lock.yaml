@@ -56,6 +56,9 @@ importers:
       '@frontdesk/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@frontdesk/integrations':
+        specifier: workspace:*
+        version: link:../../packages/integrations
       bullmq:
         specifier: ^6.4.0
         version: 6.4.0(ioredis@6.0.0)(pg@8.23.1)

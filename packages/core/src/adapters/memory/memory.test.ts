@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import type { AuditEvent, PendingAction } from "../../agent/types.js";
 import { CalendarUnavailableError } from "../../ports/calendar.js";
 import { runCalendarContract } from "../../testing/calendar-contract.js";
+import { runMailerContract } from "../../testing/mailer-contract.js";
 import {
   InMemoryAuditLog,
   InMemoryCalendar,
+  InMemoryMailer,
   InMemorySessionStore,
   InMemorySlotLock,
   ManualClock,
@@ -12,6 +14,10 @@ import {
 } from "./index.js";
 
 runCalendarContract("InMemoryCalendar", () => new InMemoryCalendar());
+runMailerContract("InMemoryMailer", () => ({
+  mailer: new InMemoryMailer(),
+  to: "ana@example.com",
+}));
 
 const pending = (id: string): PendingAction => ({
   id,
