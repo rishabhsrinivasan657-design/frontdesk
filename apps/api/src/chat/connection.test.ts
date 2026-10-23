@@ -339,4 +339,17 @@ describe("openChat", () => {
     expect(logged).not.toContain(chat.sessionId);
     expect(logged).not.toContain("bo@example.com");
   });
+
+  it("a failed conversation start is retried before the next turn is stored", async () => {
+    const { ctx, log } = context();
+    const start = log.start.bind(log);
+    let failures = 1;
+    log.start = (c) => (failures-- > 0 ? Promise.reject(new Error("db blip")) : start(c));
+    const socket = new FakeSocket();
+    const chat = await openChat(socket, ctx);
+    await chat.onMessage(say(BOOK));
+    await chat.onMessage(say(DETAILS));
+    expect(log.started.map((c) => c.id)).toEqual([chat.sessionId]);
+    expect(log.turns.map((t) => t.turnIndex)).toEqual([2]);
+  });
 });

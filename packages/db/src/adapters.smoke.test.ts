@@ -129,6 +129,19 @@ describe("PgConversations", () => {
     createdAt: "2026-11-06T23:03:00.000Z",
   });
 
+  it("start is idempotent", async () => {
+    const conversationId = id("s");
+    const c = {
+      id: conversationId,
+      source: "live" as const,
+      startedAt: "2026-11-06T23:00:00.000Z",
+    };
+    await conversations.start(c);
+    await conversations.start({ ...c, startedAt: "2026-11-06T23:05:00.000Z" });
+    await conversations.recordTurn(turn(conversationId));
+    expect(await conversations.turns(conversationId)).toHaveLength(1);
+  });
+
   it("stores a turn with every metric and reads it back", async () => {
     const conversationId = id("s");
     await conversations.start({

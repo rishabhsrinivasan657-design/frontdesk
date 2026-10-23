@@ -160,7 +160,7 @@ async function sessionMessage(
   return message;
 }
 
-/** Stores the turn (and the conversation on its first turn); a handoff ends the conversation. */
+/** Stores the turn (starting its conversation if needed); a handoff ends the conversation. */
 async function record(
   ctx: ChatContext,
   sessionId: string,
@@ -175,13 +175,12 @@ async function record(
   const position = callerTurns.findIndex((t) => t.turnId === result.turnId);
   const turnIndex = position === -1 ? (session?.turn ?? 1) : position + 1;
   const now = ctx.deps.clock.now();
-  if (turnIndex === 1) {
-    await ctx.log.start({
-      id: sessionId,
-      source: "live",
-      startedAt: session?.createdAt ?? now.toISOString(),
-    });
-  }
+  // Every turn (re)starts its conversation: one failed start must not orphan the later turns.
+  await ctx.log.start({
+    id: sessionId,
+    source: "live",
+    startedAt: session?.createdAt ?? now.toISOString(),
+  });
   await ctx.log.recordTurn(
     toTurnRecord({
       id: result.turnId,

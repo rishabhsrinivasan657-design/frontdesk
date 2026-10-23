@@ -15,6 +15,7 @@ export interface ConversationEnd {
 
 /** Where conversations and their turns are stored (spec §3). `PgConversations` satisfies it. */
 export interface ConversationLog {
+  /** Idempotent: starting a conversation that exists does nothing. */
   start(c: ConversationStart): Promise<void>;
   recordTurn(t: TurnRecord): Promise<void>;
   end(id: string, e: ConversationEnd): Promise<void>;
@@ -26,7 +27,7 @@ export class InMemoryConversationLog implements ConversationLog {
   readonly ended: (ConversationEnd & { id: string })[] = [];
 
   start(c: ConversationStart): Promise<void> {
-    this.started.push(c);
+    if (!this.started.some((s) => s.id === c.id)) this.started.push(c);
     return Promise.resolve();
   }
 
