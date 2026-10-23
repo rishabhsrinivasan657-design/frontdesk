@@ -30,8 +30,9 @@ export interface TurnRecord {
 export class PgConversations {
   constructor(private readonly db: Db) {}
 
+  /** Idempotent: a second start for the same id keeps the first row. */
   async start(c: { id: string; source: ConversationSource; startedAt: string }): Promise<void> {
-    await this.db.insert(conversations).values(c);
+    await this.db.insert(conversations).values(c).onConflictDoNothing();
   }
 
   async end(

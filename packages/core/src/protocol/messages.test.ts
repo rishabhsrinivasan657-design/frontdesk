@@ -77,3 +77,48 @@ describe("ClientMessageSchema", () => {
     ).toBe(true);
   });
 });
+
+describe("session and error messages (M6)", () => {
+  const session = {
+    type: "session",
+    sessionId: "sess_1",
+    resumed: true,
+    transcript: [{ role: "caller", text: "Hi", turnId: "turn_1" }],
+    pending: {
+      actionId: "act_1",
+      kind: "book",
+      summary: "To confirm: …",
+      expiresAt: "2026-11-04T14:05:00-05:00",
+    },
+  } as const;
+
+  it("parses a resumed session message with a pending action", () => {
+    expect(ServerMessageSchema.parse(session)).toEqual(session);
+  });
+
+  it("parses a session message after a handoff", () => {
+    const m = {
+      type: "session",
+      sessionId: "sess_1",
+      resumed: true,
+      transcript: [],
+      handoff: { reason: "human_requested", message: "Passing you on." },
+    };
+    expect(ServerMessageSchema.parse(m)).toEqual(m);
+  });
+
+  it("rejects a session message with an unknown field", () => {
+    expect(ServerMessageSchema.safeParse({ ...session, admin: true }).success).toBe(false);
+  });
+
+  it("parses an error message", () => {
+    const m = { type: "error", code: "busy", message: "One moment." };
+    expect(ServerMessageSchema.parse(m)).toEqual(m);
+  });
+
+  it("rejects an unknown error code", () => {
+    expect(
+      ServerMessageSchema.safeParse({ type: "error", code: "teapot", message: "x" }).success,
+    ).toBe(false);
+  });
+});
