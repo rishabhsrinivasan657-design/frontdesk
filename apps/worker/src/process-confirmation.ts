@@ -1,4 +1,4 @@
-import type { Clock, HandoffQueue, IdGenerator, Mailer } from "@frontdesk/core";
+import type { Clock, HandoffQueue, HandoffTicket, Mailer } from "@frontdesk/core";
 import type { EmailAttempt } from "@frontdesk/db";
 import { parseConfirmationJob } from "./confirmation-job.js";
 
@@ -12,7 +12,38 @@ export interface ProcessDeps {
   attempts: EmailAttemptLog;
   handoffs: HandoffQueue;
   clock: Clock;
-  ids: IdGenerator;
+}
+
+/** Saving the final handoff is retried this many times (1 s, 2 s apart) before giving up loudly. */
+const HANDOFF_TRIES = 3;
+const MAX_ERROR_CHARS = 300;
+
+/**
+ * audit_log can never be cleaned up, so a token must never reach it. Adapters are meant
+ * to throw sanitized errors already (part B); this is the second line of defense.
+ */
+export function redactError(message: string): string {
+  return message
+    .replace(/Bearer\s+\S+/gi, "Bearer [redacted]")
+    .replace(/\bya29\.\S+/g, "[redacted]")
+    .replace(/\b1\/\/\S+/g, "[redacted]")
+    .slice(0, MAX_ERROR_CHARS);
+}
+
+async function saveHandoff(deps: ProcessDeps, ticket: HandoffTicket): Promise<void> {
+  for (let tryNo = 1; ; tryNo++) {
+    try {
+      await deps.handoffs.enqueue(ticket);
+      return;
+    } catch (error) {
+      if (tryNo >= HANDOFF_TRIES) {
+        const why = error instanceof Error ? error.message : String(error);
+        console.error(`HANDOFF LOST for ${ticket.sessionId}: ${ticket.summary} (${why})`);
+        return;
+      }
+      await deps.clock.sleep(1000 * 2 ** (tryNo - 1));
+    }
+  }
 }
 
 /**
@@ -47,10 +78,11 @@ export async function processConfirmation(
   try {
     await deps.mailer.sendConfirmation(email);
   } catch (error) {
-    await record(false, error instanceof Error ? error.message : String(error));
+    await record(false, redactError(error instanceof Error ? error.message : String(error)));
     if (attempt.made + 1 >= attempt.max) {
-      await deps.handoffs.enqueue({
-        id: deps.ids("handoff"),
+      // A fixed id per action: if this final attempt is re-run (worker crash), no second ticket.
+      await saveHandoff(deps, {
+        id: `handoff_email_${email.actionId}`,
         sessionId: email.sessionId,
         reason: "email_failed",
         summary: `Confirmation email to ${email.to} failed after ${attempt.max} attempts; the ${email.kind} for ${email.booking.name} at ${email.booking.start.toISOString()} stands.`,

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { InMemoryHandoffQueue, ManualClock, sequentialIds } from "@frontdesk/core";
+import { InMemoryHandoffQueue, ManualClock } from "@frontdesk/core";
 import { afterEach, describe, expect, it } from "vitest";
 import { enqueueConfirmation } from "./confirmation-job.js";
 import { email, MemoryAttemptLog, ScriptedMailer } from "./fixtures.js";
@@ -33,7 +33,6 @@ function setup(outcomes: boolean[] = []) {
       attempts,
       handoffs,
       clock: new ManualClock(new Date("2026-11-06T23:00:00.000Z")),
-      ids: sequentialIds(),
     },
   });
   closers.push(async () => {

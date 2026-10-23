@@ -1,7 +1,7 @@
-import { InMemoryHandoffQueue, ManualClock, sequentialIds } from "@frontdesk/core";
+import { InMemoryHandoffQueue, ManualClock } from "@frontdesk/core";
 import { describe, expect, it } from "vitest";
 import { email, MemoryAttemptLog, ScriptedMailer } from "./fixtures.js";
-import { processConfirmation } from "./process-confirmation.js";
+import { type ProcessDeps, processConfirmation } from "./process-confirmation.js";
 
 const asJob = () => JSON.parse(JSON.stringify({ email })) as unknown;
 
@@ -9,12 +9,11 @@ function setup(outcomes: boolean[] = []) {
   const mailer = new ScriptedMailer(outcomes);
   const attempts = new MemoryAttemptLog();
   const handoffs = new InMemoryHandoffQueue();
-  const deps = {
+  const deps: ProcessDeps = {
     mailer,
     attempts,
     handoffs,
     clock: new ManualClock(new Date("2026-11-06T23:00:00.000Z")),
-    ids: sequentialIds(),
   };
   return { mailer, attempts, handoffs, deps };
 }
@@ -61,7 +60,7 @@ describe("processConfirmation", () => {
     await expect(processConfirmation(asJob(), { made: 4, max: 5 }, deps)).rejects.toThrow();
     expect(handoffs.tickets).toEqual([
       {
-        id: "handoff_1",
+        id: "handoff_email_act_1",
         sessionId: "s1",
         reason: "email_failed",
         summary:
@@ -99,5 +98,41 @@ describe("processConfirmation", () => {
       /smtp 503/,
     );
     expect(handoffs.tickets).toHaveLength(1);
+  });
+
+  it("retries a failed handoff enqueue so the final failure still reaches a human", async () => {
+    const { handoffs, deps } = setup([false]);
+    const enqueue = handoffs.enqueue.bind(handoffs);
+    let calls = 0;
+    deps.handoffs = {
+      enqueue: (t) => (++calls < 3 ? Promise.reject(new Error("db down")) : enqueue(t)),
+    };
+    await expect(processConfirmation(asJob(), { made: 4, max: 5 }, deps)).rejects.toThrow(
+      /smtp 503/,
+    );
+    expect(handoffs.tickets.map((t) => t.id)).toEqual(["handoff_email_act_1"]);
+  });
+
+  it("still rethrows the send error when the handoff can't be saved at all", async () => {
+    const { deps } = setup([false]);
+    deps.handoffs = { enqueue: () => Promise.reject(new Error("db down")) };
+    await expect(processConfirmation(asJob(), { made: 4, max: 5 }, deps)).rejects.toThrow(
+      /smtp 503/,
+    );
+  });
+
+  it("redacts tokens and caps the error before it is audited", async () => {
+    const { attempts, deps } = setup();
+    deps.mailer = {
+      sendConfirmation: () =>
+        Promise.reject(
+          new Error(`401 Authorization: Bearer ya29.SECRET refresh 1//0gSECRET ${"x".repeat(500)}`),
+        ),
+    };
+    await expect(processConfirmation(asJob(), { made: 0, max: 5 }, deps)).rejects.toThrow();
+    const error = attempts.attempts[0]!.error!;
+    expect(error).not.toMatch(/SECRET/);
+    expect(error).toContain("[redacted]");
+    expect(error.length).toBeLessThanOrEqual(300);
   });
 });

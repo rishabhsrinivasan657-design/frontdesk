@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { Clock, Mailer } from "@frontdesk/core";
@@ -29,7 +28,6 @@ const worker = startConfirmationWorker({
     attempts: new PgAuditLog(pg.db),
     handoffs: new PgHandoffQueue(pg.db),
     clock,
-    ids: (prefix) => `${prefix}_${randomUUID()}`,
   },
 });
 console.log("confirmation worker started");

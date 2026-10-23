@@ -25,26 +25,28 @@ This guide covers **part A**: the database and the worker. Part B (Google) exten
 - **DB migration.** A numbered SQL file that moves the database schema forward one step. Drizzle records which ones have run in a `drizzle.__drizzle_migrations` table, so running `migrate` again does nothing. We edit `schema.ts`, run `pnpm --filter @frontdesk/db db:generate`, and commit the new SQL file. Never edit a migration that has already run somewhere; add a new one.
 - **Two databases.** `frontdesk` holds live and pilot data; `frontdesk_eval` holds eval runs. Both get the same migrations, so real and simulated numbers never mix (spec §10).
 - **Advisory lock.** `migrate` first takes a Postgres "advisory lock", a named lock only our code checks. If two processes migrate at once (two test files, or the api and worker starting together), the second waits instead of applying the same file twice.
-- **Trigger.** A function Postgres runs automatically on some event. Ours runs _before_ any UPDATE, DELETE or TRUNCATE on `audit_log` and raises an error, so the change never happens. That makes "append-only" true even for someone with a SQL prompt, not just for our TypeScript.
+- **Trigger.** A function Postgres runs automatically on some event. Ours runs _before_ any UPDATE, DELETE or TRUNCATE on `audit_log` and raises an error, so the change never happens. That makes "append-only" true even for someone with a SQL prompt, not just for our TypeScript. One limit: the app connects as the table's owner (a superuser in Docker), and an owner can drop the trigger. A stricter setup gives the app a separate role with only `SELECT, INSERT` on `audit_log`.
 - **Job queue.** Sending an email is slow and can fail, so the api doesn't do it during the conversation. It puts a _job_ (a small JSON message) on a queue in Redis, and a separate worker process takes jobs off and does them. BullMQ is the library that manages this.
-- **Retries with backoff.** A failed job is tried again, up to 5 attempts in total, waiting 2 s, 4 s, 8 s, then 16 s between tries (exponential backoff). Waiting longer each time gives a flaky service a chance to recover. Every attempt is written to `audit_log` as `email_sent` or `email_failed`. After the 5th failure, a ticket goes to the handoff queue so a human can contact the guest. The booking still stands.
+- **Retries with backoff.** A failed job is tried again, up to 5 attempts in total, waiting 2 s, 4 s, 8 s, then 16 s between tries (exponential backoff). Waiting longer each time gives a flaky service a chance to recover. Every attempt is written to `audit_log` as `email_sent` or `email_failed`. After the 5th failure, a ticket goes to the handoff queue so a human can contact the guest. Its id is fixed per action (`handoff_email_<actionId>`), so a re-run can't create a second ticket, and saving it is retried if the database blips. The booking still stands.
 - **Idempotent job id.** The job id is `confirm-<actionId>`. BullMQ ignores a second job with the same id, and completed ids are kept for 24 hours, so a duplicate enqueue can't send a second email.
 - **Serialization.** A job travels through Redis as JSON, and JSON has no dates: `booking.start` arrives as a string. `parseConfirmationJob` validates the data with Zod and turns those strings back into `Date`s.
 
 ## 3. Potential holes and the tests that guard them
 
-| What could go wrong                                                 | Guarded by                                                                                                      |
-| ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| Someone edits or deletes an audit row                               | `audit-append-only.smoke.test.ts` › "rejects UPDATE", "rejects DELETE", "rejects TRUNCATE" (both databases)     |
-| The eval database is missing a table the live one has               | `migrate.smoke.test.ts` › "creates every table" (runs for live and eval)                                        |
-| Two processes migrate at once and one crashes                       | `migrate.smoke.test.ts` and `audit-append-only.smoke.test.ts` migrate in parallel; the advisory lock serializes |
-| A turn is saved without its latency or cost fields                  | `adapters.smoke.test.ts` › "stores a turn with every metric and reads it back"                                  |
-| An email is never retried, or retried forever                       | `worker.smoke.test.ts` › "five failures: five audited attempts, one handoff, no sixth try"                      |
-| The handoff fires on every failed attempt instead of the last       | `process-confirmation.test.ts` › "hands off only on the final attempt"                                          |
-| A duplicate enqueue sends a second email                            | `worker.smoke.test.ts` › "enqueueing the same action again after it was sent sends nothing"                     |
-| The mailer gets string dates from Redis                             | `process-confirmation.test.ts` › "revives booking dates before sending"                                         |
-| An audit write fails after a successful send, so BullMQ sends again | `process-confirmation.test.ts` › "does not fail (and so never re-sends) when auditing a successful send fails"  |
-| Garbage job data reaches the mailer                                 | `process-confirmation.test.ts` › "rejects malformed job data without sending"                                   |
+| What could go wrong                                                      | Guarded by                                                                                                      |
+| ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| Someone edits or deletes an audit row                                    | `audit-append-only.smoke.test.ts` › "rejects UPDATE", "rejects DELETE", "rejects TRUNCATE" (both databases)     |
+| The eval database is missing a table the live one has                    | `migrate.smoke.test.ts` › "creates every table" (runs for live and eval)                                        |
+| Two processes migrate at once and one crashes                            | `migrate.smoke.test.ts` and `audit-append-only.smoke.test.ts` migrate in parallel; the advisory lock serializes |
+| A turn is saved without its latency or cost fields                       | `adapters.smoke.test.ts` › "stores a turn with every metric and reads it back"                                  |
+| An email is never retried, or retried forever                            | `worker.smoke.test.ts` › "five failures: five audited attempts, one handoff, no sixth try"                      |
+| The handoff fires on every failed attempt instead of the last            | `process-confirmation.test.ts` › "hands off only on the final attempt"                                          |
+| A duplicate enqueue sends a second email                                 | `worker.smoke.test.ts` › "enqueueing the same action again after it was sent sends nothing"                     |
+| The mailer gets string dates from Redis                                  | `process-confirmation.test.ts` › "revives booking dates before sending"                                         |
+| An audit write fails after a successful send, so BullMQ sends again      | `process-confirmation.test.ts` › "does not fail (and so never re-sends) when auditing a successful send fails"  |
+| Garbage job data reaches the mailer                                      | `process-confirmation.test.ts` › "rejects malformed job data without sending"                                   |
+| The database is down on the last attempt and the handoff is lost         | `process-confirmation.test.ts` › "retries a failed handoff enqueue so the final failure still reaches a human"  |
+| A token in an adapter's error message lands in the undeletable audit log | `process-confirmation.test.ts` › "redacts tokens and caps the error before it is audited"                       |
 
 ## 4. Quiz
 

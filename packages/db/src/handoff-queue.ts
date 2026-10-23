@@ -9,14 +9,18 @@ export class PgHandoffQueue implements HandoffQueue {
   constructor(private readonly db: Db) {}
 
   async enqueue(ticket: HandoffTicket): Promise<void> {
-    await this.db.insert(handoffs).values({
-      id: ticket.id,
-      sessionId: ticket.sessionId,
-      reason: ticket.reason,
-      summary: ticket.summary,
-      transcript: ticket.transcript,
-      createdAt: ticket.createdAt,
-    });
+    await this.db
+      .insert(handoffs)
+      .values({
+        id: ticket.id,
+        sessionId: ticket.sessionId,
+        reason: ticket.reason,
+        summary: ticket.summary,
+        transcript: ticket.transcript,
+        createdAt: ticket.createdAt,
+      })
+      // Ticket ids are deterministic for retried producers (e.g. the email worker).
+      .onConflictDoNothing({ target: handoffs.id });
   }
 
   /** Unresolved tickets, oldest first. */

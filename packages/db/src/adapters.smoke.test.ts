@@ -90,6 +90,22 @@ describe("PgHandoffQueue", () => {
     const open = await queue.open();
     expect(open.find((t) => t.id === ticket.id)).toEqual(ticket);
   });
+
+  it("ignores a second enqueue of the same ticket id", async () => {
+    const queue = new PgHandoffQueue(conn.db);
+    const ticket: HandoffTicket = {
+      id: id("handoff"),
+      sessionId: "s1",
+      reason: "email_failed",
+      summary: "first",
+      transcript: [],
+      createdAt: "2026-11-06T23:02:00.000Z",
+    };
+    await queue.enqueue(ticket);
+    await queue.enqueue({ ...ticket, summary: "second" });
+    const mine = (await queue.open()).filter((t) => t.id === ticket.id);
+    expect(mine.map((t) => t.summary)).toEqual(["first"]);
+  });
 });
 
 describe("PgConversations", () => {

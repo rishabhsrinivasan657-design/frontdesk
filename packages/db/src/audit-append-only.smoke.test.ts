@@ -9,7 +9,12 @@ describe.each(Object.entries(TEST_DATABASES))("audit_log on the %s database", (_
   const actionId = `act_${randomUUID()}`;
   const count = async () =>
     Number(
-      (await client.query<{ count: string }>("select count(*) from audit_log")).rows[0]!.count,
+      (
+        await client.query<{ count: string }>(
+          "select count(*) from audit_log where action_id = $1",
+          [actionId],
+        )
+      ).rows[0]!.count,
     );
 
   beforeAll(async () => {
