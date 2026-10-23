@@ -52,5 +52,34 @@ export const ServerMessageSchema = z.discriminatedUnion("type", [
     tokensIn: z.number().int().nonnegative(),
     tokensOut: z.number().int().nonnegative(),
   }),
+  /** Sent once per socket: the server-issued session id and the state to restore (spec §11). */
+  z.strictObject({
+    type: z.literal("session"),
+    sessionId: z.string(),
+    resumed: z.boolean(),
+    transcript: z.array(
+      z.strictObject({
+        role: z.enum(["caller", "agent"]),
+        text: z.string(),
+        turnId: z.string(),
+      }),
+    ),
+    pending: z
+      .strictObject({
+        actionId: z.string(),
+        kind: z.enum(ACTION_KINDS),
+        summary: z.string(),
+        expiresAt: z.string(),
+      })
+      .optional(),
+    handoff: z.strictObject({ reason: z.enum(HANDOFF_REASONS), message: z.string() }).optional(),
+  }),
+  z.strictObject({
+    type: z.literal("error"),
+    code: z.enum(["bad_message", "busy", "server_error"]),
+    message: z.string(),
+  }),
 ]);
 export type ServerMessage = z.infer<typeof ServerMessageSchema>;
+
+export type SessionMessage = Extract<ServerMessage, { type: "session" }>;

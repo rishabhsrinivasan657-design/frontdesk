@@ -47,6 +47,7 @@ export {
   ServerMessageSchema,
   type ClientMessage,
   type ServerMessage,
+  type SessionMessage,
 } from "./protocol/messages.js";
 export * from "./agent/index.js";
 export * from "./gate/index.js";
