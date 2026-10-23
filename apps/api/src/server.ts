@@ -1,6 +1,7 @@
 import websocket from "@fastify/websocket";
 import Fastify, { type FastifyInstance } from "fastify";
 import { type Chat, type ChatContext, openChat } from "./chat/connection.js";
+import { safeError, safeRequest } from "./chat/log-safety.js";
 
 /** The largest client frame accepted; a user_text is at most 2000 characters. */
 export const MAX_PAYLOAD_BYTES = 16_384;
@@ -9,12 +10,22 @@ export interface ServerOptions {
   chat: ChatContext;
   /** Browser origins allowed to open a socket (cross-site WebSocket hijacking). */
   webOrigins: string[];
-  logger?: boolean;
+  /** false for silence; a stream to capture log lines (tests). Defaults to stdout. */
+  logger?: boolean | { stream: { write(line: string): void } };
 }
 
 /** `GET /ws`: one socket ↔ one session (spec §8). `?sessionId=` resumes after a drop (spec §11). */
 export function buildServer(opts: ServerOptions): FastifyInstance {
-  const app = Fastify({ logger: opts.logger ?? true });
+  const logger = opts.logger ?? true;
+  const app = Fastify({
+    logger:
+      logger === false
+        ? false
+        : {
+            ...(logger === true ? {} : { stream: logger.stream }),
+            serializers: { req: safeRequest },
+          },
+  });
   void app.register(websocket, { options: { maxPayload: MAX_PAYLOAD_BYTES } });
 
   app.get("/health", () => ({ ok: true }));
@@ -37,7 +48,7 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
           typeof req.query.sessionId === "string" ? req.query.sessionId : undefined,
         );
         ready.catch((error: unknown) => {
-          opts.chat.logger.error({ err: error }, "opening the chat failed");
+          opts.chat.logger.error({ err: safeError(error) }, "opening the chat failed");
           socket.close(1011, "unavailable");
         });
         socket.on("close", () => {
@@ -47,7 +58,9 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
           const raw = data.toString("utf8");
           void ready
             .then((chat) => chat.onMessage(raw))
-            .catch((error: unknown) => opts.chat.logger.error({ err: error }, "message failed"));
+            .catch((error: unknown) =>
+              opts.chat.logger.error({ err: safeError(error) }, "message failed"),
+            );
         });
       },
     );

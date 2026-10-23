@@ -100,6 +100,34 @@ describe("api server", () => {
     expect(await client.closed).toBe(1009);
   });
 
+  it("never logs the session id from a reconnect URL", async () => {
+    const lines: string[] = [];
+    const deps = memoryDeps();
+    const chat: ChatContext = {
+      deps,
+      log: new InMemoryConversationLog(),
+      price: { input: 0, output: 0 },
+      newSessionId: () => `sess_secret_${++n}`,
+      logger: { error: vi.fn() },
+      hub: new SessionHub(),
+    };
+    app = buildServer({
+      chat,
+      webOrigins: [ORIGIN],
+      logger: { stream: { write: (line: string) => void lines.push(line) } },
+    });
+    const url = (await app.listen({ port: 0, host: "127.0.0.1" })).replace("http", "ws") + "/ws";
+    const first = await connect(url);
+    const { sessionId } = await first.next("session");
+    await first.turn(BOOK);
+    first.close();
+    await first.closed;
+    const again = await connect(`${url}?sessionId=${sessionId}`);
+    await again.next("session");
+    expect(lines.some((l) => l.includes("/ws"))).toBe(true);
+    expect(lines.join("\n")).not.toContain(sessionId);
+  });
+
   it("health is ok", async () => {
     const { http } = await start();
     expect(await (await fetch(`${http}/health`)).json()).toEqual({ ok: true });

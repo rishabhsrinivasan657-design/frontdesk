@@ -324,4 +324,19 @@ describe("openChat", () => {
     await first.onMessage(say("Hello"));
     expect(log.turns).toHaveLength(1);
   });
+
+  it("error logs carry neither the session id nor query parameters", async () => {
+    const { ctx, log, logger } = context();
+    log.recordTurn = () =>
+      Promise.reject(
+        new Error('Failed query: insert into "turns" values ($1)\nparams: Bo Chen,bo@example.com'),
+      );
+    const socket = new FakeSocket();
+    const chat = await openChat(socket, ctx);
+    await chat.onMessage(say("Hello"));
+    const logged = JSON.stringify(logger.error.mock.calls);
+    expect(logged).toContain("Failed query");
+    expect(logged).not.toContain(chat.sessionId);
+    expect(logged).not.toContain("bo@example.com");
+  });
 });

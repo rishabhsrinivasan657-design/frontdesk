@@ -11,6 +11,7 @@ import type { Price } from "@frontdesk/llm";
 import { toTurnRecord } from "../metrics/turn-record.js";
 import type { ConversationLog } from "./conversation-log.js";
 import type { SessionHub } from "./hub.js";
+import { safeError, sessionTag } from "./log-safety.js";
 
 export interface ChatContext {
   deps: AgentDeps;
@@ -105,7 +106,7 @@ export async function openChat(
       try {
         turn = await runOne(message.text);
       } catch (error) {
-        ctx.logger.error({ err: error, sessionId }, "turn failed");
+        ctx.logger.error({ err: safeError(error), session: sessionTag(sessionId) }, "turn failed");
         send({ type: "error", code: "server_error", message: SERVER_ERROR_MESSAGE });
         return;
       } finally {
@@ -119,7 +120,10 @@ export async function openChat(
         turn.result,
         turn.firstOutputMs,
       ).catch((error: unknown) =>
-        ctx.logger.error({ err: error, sessionId }, "storing the turn failed"),
+        ctx.logger.error(
+          { err: safeError(error), session: sessionTag(sessionId) },
+          "storing the turn failed",
+        ),
       );
     },
   };
