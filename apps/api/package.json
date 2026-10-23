@@ -6,6 +6,9 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "scripts": {
+    "start": "tsx src/main.ts"
+  },
   "dependencies": {
     "@fastify/websocket": "^11.3.4",
     "@frontdesk/core": "workspace:*",
@@ -20,6 +23,7 @@
   },
   "devDependencies": {
     "@types/ws": "^8.18.2",
+    "drizzle-orm": "^0.45.4",
     "tsx": "^4.23.15",
     "ws": "^8.22.0"
   }

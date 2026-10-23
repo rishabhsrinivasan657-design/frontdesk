@@ -21,7 +21,8 @@
     "eval": "pnpm --filter @frontdesk/evals eval",
     "eval:ci": "pnpm eval --subset ci --check",
     "db:migrate": "pnpm --filter @frontdesk/db db:migrate",
-    "google:auth": "pnpm --filter @frontdesk/integrations google:auth"
+    "google:auth": "pnpm --filter @frontdesk/integrations google:auth",
+    "api": "pnpm --filter @frontdesk/api start"
   },
   "devDependencies": {
     "@types/node": "^24.19.2",

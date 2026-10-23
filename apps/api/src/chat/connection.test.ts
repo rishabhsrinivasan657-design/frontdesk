@@ -200,6 +200,25 @@ describe("openChat", () => {
     expect(socket.ofType("turn_metrics")).toHaveLength(2);
   });
 
+  it("accepts the next message as soon as turn_metrics arrives", async () => {
+    const { ctx, log } = context();
+    const slowRecord = log.recordTurn.bind(log);
+    log.recordTurn = async (t) => {
+      await new Promise((r) => setTimeout(r, 30));
+      await slowRecord(t);
+    };
+    const socket = new FakeSocket();
+    const chat = await openChat(socket, ctx);
+    const first = chat.onMessage(say(BOOK));
+    while (socket.ofType("turn_metrics").length === 0) await new Promise((r) => setTimeout(r, 1));
+    await chat.onMessage(say(DETAILS));
+    await first;
+    expect(socket.ofType("error")).toEqual([]);
+    expect(socket.ofType("pending_action")).toHaveLength(1);
+    await new Promise((r) => setTimeout(r, 50));
+    expect(log.turns.map((t) => t.turnIndex).sort()).toEqual([1, 2]);
+  });
+
   it("a failing conversation log doesn't break the turn", async () => {
     const { ctx, log, logger } = context();
     log.recordTurn = () => Promise.reject(new Error("db down"));

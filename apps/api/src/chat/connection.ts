@@ -57,25 +57,17 @@ export async function openChat(
 
   let busy = false;
 
-  async function runOne(text: string, timings: { speechEnd?: number; sttFinal?: number }) {
+  /** Runs one turn; resolves once its last message is sent, before the turn is stored. */
+  async function runOne(text: string): Promise<{ result: TurnResult; firstOutputMs?: number }> {
     const started = performance.now();
     let firstOutputMs: number | undefined;
-    let result: TurnResult;
-    try {
-      result = await runTurn(deps, { sessionId, text }, (m) => {
-        if (firstOutputMs === undefined && FIRST_OUTPUT.has(m.type)) {
-          firstOutputMs = performance.now() - started;
-        }
-        send(m);
-      });
-    } catch (error) {
-      ctx.logger.error({ err: error, sessionId }, "turn failed");
-      send({ type: "error", code: "server_error", message: SERVER_ERROR_MESSAGE });
-      return;
-    }
-    await record(ctx, sessionId, text, timings, result, firstOutputMs).catch((error: unknown) =>
-      ctx.logger.error({ err: error, sessionId }, "storing the turn failed"),
-    );
+    const result = await runTurn(deps, { sessionId, text }, (m) => {
+      if (firstOutputMs === undefined && FIRST_OUTPUT.has(m.type)) {
+        firstOutputMs = performance.now() - started;
+      }
+      send(m);
+    });
+    return { result, ...(firstOutputMs !== undefined ? { firstOutputMs } : {}) };
   }
 
   return {
@@ -100,11 +92,27 @@ export async function openChat(
         return;
       }
       busy = true;
+      let turn: Awaited<ReturnType<typeof runOne>>;
       try {
-        await runOne(message.text, message.timings);
+        turn = await runOne(message.text);
+      } catch (error) {
+        ctx.logger.error({ err: error, sessionId }, "turn failed");
+        send({ type: "error", code: "server_error", message: SERVER_ERROR_MESSAGE });
+        return;
       } finally {
+        // The caller has the whole reply: their next message may start while this one is stored.
         busy = false;
       }
+      await record(
+        ctx,
+        sessionId,
+        message.text,
+        message.timings,
+        turn.result,
+        turn.firstOutputMs,
+      ).catch((error: unknown) =>
+        ctx.logger.error({ err: error, sessionId }, "storing the turn failed"),
+      );
     },
   };
 }
@@ -150,7 +158,10 @@ async function record(
   firstOutputMs: number | undefined,
 ): Promise<void> {
   const session = await ctx.deps.sessions.load(sessionId);
-  const turnIndex = session?.turn ?? 1;
+  // Counted from the transcript, so a later turn that already started can't shift it.
+  const callerTurns = (session?.transcript ?? []).filter((t) => t.role === "caller");
+  const position = callerTurns.findIndex((t) => t.turnId === result.turnId);
+  const turnIndex = position === -1 ? (session?.turn ?? 1) : position + 1;
   const now = ctx.deps.clock.now();
   if (turnIndex === 1) {
     await ctx.log.start({
