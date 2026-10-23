@@ -84,3 +84,22 @@ test("reconnects mid-conversation and confirms", async ({ page }) => {
   await card.getByRole("button", { name: "Confirm" }).click();
   await expect(page.getByTestId("action-status")).toHaveText("Booked");
 });
+
+test("keeps the latest reply and the card in view, and the cursor in the box", async ({ page }) => {
+  await page.setViewportSize({ width: 800, height: 480 });
+  const input = page.getByTestId("composer-input");
+  for (const text of ["Hello", "Are you open late?", "Do you have parking?"]) {
+    await say(page, text);
+    await expect(input).toBeEnabled();
+    // Typing straight on must work: focus comes back after every reply.
+    await expect(input).toBeFocused();
+  }
+  await say(page, bookAt("18:00"));
+  await expect(page.getByTestId("agent-message").last()).toHaveText(OPEN);
+  await say(page, DETAILS);
+  const confirm = page.getByTestId("confirmation-card").getByRole("button", { name: "Confirm" });
+  await expect(confirm).toBeInViewport();
+  await confirm.click();
+  await expect(page.getByTestId("action-status")).toBeInViewport();
+  await expect(page.getByTestId("agent-message").last()).toBeInViewport();
+});

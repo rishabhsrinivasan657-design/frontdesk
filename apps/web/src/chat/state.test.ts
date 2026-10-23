@@ -164,6 +164,17 @@ describe("chatReducer", () => {
     }
   });
 
+  it("a busy error removes the caller's message the server refused", () => {
+    const state = run([
+      { type: "local_send", text: "Hi", at: 0 },
+      server({ type: "agent_sentence", turnId: "turn_1", text: "Hello." }),
+      server(metrics("turn_1")),
+      { type: "local_send", text: "Yes, please", at: 5 },
+      server({ type: "error", code: "busy", message: "Still answering your last message." }),
+    ]);
+    expect(state.messages.map((m) => m.text)).toEqual(["Hi", "Hello."]);
+  });
+
   it("a dropped socket shows reconnecting and frees the composer", () => {
     const state = run([
       { type: "local_send", text: "Hi", at: 0 },

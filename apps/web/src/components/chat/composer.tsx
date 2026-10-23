@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -12,6 +12,11 @@ export function Composer({
   onSend: (text: string) => boolean;
 }) {
   const [text, setText] = useState("");
+  const input = useRef<HTMLInputElement>(null);
+  // A disabled input loses focus; give it back when the reply is done so typing just works.
+  useEffect(() => {
+    if (!disabled) input.current?.focus();
+  }, [disabled]);
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (onSend(text)) setText("");
@@ -19,6 +24,7 @@ export function Composer({
   return (
     <form onSubmit={submit} className="flex gap-2">
       <Input
+        ref={input}
         data-testid="composer-input"
         aria-label="Message"
         placeholder="Type a message…"
@@ -26,7 +32,6 @@ export function Composer({
         maxLength={2000}
         onChange={(e) => setText(e.target.value)}
         disabled={disabled}
-        autoFocus
       />
       <Button type="submit" disabled={disabled || !text.trim()}>
         Send

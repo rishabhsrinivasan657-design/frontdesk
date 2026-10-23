@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useChat } from "@/chat/use-chat";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +21,14 @@ export function ChatWindow({ url, businessName }: { url: string; businessName: s
   const { state, send } = useChat(url);
   const closed = state.status !== "open" || state.handoff !== undefined;
   const reply = (text: string) => void send(text);
+  const end = useRef<HTMLDivElement>(null);
+  const last = state.messages.at(-1);
+  // Follow the newest content: a new or growing reply, the card and its outcome, the banner.
+  // Braces matter: newer browsers return a Promise from scrollIntoView, and an effect may only
+  // return a cleanup function.
+  useEffect(() => {
+    end.current?.scrollIntoView({ block: "end" });
+  }, [state.messages.length, last?.text, state.busy, state.pending, state.handoff]);
 
   return (
     <Card className="mx-auto flex h-[min(720px,calc(100dvh-2rem))] w-full max-w-xl flex-col">
@@ -38,6 +47,7 @@ export function ChatWindow({ url, businessName }: { url: string; businessName: s
           <ConfirmationCard card={state.pending} disabled={closed || state.busy} onReply={reply} />
         )}
         {state.handoff && <HandoffBanner message={state.handoff.message} />}
+        <div ref={end} />
       </CardContent>
       <div className="flex flex-col gap-2 px-4">
         {state.notice && (

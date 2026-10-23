@@ -1,17 +1,7 @@
-"use client";
-
-import { useEffect, useRef } from "react";
 import type { ChatMessage } from "@/chat/state";
 import { cn } from "@/lib/utils";
 
 export function MessageList({ messages, typing }: { messages: ChatMessage[]; typing: boolean }) {
-  const end = useRef<HTMLDivElement>(null);
-  // Braces matter: newer browsers return a Promise from scrollIntoView, and an effect may only
-  // return a cleanup function.
-  useEffect(() => {
-    end.current?.scrollIntoView({ block: "end" });
-  }, [messages.length, typing]);
-
   return (
     <div className="flex flex-col gap-2" aria-live="polite">
       {messages.length === 0 && (
@@ -38,7 +28,6 @@ export function MessageList({ messages, typing }: { messages: ChatMessage[]; typ
           …
         </div>
       )}
-      <div ref={end} />
     </div>
   );
 }

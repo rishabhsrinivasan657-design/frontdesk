@@ -132,8 +132,17 @@ function onServer(state: ChatState, m: ServerMessage, at: number): ChatState {
         },
       };
     }
-    case "error":
-      return { ...state, busy: false, notice: m.message };
+    case "error": {
+      // The server dropped a message it answered `busy` to: don't show it as sent.
+      const last = state.messages.at(-1);
+      const refused = m.code === "busy" && last?.role === "caller" && last.id.startsWith("local-");
+      return {
+        ...state,
+        busy: false,
+        notice: m.message,
+        messages: refused ? state.messages.slice(0, -1) : state.messages,
+      };
+    }
   }
 }
 
