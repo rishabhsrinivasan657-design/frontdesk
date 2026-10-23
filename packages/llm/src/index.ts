@@ -28,6 +28,7 @@ export type {
 export { MemoryCacheStore, MemoryRateLimitStore, MemorySpendStore } from "./stores/memory.js";
 export { withRateLimit, type RateLimitOptions } from "./wrappers/rate-limit.js";
 export {
+  costUsd,
   projectCostUsd,
   withSpendCap,
   type Price,

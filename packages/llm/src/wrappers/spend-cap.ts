@@ -26,7 +26,8 @@ export interface SpendCapOptions {
 
 const DEFAULT_MAX_OUTPUT_TOKENS = 1024;
 
-function costUsd(usage: Usage, price: Price): number {
+/** USD for the given token usage at a per-1M-token price. */
+export function costUsd(usage: Usage, price: Price): number {
   return (usage.inputTokens * price.input + usage.outputTokens * price.output) / 1_000_000;
 }
 
