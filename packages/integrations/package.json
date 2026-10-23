@@ -6,6 +6,9 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "scripts": {
+    "google:auth": "tsx src/google/auth-cli.ts"
+  },
   "dependencies": {
     "@frontdesk/core": "workspace:*",
     "dotenv": "^18.0.8",
