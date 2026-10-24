@@ -60,19 +60,24 @@ export function createWebSpeechStt(
       r.lang = "en-US";
       r.interimResults = true;
       r.continuous = false;
+      // End of speech: the `speechend` event if it comes first. Chrome often sends the final
+      // result before it, so fall back to the last interim result (the last moment words changed).
       let speechEnd: number | undefined;
+      let lastInterim: number | undefined;
       r.onspeechstart = () => h.onSpeechStart();
       r.onspeechend = () => (speechEnd = now());
       r.onresult = (event) => {
         const results = Array.from(event.results);
         const text = results.map((res) => res[0]?.transcript ?? "").join("");
         if (!results.every((res) => res.isFinal)) {
+          lastInterim = now();
           h.onInterim(text.trim());
           return;
         }
         const final = text.trim();
+        const end = speechEnd ?? lastInterim;
         if (final)
-          h.onFinal(final, { ...(speechEnd !== undefined ? { speechEnd } : {}), sttFinal: now() });
+          h.onFinal(final, { ...(end !== undefined ? { speechEnd: end } : {}), sttFinal: now() });
       };
       r.onerror = (event) => h.onError(ERRORS[event.error] ?? "other");
       r.onend = () => {

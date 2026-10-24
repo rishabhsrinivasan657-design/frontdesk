@@ -90,6 +90,24 @@ describe("createWebSpeechStt", () => {
     ]);
   });
 
+  it("uses the last interim result as end of speech when Chrome finalizes before speechend", () => {
+    let t = 0;
+    const stt = createWebSpeechStt(withRecognition(), () => t);
+    const h = handlers();
+    stt.start(h);
+    const r = FakeRecognition.last!;
+    r.onspeechstart?.();
+    t = 400;
+    r.result([{ text: "a table", final: false }]);
+    t = 900;
+    r.result([{ text: "a table for four", final: false }]);
+    t = 1500;
+    r.result([{ text: "a table for four", final: true }]);
+    t = 1600;
+    r.onspeechend?.();
+    expect(h.calls).toContain('final:a table for four:{"speechEnd":900,"sttFinal":1500}');
+  });
+
   it("drops an empty final transcript", () => {
     const stt = createWebSpeechStt(withRecognition());
     const h = handlers();
