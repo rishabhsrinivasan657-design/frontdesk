@@ -193,13 +193,105 @@ describe("openChat", () => {
     expect(socket.ofType("error")[0]?.code).toBe("bad_message");
   });
 
-  it("accepts interrupt and tts_started without running a turn", async () => {
+  it("interrupt cancels the in-flight turn", async () => {
+    const { llm: slow, release } = gatedLLM();
+    const { ctx, log, logger } = context(slow);
+    const socket = new FakeSocket();
+    const chat = await openChat(socket, ctx);
+    const first = chat.onMessage(say(BOOK));
+    await chat.onMessage(JSON.stringify({ type: "interrupt" }));
+    release();
+    await first;
+    expect(socket.sent.map((m) => m.type)).toEqual(["session", "interrupted"]);
+    expect(log.turns).toEqual([]);
+    expect(logger.error).not.toHaveBeenCalled();
+  });
+
+  it("interrupt with nothing in flight sends nothing", async () => {
     const { ctx } = context();
     const socket = new FakeSocket();
     const chat = await openChat(socket, ctx);
     await chat.onMessage(JSON.stringify({ type: "interrupt" }));
-    await chat.onMessage(JSON.stringify({ type: "tts_started", turnId: "turn_1", at: 5 }));
     expect(socket.sent.map((m) => m.type)).toEqual(["session"]);
+  });
+
+  it("interrupt during a confirm turn still reports executed", async () => {
+    const { ctx, deps } = context();
+    const { socket, chat } = await toReadBack(ctx);
+    const yes = chat.onMessage(say("Yes, please"));
+    await chat.onMessage(JSON.stringify({ type: "interrupt" }));
+    await yes;
+    expect(socket.ofType("action_result").map((r) => r.status)).toEqual(["executed"]);
+    expect(socket.ofType("interrupted")).toEqual([]);
+    expect(socket.ofType("turn_metrics")).toHaveLength(3);
+    expect(
+      await deps.calendar.listReservations({ from: new Date(0), to: new Date(2e12) }),
+    ).toHaveLength(1);
+  });
+
+  it("user_text after interrupt waits for the cancelled turn", async () => {
+    const { llm: slow, release, openNow } = gatedLLM();
+    const { ctx } = context(slow);
+    const socket = new FakeSocket();
+    const chat = await openChat(socket, ctx);
+    const first = chat.onMessage(say("Hello"));
+    await chat.onMessage(JSON.stringify({ type: "interrupt" }));
+    const second = chat.onMessage(say("Hello again"));
+    release();
+    openNow();
+    await Promise.all([first, second]);
+    expect(socket.ofType("error")).toEqual([]);
+    expect(socket.sent.map((m) => m.type)).toEqual([
+      "session",
+      "interrupted",
+      "agent_sentence",
+      "turn_metrics",
+    ]);
+  });
+
+  it("stores tts_start_ms from tts_started, before or after the row is stored", async () => {
+    const { ctx, log } = context();
+    let t = 1000;
+    ctx.monotonicMs = () => t;
+    const slowRecord = log.recordTurn.bind(log);
+    log.recordTurn = async (row) => {
+      await new Promise((r) => setTimeout(r, 20));
+      await slowRecord(row);
+    };
+    const socket = new FakeSocket();
+    const chat = await openChat(socket, ctx);
+    const first = chat.onMessage(say("Hello"));
+    while (socket.ofType("agent_sentence").length === 0) await new Promise((r) => setTimeout(r, 1));
+    const turn1 = socket.ofType("agent_sentence")[0]!.turnId;
+    t = 1120;
+    await chat.onMessage(JSON.stringify({ type: "tts_started", turnId: turn1, at: 5 }));
+    await first;
+    expect(log.turns[0]?.ttsStartMs).toBe(120);
+
+    t = 2000;
+    await chat.onMessage(say("Hello again"));
+    const turn2 = socket.ofType("agent_sentence").at(-1)!.turnId;
+    t = 2400;
+    await chat.onMessage(JSON.stringify({ type: "tts_started", turnId: turn2, at: 5 }));
+    expect(log.ttsStarts.at(-1)).toEqual({
+      conversationId: chat.sessionId,
+      turnId: turn2,
+      ms: 400,
+      flags: ["over_p95_tts_start"],
+    });
+  });
+
+  it("ignores tts_started for a turn this socket didn't run, and repeats", async () => {
+    const { ctx, log } = context();
+    const socket = new FakeSocket();
+    const chat = await openChat(socket, ctx);
+    await chat.onMessage(say("Hello"));
+    const turnId = socket.ofType("agent_sentence")[0]!.turnId;
+    await chat.onMessage(JSON.stringify({ type: "tts_started", turnId: "turn_other", at: 5 }));
+    await chat.onMessage(JSON.stringify({ type: "tts_started", turnId, at: 5 }));
+    await chat.onMessage(JSON.stringify({ type: "tts_started", turnId, at: 9e12 }));
+    expect(log.ttsStarts.map((u) => u.turnId)).toEqual([turnId]);
+    expect(socket.ofType("error")).toEqual([]);
   });
 
   it("answers busy while a turn is in flight", async () => {

@@ -3,11 +3,13 @@ import {
   ClientMessageSchema,
   type ServerMessage,
   type SessionMessage,
+  TurnInterrupted,
   type TurnResult,
   alreadyHandedOffMessage,
   runTurn,
 } from "@frontdesk/core";
 import type { Price } from "@frontdesk/llm";
+import { overBudgetFlags } from "../metrics/latency.js";
 import { toTurnRecord } from "../metrics/turn-record.js";
 import type { ConversationLog } from "./conversation-log.js";
 import type { SessionHub, Turn } from "./hub.js";
@@ -22,6 +24,8 @@ export interface ChatContext {
   newSessionId: () => string;
   logger: { error(obj: unknown, msg: string): void };
   hub: SessionHub;
+  /** A monotonic ms clock for voice timings; defaults to `performance.now`. */
+  monotonicMs?: () => number;
 }
 
 export interface ChatSocket {
@@ -64,20 +68,56 @@ export async function openChat(
   const claim = ctx.hub.claim(sessionId, socket);
   await ctx.hub.settled(sessionId);
   send(await sessionMessage(deps, sessionId, existing !== undefined));
+  const now = ctx.monotonicMs ?? (() => performance.now());
+
+  /** The turn in flight on this socket, which `interrupt` can cancel. */
+  let current: { controller: AbortController; settled: Promise<void> } | undefined;
+  // Voice: when each turn's first sentence went out, and its measured TTS start (spec §8).
+  const firstSentenceAt = new Map<string, number>();
+  const ttsStartMs = new Map<string, number>();
+  const recorded = new Set<string>();
+
+  const storeTtsStart = (turnId: string, ms: number) =>
+    ctx.log
+      .setTtsStart(
+        sessionId,
+        turnId,
+        Math.round(ms),
+        overBudgetFlags({ toolMs: [], ttsStartMs: ms }),
+      )
+      .catch((error: unknown) =>
+        ctx.logger.error(
+          { err: safeError(error), session: sessionTag(sessionId) },
+          "storing tts start failed",
+        ),
+      );
+
+  /** Only turns this socket ran, and only the first report each: a client can't touch others. */
+  async function onTtsStarted(turnId: string): Promise<void> {
+    const sentAt = firstSentenceAt.get(turnId);
+    if (sentAt === undefined || ttsStartMs.has(turnId)) return;
+    const ms = Math.max(0, now() - sentAt);
+    ttsStartMs.set(turnId, ms);
+    if (recorded.has(turnId)) await storeTtsStart(turnId, ms);
+  }
 
   /** Runs one turn; resolves once its last message is sent, before the turn is stored. */
   async function runOne(
     text: string,
     turn: Turn,
+    signal: AbortSignal,
   ): Promise<{ result: TurnResult; firstOutputMs?: number }> {
     const started = performance.now();
     let firstOutputMs: number | undefined;
-    const result = await runTurn(deps, { sessionId, text }, (m) => {
+    const result = await runTurn(deps, { sessionId, text, signal }, (m) => {
       if (firstOutputMs === undefined && FIRST_OUTPUT.has(m.type)) {
         firstOutputMs = performance.now() - started;
       }
       // The caller has the whole reply and may answer at once; core queues that turn behind
       // this one's save.
+      if (m.type === "agent_sentence" && !firstSentenceAt.has(m.turnId)) {
+        firstSentenceAt.set(m.turnId, now());
+      }
       if (m.type === "turn_metrics") turn.replied();
       send(m);
     });
@@ -102,37 +142,58 @@ export async function openChat(
         return;
       }
       const message = parsed.data;
-      // interrupt and tts_started belong to voice (M7).
-      if (message.type !== "user_text") return;
+      if (message.type === "interrupt") {
+        // Barge-in (spec §8): core stops the turn at its next safe point, if it still can.
+        current?.controller.abort();
+        return;
+      }
+      if (message.type === "tts_started") {
+        await onTtsStarted(message.turnId);
+        return;
+      }
+      // Speech that interrupted a turn waits for it to unwind instead of getting `busy`.
+      if (claim.busy() && current?.controller.signal.aborted) await current.settled;
       if (claim.busy()) {
         send({ type: "error", code: "busy", message: "Still answering your last message." });
         return;
       }
       // Busy until the reply is complete; the turn is stored after, while the next may start.
       const inflight = claim.begin();
+      const controller = new AbortController();
+      let settle!: () => void;
+      const mine = { controller, settled: new Promise<void>((r) => (settle = r)) };
+      current = mine;
       let turn: Awaited<ReturnType<typeof runOne>>;
       try {
-        turn = await runOne(message.text, inflight);
+        turn = await runOne(message.text, inflight, controller.signal);
       } catch (error) {
+        if (error instanceof TurnInterrupted) {
+          send({ type: "interrupted" });
+          return;
+        }
         ctx.logger.error({ err: safeError(error), session: sessionTag(sessionId) }, "turn failed");
         send({ type: "error", code: "server_error", message: SERVER_ERROR_MESSAGE });
         return;
       } finally {
+        if (current === mine) current = undefined;
         inflight.done();
+        settle();
       }
-      await record(
-        ctx,
-        sessionId,
-        message.text,
-        message.timings,
-        turn.result,
-        turn.firstOutputMs,
-      ).catch((error: unknown) =>
+      const turnId = turn.result.turnId;
+      const included = ttsStartMs.get(turnId);
+      await record(ctx, sessionId, message.text, message.timings, turn.result, {
+        ...(turn.firstOutputMs !== undefined ? { firstOutputMs: turn.firstOutputMs } : {}),
+        ...(included !== undefined ? { ttsStartMs: included } : {}),
+      }).catch((error: unknown) =>
         ctx.logger.error(
           { err: safeError(error), session: sessionTag(sessionId) },
           "storing the turn failed",
         ),
       );
+      recorded.add(turnId);
+      // tts_started arrived while the row was being written.
+      const late = ttsStartMs.get(turnId);
+      if (included === undefined && late !== undefined) await storeTtsStart(turnId, late);
     },
   };
 }
@@ -175,7 +236,7 @@ async function record(
   callerText: string,
   timings: { speechEnd?: number; sttFinal?: number },
   result: TurnResult,
-  firstOutputMs: number | undefined,
+  latency: { firstOutputMs?: number; ttsStartMs?: number },
 ): Promise<void> {
   const session = await ctx.deps.sessions.load(sessionId);
   // Counted from the transcript, so a later turn that already started can't shift it.
@@ -197,7 +258,7 @@ async function record(
       callerText,
       result,
       timings,
-      ...(firstOutputMs !== undefined ? { firstOutputMs } : {}),
+      ...latency,
       price: ctx.price,
       now,
     }),

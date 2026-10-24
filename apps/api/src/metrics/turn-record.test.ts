@@ -57,6 +57,16 @@ describe("toTurnRecord", () => {
     expect(toTurnRecord({ ...base, timings: { sttFinal: 450 } }).sttMs).toBeNull();
   });
 
+  it("stores tts start and flags slow voice stages", () => {
+    const row = toTurnRecord({
+      ...base,
+      timings: { speechEnd: 100, sttFinal: 1000 },
+      ttsStartMs: 350.4,
+    });
+    expect(row.ttsStartMs).toBe(350);
+    expect(row.flags).toEqual(expect.arrayContaining(["over_p95_stt", "over_p95_tts_start"]));
+  });
+
   it("prices tokens with the catalog price", () => {
     expect(toTurnRecord(base).costUsd).toBeCloseTo(0.1 + 0.2, 10);
   });
