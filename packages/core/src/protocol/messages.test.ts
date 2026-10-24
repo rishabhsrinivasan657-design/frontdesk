@@ -3,6 +3,7 @@ import { ClientMessageSchema, type ServerMessage, ServerMessageSchema } from "./
 
 const server: ServerMessage[] = [
   { type: "agent_delta", turnId: "turn_1", text: "Hel" },
+  { type: "interrupted" },
   { type: "agent_sentence", turnId: "turn_1", text: "Hello there." },
   {
     type: "pending_action",
