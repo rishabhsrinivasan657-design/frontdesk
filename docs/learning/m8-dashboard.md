@@ -62,7 +62,7 @@ M8 gives the Casa Fiorella owner a back office at `/dashboard`: Live conversatio
 1. A random id the server remembers can be revoked: logout deletes it and it expires on its own. A self-contained cookie stays valid until it expires, even after logout.
 2. `HttpOnly`: JavaScript on the page (for example an injected script) can't read the cookie. `SameSite=Lax`: the browser won't send it on a POST started by another site.
 3. So a wrong email takes as long as a wrong password. Otherwise the fast answer would reveal which emails aren't the owner's.
-4. So a route added later can't forget it. The hook also runs for unknown paths, and the guard test lists every registered route and checks each one.
+4. So a route added later can't forget it. The guard test lists every registered route and checks each one; unknown paths just get 404.
 5. A cross-site HTML form can only send form-encoded or plain-text bodies. Sending JSON cross-site needs a CORS preflight, which our api doesn't grant.
 6. The owner sees a reply the moment it's sent, and nothing runs while nobody is talking. Polling would be late and keep hitting Redis.
 7. p50 is 550 and p95 is 955. `percentile_cont` interpolates: 95% of the way through ten values falls between 900 and 1000.

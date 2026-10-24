@@ -22,7 +22,7 @@ export type OwnerRouteSet = (app: FastifyInstance) => void;
 
 /**
  * Everything under `/owner` (spec §10). Every route requires the owner's session cookie unless
- * its config says `public`, and the check runs on every request, including unknown paths.
+ * its config says `public`; unknown paths fall through to the 404 handler and reach nothing.
  * Mutations must be JSON from an allowed origin (CSRF): a cross-site form can't send JSON.
  */
 export function ownerPlugin(
