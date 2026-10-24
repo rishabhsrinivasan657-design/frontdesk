@@ -2,6 +2,8 @@ import websocket from "@fastify/websocket";
 import Fastify, { type FastifyInstance } from "fastify";
 import { type Chat, type ChatContext, openChat } from "./chat/connection.js";
 import { safeError, safeRequest } from "./chat/log-safety.js";
+import type { OwnerContext } from "./owner/context.js";
+import { type OwnerRouteSet, ownerPlugin } from "./owner/plugin.js";
 
 /** The largest client frame accepted; a user_text is at most 2000 characters. */
 export const MAX_PAYLOAD_BYTES = 16_384;
@@ -10,6 +12,10 @@ export interface ServerOptions {
   chat: ChatContext;
   /** Browser origins allowed to open a socket (cross-site WebSocket hijacking). */
   webOrigins: string[];
+  /** The owner dashboard api; undefined answers 503 on every `/owner` route. */
+  owner?: OwnerContext;
+  /** Owner routes beyond login/logout/me (REST, live feed). */
+  ownerRoutes?: OwnerRouteSet[];
   /** false for silence; a stream to capture log lines (tests). Defaults to stdout. */
   logger?: boolean | { stream: { write(line: string): void } };
 }
@@ -18,6 +24,9 @@ export interface ServerOptions {
 export function buildServer(opts: ServerOptions): FastifyInstance {
   const logger = opts.logger ?? true;
   const app = Fastify({
+    // The web app's owner proxy runs on this machine and forwards the browser's address, so
+    // per-IP login limits see the visitor, not the proxy. Only loopback is trusted to say so.
+    trustProxy: ["127.0.0.1", "::1"],
     logger:
       logger === false
         ? false
@@ -29,6 +38,9 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
   void app.register(websocket, { options: { maxPayload: MAX_PAYLOAD_BYTES } });
 
   app.get("/health", () => ({ ok: true }));
+  void app.register(ownerPlugin(opts.owner, opts.webOrigins, opts.ownerRoutes), {
+    prefix: "/owner",
+  });
 
   void app.register((scoped, _o, done) => {
     scoped.get<{ Querystring: { sessionId?: string } }>(
