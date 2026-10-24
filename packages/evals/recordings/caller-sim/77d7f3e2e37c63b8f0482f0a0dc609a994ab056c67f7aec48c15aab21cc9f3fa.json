@@ -22,7 +22,7 @@
   },
   "response": {
     "value": {
-      "say": "Hello, my name is Dev Shah. I’m calling about an anniversary dinner.",
+      "say": "Hello, my name is Dev Shah. I'm calling about an anniversary dinner.",
       "done": false
     },
     "usage": {
@@ -30,5 +30,5 @@
       "outputTokens": 27
     }
   },
-  "recordedAt": "2026-10-22T20:38:59.258Z"
+  "recordedAt": "2026-10-24T07:56:57.812Z"
 }

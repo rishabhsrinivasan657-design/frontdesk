@@ -8,11 +8,18 @@
 #
 # pricePerMTok is USD per 1M text tokens on the paid tier (output includes thinking).
 models:
+  # Hedge model (LLM_HEDGE_MODEL): the fastest free model when it isn't overloaded (503s).
+  gemini-3.1-flash-lite:
+    provider: gemini
+    freeTier: { rpm: 10, rpd: 500 }
+    pricePerMTok: { input: 0.25, output: 1.5 }
+    source: "price: pricing page 2026-10-22; limits assumed equal to 3.5 Flash-Lite, confirm in AI Studio"
+  # Default agent model: slower (p50 ~8 s on 2026-10-23), but it never errored in 30 probes.
   gemini-3.5-flash-lite:
     provider: gemini
     freeTier: { rpm: 10, rpd: 500 }
     pricePerMTok: { input: 0.3, output: 2.5 }
-    source: "secondary (ScriptByAI, 2026-10); confirm in AI Studio"
+    source: "rpd 500 confirmed by a 2026-10-23 429 (GenerateRequestsPerDayPerProjectPerModel-FreeTier); rpm secondary"
   gemini-3.6-flash:
     provider: gemini
     freeTier: { rpm: 5, rpd: 20 }

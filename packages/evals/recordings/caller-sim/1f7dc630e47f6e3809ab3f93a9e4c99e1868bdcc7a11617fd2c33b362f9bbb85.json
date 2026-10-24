@@ -22,13 +22,13 @@
   },
   "response": {
     "value": {
-      "say": "Hi, my name is Grace Kim. I'd like to book a table for 6 this Saturday, November 7th, at 8pm.",
+      "say": "Hi, my name is Grace Kim. I’d like to book a table for 6 this Saturday, November 7th at 8pm.",
       "done": false
     },
     "usage": {
       "inputTokens": 368,
-      "outputTokens": 42
+      "outputTokens": 41
     }
   },
-  "recordedAt": "2026-10-22T20:38:48.541Z"
+  "recordedAt": "2026-10-24T07:39:10.269Z"
 }

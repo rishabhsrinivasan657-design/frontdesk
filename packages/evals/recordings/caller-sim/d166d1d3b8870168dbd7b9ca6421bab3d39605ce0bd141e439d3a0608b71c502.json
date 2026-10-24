@@ -22,13 +22,13 @@
   },
   "response": {
     "value": {
-      "say": "Hi there! I’d like to book brunch for 2 this Sunday, November 8th at 12:30pm.",
+      "say": "Hi, my name is Priya Nair. priya@example.com, I’d like to book brunch for 2 this Sunday.",
       "done": false
     },
     "usage": {
       "inputTokens": 378,
-      "outputTokens": 39
+      "outputTokens": 38
     }
   },
-  "recordedAt": "2026-10-22T20:37:46.920Z"
+  "recordedAt": "2026-10-23T17:43:38.554Z"
 }
