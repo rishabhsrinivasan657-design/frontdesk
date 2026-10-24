@@ -14,6 +14,9 @@ import { buildLLM } from "./llm/build.js";
 import { RedisSessionStore } from "./redis/session-store.js";
 import { RedisSlotLock } from "./redis/slot-lock.js";
 import type { OwnerContext } from "./owner/context.js";
+import type { OwnerRouteSet } from "./owner/plugin.js";
+import { pgOwnerReads } from "./owner/reads.js";
+import { ownerRestRoutes } from "./owner/routes.js";
 import { RedisOwnerSessionStore } from "./owner/session-store.js";
 
 export const REPO_ROOT = resolve(import.meta.dirname, "../../..");
@@ -47,6 +50,7 @@ function required(env: Env, key: string): string {
 export async function buildDeps(env: Env): Promise<{
   chat: ChatContext;
   owner: OwnerContext | undefined;
+  ownerRoutes: OwnerRouteSet[];
   summary: string;
   close(): Promise<void>;
 }> {
@@ -89,8 +93,18 @@ export async function buildDeps(env: Env): Promise<{
 
   const owner = readOwnerEnv(env, redis);
 
+  const now = () => clock.now();
+  const ownerRoutes = [
+    ownerRestRoutes({
+      reads: pgOwnerReads(pg.db, { timezone: config.business.timezone, now }),
+      calendarId: google ? google.calendarId : null,
+      now,
+    }),
+  ];
+
   return {
     owner,
+    ownerRoutes,
     chat: {
       deps,
       log: new PgConversations(pg.db),
