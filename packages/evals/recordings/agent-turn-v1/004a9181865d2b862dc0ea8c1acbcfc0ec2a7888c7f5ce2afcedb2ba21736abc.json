@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "key": "535c8a9fee658749e5b34c3057aebd73e35dfa29b0e9b3ac1c12c3b78564e9f0",
+  "key": "004a9181865d2b862dc0ea8c1acbcfc0ec2a7888c7f5ce2afcedb2ba21736abc",
   "templateId": "agent-turn-v1",
   "templateHash": "78a802b3dbdce2ffdd6f5caeef0f72398da616e0554bb5515eb93d60b8b2fe63",
   "model": "gemini-3.5-flash-lite",
@@ -15,15 +15,45 @@
     "messages": [
       {
         "role": "user",
-        "text": "<caller_message>\nHi, my name is Dev Shah. I'm calling about an anniversary dinner.\n</caller_message>"
+        "text": "<caller_message>\nHi, my name is Dev Shah. Can you tell me if you allow customers to bring their own wine?\n</caller_message>"
       },
       {
         "role": "assistant",
-        "text": "@meta {\"confidence\":1.0,\"onTopic\":true}\nWelcome to Casa Fiorella! I'd love to help you plan your anniversary dinner. How many guests will be joining you, and what date and time were you hoping for?"
+        "text": "",
+        "toolCalls": [
+          {
+            "id": "call_729700",
+            "name": "lookup_faq",
+            "args": {
+              "query": "wine corkage bring your own"
+            },
+            "signature": "EmAKXgFpFH0THOLqPMA3WGaxQLsF/zC28ocMpRSdFSocPsgQREpLv4WX6ij6Gx/2xYhjK2tpb7EGYU8/vD1AESFbGwtgOl1hUpiZyrnjsW3OL0d69w4aPoAX/P5xddqv4uE="
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "callId": "call_729700",
+        "name": "lookup_faq",
+        "result": {
+          "ok": true,
+          "data": {
+            "answers": [
+              {
+                "id": "corkage",
+                "a": "Yes, corkage is $25 per bottle, with a limit of two bottles per table."
+              }
+            ]
+          }
+        }
+      },
+      {
+        "role": "assistant",
+        "text": "@meta {\"confidence\":1,\"onTopic\":true}\nYes, you're welcome to bring your own wine! Corkage is $25 per bottle, with a limit of two bottles per table."
       },
       {
         "role": "user",
-        "text": "<caller_message>\nTwo people, and I was thinking Saturday, the 18th, around 7:30pm.\n</caller_message>"
+        "text": "<caller_message>\nOkay, thanks. And what is the parking situation like?\n</caller_message>"
       }
     ],
     "tools": [
@@ -258,24 +288,22 @@
       {
         "type": "tool_call",
         "call": {
-          "id": "call_800491",
-          "name": "check_availability",
+          "id": "call_745544",
+          "name": "lookup_faq",
           "args": {
-            "partySize": 2,
-            "time": "19:30",
-            "date": "2026-11-18"
+            "query": "parking"
           },
-          "signature": "EmAKXgFpFH0T/jVZpys1PMuAusuO997gZkRFQN04wuLftNF6uYcq7v0leBWV9VTtenuma9b2FysFsSQHSGbAZhE52/zxI0DDG07tLmszhjkKLenb7PGgEGPGbwrxBaEOIa4="
+          "signature": "EmAKXgFpFH0TcwNnvHMJ5BrCYD9fy48LRUROcDoKPQV20BqL1JhJqUO3sGAGyItBEM30gVN8F4GCJS0I6ZEnbz0eSCLuTMi4cvO5OCJZgq23UZhZ4+T2QQZhVx+PF31klas="
         }
       },
       {
         "type": "usage",
         "usage": {
-          "inputTokens": 1614,
-          "outputTokens": 40
+          "inputTokens": 1673,
+          "outputTokens": 16
         }
       }
     ]
   },
-  "recordedAt": "2026-10-24T14:45:09.215Z"
+  "recordedAt": "2026-10-24T15:00:17.252Z"
 }

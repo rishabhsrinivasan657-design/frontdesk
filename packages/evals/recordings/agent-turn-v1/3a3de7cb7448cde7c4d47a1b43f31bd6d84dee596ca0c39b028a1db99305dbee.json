@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "key": "e91874e8920804a641e14c9e791195bb1568bd6fa098ac042329abf28f64f5d3",
+  "key": "3a3de7cb7448cde7c4d47a1b43f31bd6d84dee596ca0c39b028a1db99305dbee",
   "templateId": "agent-turn-v1",
   "templateHash": "78a802b3dbdce2ffdd6f5caeef0f72398da616e0554bb5515eb93d60b8b2fe63",
   "model": "gemini-3.5-flash-lite",
@@ -15,47 +15,33 @@
     "messages": [
       {
         "role": "user",
-        "text": "<caller_message>\nHi, my name is Dev Shah. I'm calling about an anniversary dinner.\n</caller_message>"
-      },
-      {
-        "role": "assistant",
-        "text": "@meta {\"confidence\":1.0,\"onTopic\":true}\nWelcome to Casa Fiorella! I'd love to help you plan your anniversary dinner. How many guests will be joining you, and what date and time were you hoping for?"
-      },
-      {
-        "role": "user",
-        "text": "<caller_message>\nTwo people, and I was thinking Saturday, the 18th, around 7:30pm.\n</caller_message>"
+        "text": "<caller_message>\nHi, my name is Dev Shah. Can you tell me if you allow customers to bring their own wine?\n</caller_message>"
       },
       {
         "role": "assistant",
         "text": "",
         "toolCalls": [
           {
-            "id": "call_800491",
-            "name": "check_availability",
+            "id": "call_729700",
+            "name": "lookup_faq",
             "args": {
-              "partySize": 2,
-              "time": "19:30",
-              "date": "2026-11-18"
+              "query": "wine corkage bring your own"
             },
-            "signature": "EmAKXgFpFH0T/jVZpys1PMuAusuO997gZkRFQN04wuLftNF6uYcq7v0leBWV9VTtenuma9b2FysFsSQHSGbAZhE52/zxI0DDG07tLmszhjkKLenb7PGgEGPGbwrxBaEOIa4="
+            "signature": "EmAKXgFpFH0THOLqPMA3WGaxQLsF/zC28ocMpRSdFSocPsgQREpLv4WX6ij6Gx/2xYhjK2tpb7EGYU8/vD1AESFbGwtgOl1hUpiZyrnjsW3OL0d69w4aPoAX/P5xddqv4uE="
           }
         ]
       },
       {
         "role": "tool",
-        "callId": "call_800491",
-        "name": "check_availability",
+        "callId": "call_729700",
+        "name": "lookup_faq",
         "result": {
           "ok": true,
           "data": {
-            "date": "2026-11-18",
-            "partySize": 2,
-            "available": true,
-            "slots": [
+            "answers": [
               {
-                "slotId": "2026-11-18T19:30@t2-1#2",
-                "time": "19:30",
-                "when": "Wednesday, November 18 at 7:30 PM"
+                "id": "corkage",
+                "a": "Yes, corkage is $25 per bottle, with a limit of two bottles per table."
               }
             ]
           }
@@ -63,19 +49,41 @@
       },
       {
         "role": "assistant",
-        "text": "@meta {\"confidence\":1.0,\"onTopic\":true}\nWe have a table available for two on Wednesday, November 18 at 7:30 PM. To get this booked for your anniversary dinner, may I have a contact phone number or email address?"
+        "text": "@meta {\"confidence\":1,\"onTopic\":true}\nYes, you're welcome to bring your own wine! Corkage is $25 per bottle, with a limit of two bottles per table."
       },
       {
         "role": "user",
-        "text": "<caller_message>\nNo, I don’t want to book yet. I just wanted to ask a few questions.\n</caller_message>"
+        "text": "<caller_message>\nOkay, thanks. And what is the parking situation like?\n</caller_message>"
       },
       {
         "role": "assistant",
-        "text": "@meta {\"confidence\":1.0,\"onTopic\":true}\nOf course! What questions can I answer for you?"
+        "text": "",
+        "toolCalls": [
+          {
+            "id": "call_745544",
+            "name": "lookup_faq",
+            "args": {
+              "query": "parking"
+            },
+            "signature": "EmAKXgFpFH0TcwNnvHMJ5BrCYD9fy48LRUROcDoKPQV20BqL1JhJqUO3sGAGyItBEM30gVN8F4GCJS0I6ZEnbz0eSCLuTMi4cvO5OCJZgq23UZhZ4+T2QQZhVx+PF31klas="
+          }
+        ]
       },
       {
-        "role": "user",
-        "text": "<caller_message>\nCould you tell me if it’s okay to bring our own wine? And where is the best place to park?\n</caller_message>"
+        "role": "tool",
+        "callId": "call_745544",
+        "name": "lookup_faq",
+        "result": {
+          "ok": true,
+          "data": {
+            "answers": [
+              {
+                "id": "parking",
+                "a": "There's metered street parking on Mulberry Lane and a public garage one block east on Court Street."
+              }
+            ]
+          }
+        }
       }
     ],
     "tools": [
@@ -308,24 +316,25 @@
   "response": {
     "chunks": [
       {
-        "type": "tool_call",
-        "call": {
-          "id": "call_808101",
-          "name": "lookup_faq",
-          "args": {
-            "query": "corkage bring your own wine parking"
-          },
-          "signature": "EmAKXgFpFH0TI6W+PcIIX1hFTunIHZ2glce7TFEC+LQvXzCFy9/rCDO4QyjBIN1hvRkU5ogVDf/243A299b/Wi0Vmdjhm45X2XtpGizVCspOabcvbG6xc+l+wAq/u30FPRY="
-        }
+        "type": "text",
+        "text": "@"
+      },
+      {
+        "type": "text",
+        "text": "meta {\"confidence\":1,\"onTopic\":true}\nWe have metered street parking"
+      },
+      {
+        "type": "text",
+        "text": " on Mulberry Lane, as well as a public garage one block east on Court Street."
       },
       {
         "type": "usage",
         "usage": {
-          "inputTokens": 1909,
-          "outputTokens": 23
+          "inputTokens": 1740,
+          "outputTokens": 36
         }
       }
     ]
   },
-  "recordedAt": "2026-10-24T14:45:30.657Z"
+  "recordedAt": "2026-10-24T15:00:21.032Z"
 }

@@ -1,7 +1,7 @@
 id: faq-corkage-parking
 category: faq
-persona: "Dev Shah, planning an anniversary dinner"
-goal: "Find out whether you can bring your own wine and what it costs, and where to park. You don't want to book yet"
+persona: "Dev Shah, who has two questions before deciding where to have an anniversary dinner"
+goal: "Only ask questions: can you bring your own wine, and what does it cost; and where can you park. Ask the wine question in your first message. You are not booking today: if the receptionist offers a table or times, say no thanks, you'll call back to book"
 seed:
   now: 2026-11-04T14:00:00-05:00
 expect:

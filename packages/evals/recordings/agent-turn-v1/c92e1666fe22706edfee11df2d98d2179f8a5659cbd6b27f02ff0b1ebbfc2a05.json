@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "key": "ccbde6a352d183ae2ce2cad8064f61cd500cb8ffe043f332f4ad6f5134bb8dbd",
+  "key": "c92e1666fe22706edfee11df2d98d2179f8a5659cbd6b27f02ff0b1ebbfc2a05",
   "templateId": "agent-turn-v1",
   "templateHash": "78a802b3dbdce2ffdd6f5caeef0f72398da616e0554bb5515eb93d60b8b2fe63",
   "model": "gemini-3.5-flash-lite",
@@ -15,51 +15,7 @@
     "messages": [
       {
         "role": "user",
-        "text": "<caller_message>\nHi, my name is Dev Shah. I'm calling about an anniversary dinner.\n</caller_message>"
-      },
-      {
-        "role": "assistant",
-        "text": "@meta {\"confidence\":1.0,\"onTopic\":true}\nWelcome to Casa Fiorella! I'd love to help you plan your anniversary dinner. How many guests will be joining you, and what date and time were you hoping for?"
-      },
-      {
-        "role": "user",
-        "text": "<caller_message>\nTwo people, and I was thinking Saturday, the 18th, around 7:30pm.\n</caller_message>"
-      },
-      {
-        "role": "assistant",
-        "text": "",
-        "toolCalls": [
-          {
-            "id": "call_800491",
-            "name": "check_availability",
-            "args": {
-              "partySize": 2,
-              "time": "19:30",
-              "date": "2026-11-18"
-            },
-            "signature": "EmAKXgFpFH0T/jVZpys1PMuAusuO997gZkRFQN04wuLftNF6uYcq7v0leBWV9VTtenuma9b2FysFsSQHSGbAZhE52/zxI0DDG07tLmszhjkKLenb7PGgEGPGbwrxBaEOIa4="
-          }
-        ]
-      },
-      {
-        "role": "tool",
-        "callId": "call_800491",
-        "name": "check_availability",
-        "result": {
-          "ok": true,
-          "data": {
-            "date": "2026-11-18",
-            "partySize": 2,
-            "available": true,
-            "slots": [
-              {
-                "slotId": "2026-11-18T19:30@t2-1#2",
-                "time": "19:30",
-                "when": "Wednesday, November 18 at 7:30 PM"
-              }
-            ]
-          }
-        }
+        "text": "<caller_message>\nHi, my name is Dev Shah. Can you tell me if you allow customers to bring their own wine?\n</caller_message>"
       }
     ],
     "tools": [
@@ -292,29 +248,24 @@
   "response": {
     "chunks": [
       {
-        "type": "text",
-        "text": "@meta"
-      },
-      {
-        "type": "text",
-        "text": " {\"confidence\":1.0,\"onTopic\":true}\nWe have a table available"
-      },
-      {
-        "type": "text",
-        "text": " for two on Wednesday, November 18 at 7:30 PM. To get this booked for your anniversary dinner, may I have"
-      },
-      {
-        "type": "text",
-        "text": " a contact phone number or email address?"
+        "type": "tool_call",
+        "call": {
+          "id": "call_729700",
+          "name": "lookup_faq",
+          "args": {
+            "query": "wine corkage bring your own"
+          },
+          "signature": "EmAKXgFpFH0THOLqPMA3WGaxQLsF/zC28ocMpRSdFSocPsgQREpLv4WX6ij6Gx/2xYhjK2tpb7EGYU8/vD1AESFbGwtgOl1hUpiZyrnjsW3OL0d69w4aPoAX/P5xddqv4uE="
+        }
       },
       {
         "type": "usage",
         "usage": {
-          "inputTokens": 1754,
-          "outputTokens": 57
+          "inputTokens": 1531,
+          "outputTokens": 21
         }
       }
     ]
   },
-  "recordedAt": "2026-10-24T14:45:15.799Z"
+  "recordedAt": "2026-10-24T15:00:04.369Z"
 }
