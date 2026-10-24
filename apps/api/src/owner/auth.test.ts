@@ -132,6 +132,25 @@ describe("owner auth", () => {
     );
   });
 
+  it("parallel guesses can't beat the rate limit", async () => {
+    const { app } = await start();
+    const results = await Promise.all(
+      Array.from({ length: 20 }, () => login(app, { email: EMAIL, password: "nope" })),
+    );
+    const codes = results.map((r) => r.statusCode);
+    expect(codes.filter((c) => c === 401)).toHaveLength(5);
+    expect(codes.filter((c) => c === 429)).toHaveLength(15);
+  });
+
+  it("a successful login clears earlier failures", async () => {
+    const { app } = await start();
+    for (let i = 0; i < 4; i++) await login(app, { email: EMAIL, password: "nope" });
+    expect((await login(app, { email: EMAIL, password: PASSWORD })).statusCode).toBe(204);
+    for (let i = 0; i < 4; i++) {
+      expect((await login(app, { email: EMAIL, password: "nope" })).statusCode).toBe(401);
+    }
+  });
+
   it("rejects a malformed login body", async () => {
     const { app } = await start();
     expect((await login(app, { email: EMAIL })).statusCode).toBe(400);

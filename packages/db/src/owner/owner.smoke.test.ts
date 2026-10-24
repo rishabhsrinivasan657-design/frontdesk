@@ -359,4 +359,28 @@ describe("metrics", () => {
     expect(live.summary.conversations).toBe(1);
     expect(live.hasSeeded).toBe(true);
   });
+
+  it("the window starts at local midnight of the oldest day, so summary = sum of daily", async () => {
+    const { now } = freshWindow();
+    // 17:00 New York, 7 days ago: inside now-7×24h, but before the oldest charted day.
+    const tooOld = new Date(now.getTime() - 7 * 86_400_000 + 5 * 3_600_000).toISOString();
+    await conversation({ tag: uid(), startedAt: tooOld });
+    const m = await metrics(db, { source: "live", days: 7, now, timezone: TZ });
+    expect(m.summary.conversations).toBe(0);
+    expect(m.daily.reduce((n, d) => n + d.conversations, 0)).toBe(m.summary.conversations);
+  });
+
+  it.each([
+    ["spring forward", "2026-03-09T04:30:00.000Z", "2026-03-09"],
+    ["fall back", "2026-11-02T04:30:00.000Z", "2026-11-01"],
+  ])("daily rows are consecutive calendar days across DST (%s)", async (_name, nowIso, today) => {
+    const m = await metrics(db, { source: "pilot", days: 7, now: new Date(nowIso), timezone: TZ });
+    const days = m.daily.map((d) => d.day);
+    expect(days).toHaveLength(7);
+    expect(days.at(-1)).toBe(today);
+    for (let i = 1; i < days.length; i++) {
+      const gap = Date.parse(`${days[i]}T00:00:00Z`) - Date.parse(`${days[i - 1]}T00:00:00Z`);
+      expect(gap, days.join(",")).toBe(86_400_000);
+    }
+  });
 });

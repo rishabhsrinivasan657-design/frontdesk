@@ -10,8 +10,13 @@ export interface OwnerSessionStore {
   create(): Promise<string>;
   valid(id: string): Promise<boolean>;
   destroy(id: string): Promise<void>;
-  failures(ip: string): Promise<number>;
-  recordFailure(ip: string): Promise<void>;
+  /**
+   * Counts a login attempt from `ip` before the password is checked and returns the count in
+   * the current window, atomically: parallel guesses each get their own number.
+   */
+  attempt(ip: string): Promise<number>;
+  /** A correct password: earlier mistakes no longer count. */
+  clearAttempts(ip: string): Promise<void>;
 }
 
 /** 32 random bytes, base64url: 43 characters, unguessable. */
@@ -42,14 +47,15 @@ export class RedisOwnerSessionStore implements OwnerSessionStore {
     if (isSessionIdShape(id)) await this.redis.del(`owner:sess:${id}`);
   }
 
-  async failures(ip: string): Promise<number> {
-    return Number((await this.redis.get(`owner:fail:${ip}`)) ?? 0);
-  }
-
-  async recordFailure(ip: string): Promise<void> {
+  async attempt(ip: string): Promise<number> {
     const key = `owner:fail:${ip}`;
     const n = await this.redis.incr(key);
     if (n === 1) await this.redis.pexpire(key, LOGIN_FAILURE_WINDOW_MS);
+    return n;
+  }
+
+  async clearAttempts(ip: string): Promise<void> {
+    await this.redis.del(`owner:fail:${ip}`);
   }
 }
 
@@ -79,14 +85,17 @@ export class InMemoryOwnerSessionStore implements OwnerSessionStore {
     return Promise.resolve();
   }
 
-  failures(ip: string): Promise<number> {
+  attempt(ip: string): Promise<number> {
     const f = this.fails.get(ip);
-    return Promise.resolve(f && f.until > this.now() ? f.n : 0);
+    const current =
+      f && f.until > this.now() ? f : { n: 0, until: this.now() + LOGIN_FAILURE_WINDOW_MS };
+    const next = { n: current.n + 1, until: current.until };
+    this.fails.set(ip, next);
+    return Promise.resolve(next.n);
   }
 
-  async recordFailure(ip: string): Promise<void> {
-    const n = (await this.failures(ip)) + 1;
-    const until = n === 1 ? this.now() + LOGIN_FAILURE_WINDOW_MS : this.fails.get(ip)!.until;
-    this.fails.set(ip, { n, until });
+  clearAttempts(ip: string): Promise<void> {
+    this.fails.delete(ip);
+    return Promise.resolve();
   }
 }

@@ -47,21 +47,35 @@ const STAGE_COLUMNS = {
 const dayOf = (d: Date, timezone: string): string =>
   new Intl.DateTimeFormat("en-CA", { timeZone: timezone, dateStyle: "short" }).format(d);
 
+/**
+ * The last `days` calendar days ending today in `timezone`, oldest first. Steps whole dates,
+ * not 24 h, so DST changes never skip or repeat a day.
+ */
+export function calendarDays(now: Date, days: number, timezone: string): string[] {
+  const [y, m, d] = dayOf(now, timezone).split("-").map(Number) as [number, number, number];
+  return Array.from({ length: days }, (_, i) =>
+    new Date(Date.UTC(y, m - 1, d - (days - 1 - i))).toISOString().slice(0, 10),
+  );
+}
+
 const rate = (n: number, of: number): number | null => (of === 0 ? null : n / of);
 
 /**
- * Metrics over the conversations that started in the last `days` days and have a turn.
+ * Metrics over the conversations with a turn that started in the last `days` calendar days.
  * Percentiles are Postgres `percentile_cont` (linear interpolation).
  */
 export async function metrics(
   db: Db,
   o: { source: OwnerSource; days: number; now: Date; timezone: string },
 ): Promise<MetricsReport> {
-  const since = new Date(o.now.getTime() - o.days * 86_400_000).toISOString();
-  const until = o.now.toISOString();
-  const window = sql`${sourceIs(o.source)} and c.started_at > ${since} and c.started_at <= ${until}
-    and exists (select 1 from turns t where t.conversation_id = c.id)`;
   const tz = o.timezone;
+  const days = calendarDays(o.now, o.days, tz);
+  const until = o.now.toISOString();
+  // From local midnight of the oldest charted day, so the summary covers exactly the bars.
+  const window = sql`${sourceIs(o.source)}
+    and c.started_at >= (${days[0]}::date)::timestamp at time zone ${tz}
+    and c.started_at <= ${until}
+    and exists (select 1 from turns t where t.conversation_id = c.id)`;
 
   const perDay = await rows<{
     day: string;
@@ -117,8 +131,7 @@ export async function metrics(
   const byDay = new Map(perDay.map((d) => [d.day, d]));
   const latencyByDay = new Map(firstOutputByDay.map((d) => [d.day, d]));
   const daily: DailyMetrics[] = [];
-  for (let i = o.days - 1; i >= 0; i--) {
-    const day = dayOf(new Date(o.now.getTime() - i * 86_400_000), tz);
+  for (const day of days) {
     const d = byDay.get(day);
     const l = latencyByDay.get(day);
     const n = d?.conversations ?? 0;

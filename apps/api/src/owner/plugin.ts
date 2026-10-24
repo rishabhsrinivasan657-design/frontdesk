@@ -58,13 +58,14 @@ export function ownerPlugin(
     app.post("/login", { config: { public: true } }, async (req, reply) => {
       const body = LoginBody.safeParse(req.body);
       if (!body.success) return reply.code(400).send({ error: "bad_request" });
-      if ((await owner.sessions.failures(req.ip)) >= MAX_LOGIN_FAILURES) {
+      // Counted before bcrypt runs, so parallel guesses can't all read "0 failures so far".
+      if ((await owner.sessions.attempt(req.ip)) > MAX_LOGIN_FAILURES) {
         return reply.code(429).send({ error: "too_many_attempts" });
       }
       if (!(await checkCredentials(owner, body.data.email, body.data.password))) {
-        await owner.sessions.recordFailure(req.ip);
         return reply.code(401).send({ error: "invalid_credentials" });
       }
+      await owner.sessions.clearAttempts(req.ip);
       const id = await owner.sessions.create();
       setSessionCookie(reply, owner, id);
       return reply.code(204).send();

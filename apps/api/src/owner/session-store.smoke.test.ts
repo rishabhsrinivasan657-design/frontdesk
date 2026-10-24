@@ -26,13 +26,15 @@ describe("RedisOwnerSessionStore", () => {
     expect(await store.valid("x".repeat(10_000))).toBe(false);
   });
 
-  it("counts failures per IP within a window", async () => {
+  it("counts attempts per IP atomically within a window, and clears them", async () => {
     const store = new RedisOwnerSessionStore(redis, 60_000);
     const ip = `test-${randomUUID()}`;
-    for (let i = 0; i < MAX_LOGIN_FAILURES; i++) await store.recordFailure(ip);
-    expect(await store.failures(ip)).toBe(MAX_LOGIN_FAILURES);
+    const counts = await Promise.all(Array.from({ length: 10 }, () => store.attempt(ip)));
+    expect([...counts].sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
     expect(await redis.pttl(`owner:fail:${ip}`)).toBeGreaterThan(14 * 60_000);
-    expect(await store.failures(`test-${randomUUID()}`)).toBe(0);
+    await store.clearAttempts(ip);
+    expect(await store.attempt(ip)).toBe(1);
+    expect(MAX_LOGIN_FAILURES).toBe(5);
     await redis.del(`owner:fail:${ip}`);
   });
 });
