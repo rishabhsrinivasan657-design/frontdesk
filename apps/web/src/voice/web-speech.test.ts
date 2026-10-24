@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import type { SttHandlers } from "./types";
-import { type WebSpeechGlobals, createWebSpeechStt, createWebSpeechTts } from "./web-speech";
+import {
+  SILENCE_MS,
+  type Timers,
+  type WebSpeechGlobals,
+  createWebSpeechStt,
+  createWebSpeechTts,
+} from "./web-speech";
 
 type Listener = (event?: unknown) => void;
 
@@ -52,6 +58,39 @@ const withRecognition = (): WebSpeechGlobals => ({
   webkitSpeechRecognition: FakeRecognition,
 });
 
+/** A clock and timers the test moves by hand: `advance` fires timers that come due, in order. */
+function fakeClock() {
+  let t = 0;
+  let nextId = 1;
+  const pending = new Map<number, { at: number; fn: () => void }>();
+  const timers: Timers = {
+    set: (fn, ms) => {
+      const id = nextId++;
+      pending.set(id, { at: t + ms, fn });
+      return id;
+    },
+    clear: (id) => pending.delete(id as number),
+  };
+  return {
+    now: () => t,
+    timers,
+    pending: () => pending.size,
+    set: (ms: number) => (t = ms),
+    advance(ms: number) {
+      const end = t + ms;
+      for (;;) {
+        const due = [...pending].filter(([, p]) => p.at <= end).sort((a, b) => a[1].at - b[1].at);
+        const first = due[0];
+        if (!first) break;
+        pending.delete(first[0]);
+        t = first[1].at;
+        first[1].fn();
+      }
+      t = end;
+    },
+  };
+}
+
 describe("createWebSpeechStt", () => {
   it("is unsupported without SpeechRecognition, and reports an error instead of throwing", () => {
     const stt = createWebSpeechStt({});
@@ -61,12 +100,12 @@ describe("createWebSpeechStt", () => {
     expect(h.calls).toEqual(["error:other"]);
   });
 
-  it("uses webkitSpeechRecognition with interim results, en-US, one utterance", () => {
+  it("uses webkitSpeechRecognition with interim results, en-US, continuous (we endpoint)", () => {
     const stt = createWebSpeechStt(withRecognition());
     expect(stt.supported).toBe(true);
     stt.start(handlers());
     const r = FakeRecognition.last!;
-    expect([r.lang, r.interimResults, r.continuous, r.started]).toEqual(["en-US", true, false, 1]);
+    expect([r.lang, r.interimResults, r.continuous, r.started]).toEqual(["en-US", true, true, 1]);
   });
 
   it("reports speech start, interim text, then the final text with its timings", () => {
@@ -127,6 +166,104 @@ describe("createWebSpeechStt", () => {
         `error:${error === "service-not-allowed" ? "not-allowed" : error === "weird" ? "other" : error}`,
       ]);
     }
+  });
+
+  describe("endpointing (our own silence timer)", () => {
+    const finals = (calls: string[]) => calls.filter((c) => c.startsWith("final:"));
+
+    it("finalizes after SILENCE_MS with no new words, then stops the recognizer", () => {
+      const c = fakeClock();
+      const stt = createWebSpeechStt(withRecognition(), c.now, c.timers);
+      const h = handlers();
+      stt.start(h);
+      const r = FakeRecognition.last!;
+      c.set(400);
+      r.result([{ text: "a table", final: false }]);
+      c.set(900);
+      r.result([{ text: "a table for four", final: false }]);
+      c.advance(SILENCE_MS - 1);
+      expect(finals(h.calls)).toEqual([]);
+      c.advance(1);
+      expect(finals(h.calls)).toEqual([
+        `final:a table for four:{"speechEnd":900,"sttFinal":${900 + SILENCE_MS}}`,
+      ]);
+      expect(r.stopped).toBe(1);
+    });
+
+    it("restarts the silence window whenever the words change", () => {
+      const c = fakeClock();
+      const stt = createWebSpeechStt(withRecognition(), c.now, c.timers);
+      const h = handlers();
+      stt.start(h);
+      const r = FakeRecognition.last!;
+      r.result([{ text: "a table", final: false }]);
+      c.advance(SILENCE_MS - 100);
+      r.result([{ text: "a table for", final: false }]);
+      c.advance(SILENCE_MS - 100);
+      expect(finals(h.calls)).toEqual([]);
+      c.advance(100);
+      expect(finals(h.calls)).toHaveLength(1);
+    });
+
+    it("uses Chrome's own final if it comes first, and cancels the timer", () => {
+      const c = fakeClock();
+      const stt = createWebSpeechStt(withRecognition(), c.now, c.timers);
+      const h = handlers();
+      stt.start(h);
+      const r = FakeRecognition.last!;
+      c.set(400);
+      r.result([{ text: "a table for four", final: false }]);
+      c.set(700);
+      r.result([{ text: "a table for four", final: true }]);
+      expect(c.pending()).toBe(0);
+      c.advance(SILENCE_MS * 2);
+      expect(finals(h.calls)).toEqual(['final:a table for four:{"speechEnd":400,"sttFinal":700}']);
+    });
+
+    it("ignores Chrome's late final after we already finalized: onFinal fires once", () => {
+      const c = fakeClock();
+      const stt = createWebSpeechStt(withRecognition(), c.now, c.timers);
+      const h = handlers();
+      stt.start(h);
+      const r = FakeRecognition.last!;
+      r.result([{ text: "a table for four", final: false }]);
+      c.advance(SILENCE_MS);
+      r.result([{ text: "a table for four", final: true }]);
+      r.result([{ text: "a table for four please", final: false }]);
+      c.advance(SILENCE_MS * 2);
+      r.onend?.();
+      expect(finals(h.calls)).toHaveLength(1);
+      expect(h.calls.filter((call) => call.startsWith("interim:"))).toHaveLength(1);
+      expect(h.calls.at(-1)).toBe("end");
+    });
+
+    it("stop() cancels the timer; the final Chrome sends on stop still comes through once", () => {
+      const c = fakeClock();
+      const stt = createWebSpeechStt(withRecognition(), c.now, c.timers);
+      const h = handlers();
+      stt.start(h);
+      const r = FakeRecognition.last!;
+      c.set(400);
+      r.result([{ text: "a table", final: false }]);
+      stt.stop();
+      expect(c.pending()).toBe(0);
+      c.advance(SILENCE_MS * 2);
+      expect(finals(h.calls)).toEqual([]);
+      r.result([{ text: "a table", final: true }]);
+      expect(finals(h.calls)).toHaveLength(1);
+    });
+
+    it("an error cancels the timer", () => {
+      const c = fakeClock();
+      const stt = createWebSpeechStt(withRecognition(), c.now, c.timers);
+      const h = handlers();
+      stt.start(h);
+      const r = FakeRecognition.last!;
+      r.result([{ text: "a table", final: false }]);
+      r.onerror?.({ error: "network" });
+      c.advance(SILENCE_MS * 2);
+      expect(finals(h.calls)).toEqual([]);
+    });
   });
 
   it("stop stops the recognizer", () => {
