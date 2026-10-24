@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useChat } from "@/chat/use-chat";
+import { useVoice } from "@/voice/use-voice";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Composer } from "./composer";
@@ -9,6 +10,7 @@ import { ConfirmationCard } from "./confirmation-card";
 import { HandoffBanner } from "./handoff-banner";
 import { LatencyBadge } from "./latency-badge";
 import { MessageList } from "./message-list";
+import { MicButton, VOICE_NOTICE } from "./mic-button";
 
 const STATUS = {
   connecting: "Connecting…",
@@ -18,9 +20,18 @@ const STATUS = {
 } as const;
 
 export function ChatWindow({ url, businessName }: { url: string; businessName: string }) {
-  const { state, send } = useChat(url);
+  const chat = useChat(url);
+  const { state } = chat;
+  const voice = useVoice(chat);
   const closed = state.status !== "open" || state.handoff !== undefined;
+  // Typed text and card buttons: same path as before; voice hears that turn's reply too.
+  const send = (text: string) => {
+    const ok = chat.send(text);
+    if (ok) voice.typed();
+    return ok;
+  };
   const reply = (text: string) => void send(text);
+  const voiceNotice = VOICE_NOTICE[voice.status];
   const end = useRef<HTMLDivElement>(null);
   const last = state.messages.at(-1);
   // Follow the newest content: a new or growing reply, the card and its outcome, the banner.
@@ -35,7 +46,7 @@ export function ChatWindow({ url, businessName }: { url: string; businessName: s
       <CardHeader className="flex-row items-start justify-between">
         <div className="flex flex-col gap-1">
           <CardTitle>{businessName}</CardTitle>
-          <CardDescription>Chat with our receptionist to book a table.</CardDescription>
+          <CardDescription>Chat or talk with our receptionist to book a table.</CardDescription>
         </div>
         <Badge data-testid="connection" variant={state.status === "open" ? "outline" : "secondary"}>
           {STATUS[state.status]}
@@ -55,9 +66,25 @@ export function ChatWindow({ url, businessName }: { url: string; businessName: s
             {state.notice}
           </p>
         )}
-        <Composer disabled={closed || state.busy} onSend={send} />
+        {voiceNotice && (
+          <p data-testid="voice-notice" className="text-xs text-muted-foreground">
+            {voiceNotice}
+          </p>
+        )}
+        {voice.interim && (
+          <p data-testid="interim-transcript" className="text-sm text-muted-foreground italic">
+            {voice.interim}
+          </p>
+        )}
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <Composer disabled={closed || state.busy} onSend={send} />
+          </div>
+          {/* Usable while we answer: pressing it then is barge-in. */}
+          <MicButton status={voice.status} disabled={closed} onPress={voice.press} />
+        </div>
         <div className="flex h-4 justify-end">
-          {state.lastLatency && <LatencyBadge latency={state.lastLatency} />}
+          {state.lastLatency && <LatencyBadge latency={state.lastLatency} voice={voice.latency} />}
         </div>
       </div>
     </Card>
