@@ -38,6 +38,8 @@ export function toTurnRecord(input: TurnRecordInput): TurnRecord {
     llmTotalMs: round(metrics.llmTotalMs),
     toolMs: metrics.toolMs.map(Math.round),
     ttsStartMs: round(input.ttsStartMs),
+    firstOutputMs: round(input.firstOutputMs),
+    toolCalls: input.result.toolCalls.map((c) => ({ ...c, ms: Math.round(c.ms) })),
     totalMs: round(metrics.totalMs),
     tokensIn: metrics.tokensIn,
     tokensOut: metrics.tokensOut,

@@ -56,6 +56,16 @@ describe("runTurn", () => {
     expect(session!.transcript.map((t) => t.role)).toEqual(["caller", "agent"]);
   });
 
+  it("reports each tool call's name, duration and success", async () => {
+    const s = setup();
+    const result = await proposeBooking(s);
+    expect(result.toolCalls.map(({ name, ok }) => ({ name, ok }))).toEqual([
+      { name: "check_availability", ok: true },
+      { name: "book", ok: true },
+    ]);
+    expect(result.toolCalls.every((c) => typeof c.ms === "number" && c.ms >= 0)).toBe(true);
+  });
+
   it("feeds read tool results back to the model", async () => {
     const s = setup();
     queue(s.llm, [call("check_availability", CHECK)], [text("7pm is open.")]);

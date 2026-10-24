@@ -17,10 +17,13 @@ export interface TurnRecord {
   llmTotalMs: number | null;
   toolMs: number[];
   ttsStartMs: number | null;
+  firstOutputMs: number | null;
   totalMs: number | null;
   tokensIn: number;
   tokensOut: number;
   costUsd: number;
+  /** Tool name, whole ms and success, in call order (no args). */
+  toolCalls: { name: string; ms: number; ok: boolean }[];
   /** e.g. injection patterns flagged by the guardrails (spec §6). */
   flags: string[];
   createdAt: string;

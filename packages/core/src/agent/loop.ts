@@ -76,6 +76,14 @@ export interface TurnResult {
   flags: TurnFlag[];
   handoff?: HandoffReason;
   decision?: Decision;
+  /** Every tool the model called this turn, in order. No args: they can hold contact details. */
+  toolCalls: ToolCallRecord[];
+}
+
+export interface ToolCallRecord {
+  name: string;
+  ms: number;
+  ok: boolean;
 }
 
 /** A frozen view with only Calendar's read methods: read tools can't reach a write. */
@@ -103,6 +111,7 @@ interface Turn {
     tokensIn: number;
     tokensOut: number;
   };
+  toolCalls: ToolCallRecord[];
   /** True once the caller's text is in the model history. */
   userInHistory: boolean;
   /** True once the reply is in the model history (the LLM wrote it). */
@@ -173,6 +182,7 @@ async function runTurnNow(
     },
     flags: [],
     metrics: { llmTotalMs: 0, toolMs: [], tokensIn: 0, tokensOut: 0 },
+    toolCalls: [],
     userInHistory: false,
     replyInHistory: false,
     messages,
@@ -214,6 +224,7 @@ async function finishTurn(turn: Turn, startedMs: number): Promise<TurnResult> {
     reply,
     flags: turn.flags,
     messages: turn.messages,
+    toolCalls: turn.toolCalls,
     ...(turn.handoff ? { handoff: turn.handoff } : {}),
     ...(turn.decision ? { decision: turn.decision } : {}),
   };
@@ -375,7 +386,9 @@ async function modelTurn(turn: Turn): Promise<string> {
           session,
         });
       }
-      turn.metrics.toolMs.push(deps.clock.now().getTime() - started);
+      const ms = deps.clock.now().getTime() - started;
+      turn.metrics.toolMs.push(ms);
+      turn.toolCalls.push({ name: call.name, ms, ok: result.ok });
       countToolResult(turn, result.ok);
       session.history.push({ role: "tool", callId: call.id, name: call.name, result });
     }
