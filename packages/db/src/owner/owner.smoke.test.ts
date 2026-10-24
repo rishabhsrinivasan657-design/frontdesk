@@ -273,28 +273,34 @@ describe("handoffs", () => {
   });
 });
 
+/** A random day in 2032–2099: each run and test gets a window no other rows share. */
+function freshWindow(): { now: Date; at: string; day: string } {
+  const day0 = Date.UTC(2032, 0, 1) + Math.floor(Math.random() * 24_000) * 86_400_000;
+  const now = new Date(day0 + 17 * 3_600_000); // 12:00 or 13:00 New York
+  const at = new Date(day0 - 24 * 3_600_000 + 20 * 3_600_000).toISOString(); // the day before
+  return { now, at, day: at.slice(0, 10) };
+}
+
 describe("metrics", () => {
-  // Each test owns a window far from other suites' rows (and from each other).
   it("percentiles over first output and stages", async () => {
-    const now = new Date("2031-05-10T12:00:00.000Z");
+    const { now, at, day: yesterday } = freshWindow();
     await conversation({
       tag: uid(),
-      startedAt: "2031-05-09T15:00:00.000Z",
+      startedAt: at,
       firstOutputMs: [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000],
     });
     const m = await metrics(db, { source: "live", days: 7, now, timezone: TZ });
     expect(m.summary.latency.firstOutput).toEqual({ p50: 550, p95: 955 });
     expect(m.summary.latency.tool).toEqual({ p50: 275, p95: 477.5 });
     expect(m.summary.latency.stt).toEqual({ p50: null, p95: null });
-    const day = m.daily.find((d) => d.day === "2031-05-09")!;
+    const day = m.daily.find((d) => d.day === yesterday)!;
     expect(day).toMatchObject({ conversations: 1, p50FirstOutputMs: 550, p95FirstOutputMs: 955 });
     expect(m.daily).toHaveLength(7);
-    expect(m.daily.at(-1)!.day).toBe("2031-05-10");
+    expect(m.daily.at(-1)!.day).toBe(now.toISOString().slice(0, 10));
   });
 
   it("task success and handoff rate, tokens and cost per conversation", async () => {
-    const now = new Date("2031-06-10T12:00:00.000Z");
-    const at = "2031-06-09T15:00:00.000Z";
+    const { now, at } = freshWindow();
     const a = await conversation({ tag: uid(), startedAt: at, tokens: [1000, 100], costUsd: 0.01 });
     const b = await conversation({ tag: uid(), startedAt: at, tokens: [1000, 100], costUsd: 0.01 });
     await conversation({
@@ -326,8 +332,7 @@ describe("metrics", () => {
   });
 
   it("metrics never mix sources", async () => {
-    const now = new Date("2031-07-10T12:00:00.000Z");
-    const at = "2031-07-09T15:00:00.000Z";
+    const { now, at } = freshWindow();
     await conversation({ tag: uid(), startedAt: at, source: "live" });
     await conversation({ tag: uid(), startedAt: at, source: "pilot", firstOutputMs: [9000] });
     await conversation({ tag: uid(), startedAt: at, source: "eval", firstOutputMs: [7000] });
@@ -340,8 +345,7 @@ describe("metrics", () => {
   });
 
   it("pilot excludes seeded rows; live flags them", async () => {
-    const now = new Date("2031-08-10T12:00:00.000Z");
-    const at = "2031-08-09T15:00:00.000Z";
+    const { now, at } = freshWindow();
     await conversation({ tag: uid(), startedAt: at, source: "pilot", seeded: true });
     await conversation({ tag: uid(), startedAt: at, source: "live", seeded: true });
     const pilot = await metrics(db, { source: "pilot", days: 7, now, timezone: TZ });
