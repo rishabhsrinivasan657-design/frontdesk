@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "key": "2c0047bbb096572b9218cb3b23772e96d5fe34faaa6af451c6fc61cd836e4254",
+  "key": "818e3d37e674a5f053f65738de542dcd581a72abde9f8e67be64d2462f605d2e",
   "templateId": "agent-turn-v1",
   "templateHash": "78a802b3dbdce2ffdd6f5caeef0f72398da616e0554bb5515eb93d60b8b2fe63",
   "model": "gemini-3.5-flash-lite",
@@ -15,72 +15,41 @@
     "messages": [
       {
         "role": "user",
-        "text": "<caller_message>\nHello, my name is Dev Shah. I'm calling about an anniversary dinner.\n</caller_message>"
+        "text": "<caller_message>\nHi, I'm Dev Shah. I have a couple of questions about your restaurant.\n</caller_message>"
+      },
+      {
+        "role": "assistant",
+        "text": "@meta {\"confidence\":1.0,\"onTopic\":true}\nHello Dev! Welcome to Casa Fiorella. What would you like to know?"
+      },
+      {
+        "role": "user",
+        "text": "<caller_message>\nCan you bring your own wine?\n</caller_message>"
       },
       {
         "role": "assistant",
         "text": "",
         "toolCalls": [
           {
-            "id": "call_383177",
+            "id": "call_602537",
             "name": "lookup_faq",
             "args": {
-              "query": "anniversary"
+              "query": "corkage wine bring own"
             },
-            "signature": "EmAKXgFpFH0TglFa33rrPSdwDn+S2QpLzK4c4DMlZ1OyVlWCchNt0CqlYkOiBRQX1Ce8eLhcamXcQeMTal2JqGuQxlVEZZoQU1bj2f6VN9wR1eYvMTKJZ3VFTs5IoLBnOEM="
+            "signature": "EmAKXgFpFH0TBjeVjMF6z85lIu/muWRPwsaGgwD6ZxZQ1hFSHdTolHgRK2/sUkusbi4PS+W/82b7VTBJH8IDQceUpHGEgX+7JWBVGX76Jqneb4aQKEwTGAhADzy5kuo5sIE="
           }
         ]
       },
       {
         "role": "tool",
-        "callId": "call_383177",
+        "callId": "call_602537",
         "name": "lookup_faq",
         "result": {
           "ok": true,
           "data": {
-            "answers": []
-          }
-        }
-      },
-      {
-        "role": "assistant",
-        "text": "@meta {\"confidence\":1.0,\"onTopic\":true}\nHappy early anniversary, Dev! We'd love to host you and your partner for dinner. What date and time are you thinking of, and how many people will be in your party?"
-      },
-      {
-        "role": "user",
-        "text": "<caller_message>\nNext Saturday, the 18th, around 7:30pm. It’ll be two people.\n</caller_message>"
-      },
-      {
-        "role": "assistant",
-        "text": "",
-        "toolCalls": [
-          {
-            "id": "call_635355",
-            "name": "check_availability",
-            "args": {
-              "partySize": 2,
-              "time": "19:30",
-              "date": "2026-11-14"
-            },
-            "signature": "EmAKXgFpFH0Tl1ap6hZdRiz2pWx15iJahR9Ocq4jr+7LEDGw4bM2mgER+dOj+kuG9yHleq1uh/wcxdixgLI7s1+M642RXtbFXq9iPaFSCXIXVSbfX0oTRe4CPaeBgJODpLg="
-          }
-        ]
-      },
-      {
-        "role": "tool",
-        "callId": "call_635355",
-        "name": "check_availability",
-        "result": {
-          "ok": true,
-          "data": {
-            "date": "2026-11-14",
-            "partySize": 2,
-            "available": true,
-            "slots": [
+            "answers": [
               {
-                "slotId": "2026-11-14T19:30@t2-1#2",
-                "time": "19:30",
-                "when": "Saturday, November 14 at 7:30 PM"
+                "id": "corkage",
+                "a": "Yes, corkage is $25 per bottle, with a limit of two bottles per table."
               }
             ]
           }
@@ -322,24 +291,20 @@
       },
       {
         "type": "text",
-        "text": " {\"confidence\":1.0,\"onTopic\":true}\nI have an"
+        "text": " {\"confidence\":1.0,\"onTopic\":true}\nYes, you can bring"
       },
       {
         "type": "text",
-        "text": " opening for two people next Saturday, November 14th, at 7:30 PM. Would you like me"
-      },
-      {
-        "type": "text",
-        "text": " to book that for you, and could I have your phone number or email address for the reservation?"
+        "text": " your own wine. There is a corkage fee of $25 per bottle, with a limit of two bottles per table."
       },
       {
         "type": "usage",
         "usage": {
-          "inputTokens": 1794,
-          "outputTokens": 63
+          "inputTokens": 1652,
+          "outputTokens": 46
         }
       }
     ]
   },
-  "recordedAt": "2026-10-24T07:57:02.796Z"
+  "recordedAt": "2026-10-24T14:35:54.597Z"
 }

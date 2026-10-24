@@ -42,9 +42,10 @@ M4 is how we _prove_ the receptionist behaves. It lives in `packages/evals`. A s
 
 - **The agent** runs on `gemini-3.5-flash-lite`. It answered fine on 2026-10-22, and its 500 requests/day covers a full record of about 150 calls. Live and record runs allow each Gemini call 30 s (`LLM_TIMEOUT_MS`), because flash-lite sometimes took over 10 s.
 - **The caller** is `gemma3:4b` (set `EVAL_CALLER_MODEL` to try another). `mistral:latest` hung up too early and ignored its persona's details.
-- **Two lessons from the live runs:**
+- **Lessons from the live runs:**
   - Small callers often say "yes" and hang up in the same message, so the harness always delivers the caller's last message.
   - Small callers also end with a bare `{"say": "done"}`. That's a signal to the harness, not something a caller said, so it is never sent to the agent. (Sending it once made the agent read "done" as "yes, get me a human".)
+  - Small callers follow the persona more than the goal. `faq-corkage-parking` used to say "planning an anniversary dinner… You don't want to book yet". On 2026-10-23/24 the caller opened with "I'm calling about an anniversary dinner", never asked its questions, and said yes when the agent offered times. That scored as `UNSAFE extra_event` even though the agent booked only after a confirmed read-back. The fix was in the scenario, not the agent: the persona now says "two questions before deciding", and the goal says "Only ask questions", names the first thing to ask, and spells out what to say if a table is offered ("no thanks, you'll call back"). It passed 5 of 5 live runs. **Write goals as what to do, not only what not to do.** A small model reliably follows "ask X first", and often drops a trailing "don't".
   - The agent offers a human too readily and sometimes hands off a prank instead of refusing it. Those are the baseline's two remaining failures (86.7% success), and they're a job for M9.
 - **To re-record after changing a prompt or tool:** delete `packages/evals/recordings/`, run `pnpm eval --record` (you need `GEMINI_API_KEY` in `.env` and Ollama running), check that `pnpm eval` gives the same result twice, then run `pnpm eval --subset ci --save`. If the daily quota runs out, the CLI tells you which categories to re-run tomorrow with `--filter`.
 
@@ -77,6 +78,7 @@ M4 is how we _prove_ the receptionist behaves. It lives in `packages/evals`. A s
 9. Why does `--save` refuse to write a baseline when a scenario was `missing`?
 10. Two scenarios have the same persona, goal and seed. Why do they share recordings?
 11. Why does the harness send the caller's last message even when it says it's done?
+12. The FAQ scenario booked a table and scored unsafe. Why did we change the scenario's wording instead of the agent's prompt?
 
 <details>
 <summary>Answers</summary>
@@ -92,5 +94,6 @@ M4 is how we _prove_ the receptionist behaves. It lives in `packages/evals`. A s
 9. The baseline would bake in a broken run. Later real regressions could then hide under it.
 10. Recordings are keyed by the request's content (model, prompt, messages, tools), not by scenario id. Identical inputs produce identical requests.
 11. Small models often say "yes, book it" and hang up in the same message. Dropping that message would make every booking fail at the read-back, and a real caller's last words reach the receptionist too.
+12. The agent did nothing wrong: it offered times and booked only after the caller confirmed the read-back. The simulator broke its goal. Rewording one scenario re-records one category. Changing the agent prompt would make every recording stale and cost a full re-record against the 500-requests/day quota.
 
 </details>

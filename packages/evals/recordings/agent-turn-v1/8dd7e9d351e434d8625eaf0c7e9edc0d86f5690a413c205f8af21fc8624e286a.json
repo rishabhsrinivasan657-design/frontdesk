@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "key": "1186ae809bd70dccc7a596fd97ca665c6c400f14a263ef29ec2cd8cbff31e7ea",
+  "key": "8dd7e9d351e434d8625eaf0c7e9edc0d86f5690a413c205f8af21fc8624e286a",
   "templateId": "agent-turn-v1",
   "templateHash": "78a802b3dbdce2ffdd6f5caeef0f72398da616e0554bb5515eb93d60b8b2fe63",
   "model": "gemini-3.5-flash-lite",
@@ -15,119 +15,38 @@
     "messages": [
       {
         "role": "user",
-        "text": "<caller_message>\nHello, my name is Dev Shah. I'm calling about an anniversary dinner.\n</caller_message>"
+        "text": "<caller_message>\nHi, I'm Dev Shah. I have a couple of questions about your restaurant.\n</caller_message>"
+      },
+      {
+        "role": "assistant",
+        "text": "@meta {\"confidence\":1.0,\"onTopic\":true}\nHello Dev! Welcome to Casa Fiorella. What would you like to know?"
+      },
+      {
+        "role": "user",
+        "text": "<caller_message>\nCan you bring your own wine?\n</caller_message>"
       },
       {
         "role": "assistant",
         "text": "",
         "toolCalls": [
           {
-            "id": "call_383177",
+            "id": "call_602537",
             "name": "lookup_faq",
             "args": {
-              "query": "anniversary"
+              "query": "corkage wine bring own"
             },
-            "signature": "EmAKXgFpFH0TglFa33rrPSdwDn+S2QpLzK4c4DMlZ1OyVlWCchNt0CqlYkOiBRQX1Ce8eLhcamXcQeMTal2JqGuQxlVEZZoQU1bj2f6VN9wR1eYvMTKJZ3VFTs5IoLBnOEM="
+            "signature": "EmAKXgFpFH0TBjeVjMF6z85lIu/muWRPwsaGgwD6ZxZQ1hFSHdTolHgRK2/sUkusbi4PS+W/82b7VTBJH8IDQceUpHGEgX+7JWBVGX76Jqneb4aQKEwTGAhADzy5kuo5sIE="
           }
         ]
       },
       {
         "role": "tool",
-        "callId": "call_383177",
-        "name": "lookup_faq",
-        "result": {
-          "ok": true,
-          "data": {
-            "answers": []
-          }
-        }
-      },
-      {
-        "role": "assistant",
-        "text": "@meta {\"confidence\":1.0,\"onTopic\":true}\nHappy early anniversary, Dev! We'd love to host you and your partner for dinner. What date and time are you thinking of, and how many people will be in your party?"
-      },
-      {
-        "role": "user",
-        "text": "<caller_message>\nNext Saturday, the 18th, around 7:30pm. It’ll be two people.\n</caller_message>"
-      },
-      {
-        "role": "assistant",
-        "text": "",
-        "toolCalls": [
-          {
-            "id": "call_635355",
-            "name": "check_availability",
-            "args": {
-              "partySize": 2,
-              "time": "19:30",
-              "date": "2026-11-14"
-            },
-            "signature": "EmAKXgFpFH0Tl1ap6hZdRiz2pWx15iJahR9Ocq4jr+7LEDGw4bM2mgER+dOj+kuG9yHleq1uh/wcxdixgLI7s1+M642RXtbFXq9iPaFSCXIXVSbfX0oTRe4CPaeBgJODpLg="
-          }
-        ]
-      },
-      {
-        "role": "tool",
-        "callId": "call_635355",
-        "name": "check_availability",
-        "result": {
-          "ok": true,
-          "data": {
-            "date": "2026-11-14",
-            "partySize": 2,
-            "available": true,
-            "slots": [
-              {
-                "slotId": "2026-11-14T19:30@t2-1#2",
-                "time": "19:30",
-                "when": "Saturday, November 14 at 7:30 PM"
-              }
-            ]
-          }
-        }
-      },
-      {
-        "role": "assistant",
-        "text": "@meta {\"confidence\":1.0,\"onTopic\":true}\nI have an opening for two people next Saturday, November 14th, at 7:30 PM. Would you like me to book that for you, and could I have your phone number or email address for the reservation?"
-      },
-      {
-        "role": "user",
-        "text": "<caller_message>\nNo, not yet. I just wanted to check a couple of things first.\n</caller_message>"
-      },
-      {
-        "role": "assistant",
-        "text": "@meta {\"confidence\":1.0,\"onTopic\":true}\nOf course! What questions can I answer for you?"
-      },
-      {
-        "role": "user",
-        "text": "<caller_message>\nCould we bring our own wine? And where is the best place to park?\n</caller_message>"
-      },
-      {
-        "role": "assistant",
-        "text": "",
-        "toolCalls": [
-          {
-            "id": "call_552885",
-            "name": "lookup_faq",
-            "args": {
-              "query": "corkage wine parking"
-            },
-            "signature": "EmAKXgFpFH0T3lyFWzgV3e8itmdiRL0w3Zk1HA3SoVgpY4nx8Nwf9Pj6JEuMTeXChbo/Jbu7RV55qvmk+t2RQLlt12wg5xMQhOESAqIpRMilSEWFyS3e1FV1Q+fZ3jTuaLU="
-          }
-        ]
-      },
-      {
-        "role": "tool",
-        "callId": "call_552885",
+        "callId": "call_602537",
         "name": "lookup_faq",
         "result": {
           "ok": true,
           "data": {
             "answers": [
-              {
-                "id": "parking",
-                "a": "There's metered street parking on Mulberry Lane and a public garage one block east on Court Street."
-              },
               {
                 "id": "corkage",
                 "a": "Yes, corkage is $25 per bottle, with a limit of two bottles per table."
@@ -135,6 +54,22 @@
             ]
           }
         }
+      },
+      {
+        "role": "assistant",
+        "text": "@meta {\"confidence\":1.0,\"onTopic\":true}\nYes, you can bring your own wine. There is a corkage fee of $25 per bottle, with a limit of two bottles per table."
+      },
+      {
+        "role": "user",
+        "text": "<caller_message>\nOkay, and what does that corkage fee cost?\n</caller_message>"
+      },
+      {
+        "role": "assistant",
+        "text": "@meta {\"confidence\":1.0,\"onTopic\":true}\nIt is $25 per bottle, with a limit of two bottles per table."
+      },
+      {
+        "role": "user",
+        "text": "<caller_message>\nOkay, and where can we park?\n</caller_message>"
       }
     ],
     "tools": [
@@ -367,33 +302,24 @@
   "response": {
     "chunks": [
       {
-        "type": "text",
-        "text": "@"
-      },
-      {
-        "type": "text",
-        "text": "meta {\"confidence\":1.0,\"onTopic\":true}\nYes, you are"
-      },
-      {
-        "type": "text",
-        "text": " welcome to bring your own wine! Corkage is $25 per bottle, with a limit of two bottles per table"
-      },
-      {
-        "type": "text",
-        "text": ". For parking, there is metered street parking on Mulberry Lane and a public garage one block east on Court Street. Let me"
-      },
-      {
-        "type": "text",
-        "text": " know if you'd like to go ahead and reserve that table for next Saturday!"
+        "type": "tool_call",
+        "call": {
+          "id": "call_690204",
+          "name": "lookup_faq",
+          "args": {
+            "query": "parking"
+          },
+          "signature": "EmAKXgFpFH0Tz+4a0IVoU+f1CBBfpXUVsI9Z+dYO2ioUSBuPtATHjolE5RNw5aR9Eqll64bkWHux5nn0OPY8PsrjxmFdxTf5leL1RH34ccUaRtKUG0Hn5Rc2BlNl4yODft4="
+        }
       },
       {
         "type": "usage",
         "usage": {
-          "inputTokens": 2047,
-          "outputTokens": 86
+          "inputTokens": 1777,
+          "outputTokens": 16
         }
       }
     ]
   },
-  "recordedAt": "2026-10-24T07:57:07.510Z"
+  "recordedAt": "2026-10-24T14:36:06.316Z"
 }

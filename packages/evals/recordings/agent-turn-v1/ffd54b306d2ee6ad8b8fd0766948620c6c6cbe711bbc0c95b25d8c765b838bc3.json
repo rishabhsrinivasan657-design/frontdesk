@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "key": "c729abb087d3fabfcf52fbf2f52c693325213bd75b00a7b04111ffce10015e8b",
+  "key": "ffd54b306d2ee6ad8b8fd0766948620c6c6cbe711bbc0c95b25d8c765b838bc3",
   "templateId": "agent-turn-v1",
   "templateHash": "78a802b3dbdce2ffdd6f5caeef0f72398da616e0554bb5515eb93d60b8b2fe63",
   "model": "gemini-3.5-flash-lite",
@@ -15,7 +15,15 @@
     "messages": [
       {
         "role": "user",
-        "text": "<caller_message>\nHello, my name is Dev Shah. I'm calling about an anniversary dinner.\n</caller_message>"
+        "text": "<caller_message>\nHi, I'm Dev Shah. I have a couple of questions about your restaurant.\n</caller_message>"
+      },
+      {
+        "role": "assistant",
+        "text": "@meta {\"confidence\":1.0,\"onTopic\":true}\nHello Dev! Welcome to Casa Fiorella. What would you like to know?"
+      },
+      {
+        "role": "user",
+        "text": "<caller_message>\nCan you bring your own wine?\n</caller_message>"
       }
     ],
     "tools": [
@@ -250,22 +258,22 @@
       {
         "type": "tool_call",
         "call": {
-          "id": "call_383177",
+          "id": "call_602537",
           "name": "lookup_faq",
           "args": {
-            "query": "anniversary"
+            "query": "corkage wine bring own"
           },
-          "signature": "EmAKXgFpFH0TglFa33rrPSdwDn+S2QpLzK4c4DMlZ1OyVlWCchNt0CqlYkOiBRQX1Ce8eLhcamXcQeMTal2JqGuQxlVEZZoQU1bj2f6VN9wR1eYvMTKJZ3VFTs5IoLBnOEM="
+          "signature": "EmAKXgFpFH0TBjeVjMF6z85lIu/muWRPwsaGgwD6ZxZQ1hFSHdTolHgRK2/sUkusbi4PS+W/82b7VTBJH8IDQceUpHGEgX+7JWBVGX76Jqneb4aQKEwTGAhADzy5kuo5sIE="
         }
       },
       {
         "type": "usage",
         "usage": {
-          "inputTokens": 1526,
-          "outputTokens": 17
+          "inputTokens": 1579,
+          "outputTokens": 21
         }
       }
     ]
   },
-  "recordedAt": "2026-10-24T07:56:59.137Z"
+  "recordedAt": "2026-10-24T14:35:50.125Z"
 }
