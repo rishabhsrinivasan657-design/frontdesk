@@ -6,6 +6,10 @@ import { InMemoryConversationLog } from "../chat/conversation-log.js";
 import { SessionHub } from "../chat/hub.js";
 import { buildServer } from "../server.js";
 import { memoryDeps } from "../test-deps.js";
+import { OwnerFeed } from "./feed.js";
+import { ownerLiveRoutes } from "./live.js";
+import type { OwnerReads } from "./reads.js";
+import { ownerRestRoutes } from "./routes.js";
 import { testOwner } from "./test-owner.js";
 
 const ORIGIN = "http://localhost:3000";
@@ -33,10 +37,22 @@ function chat(): ChatContext {
 /** Builds the server and records every route registered under /owner. */
 async function start(withOwner = true) {
   const owner = withOwner ? testOwner({ email: EMAIL, passwordHash: HASH }) : undefined;
+  const c = chat();
+  // Every route set the api registers, so the guard test sees all of them.
+  const ownerRoutes = [
+    ownerRestRoutes({ reads: {} as OwnerReads, calendarId: null, now: () => new Date() }),
+    ownerLiveRoutes({
+      hub: c.hub,
+      sessions: c.deps.sessions,
+      clock: c.deps.clock,
+      feed: new OwnerFeed(),
+    }),
+  ];
   app = buildServer({
-    chat: chat(),
+    chat: c,
     webOrigins: [ORIGIN],
     logger: false,
+    ownerRoutes,
     ...(owner ? { owner } : {}),
   });
   const routes: { method: string; url: string }[] = [];
@@ -125,7 +141,14 @@ describe("owner auth", () => {
   it("every registered owner route rejects a missing or forged cookie", async () => {
     const { app, routes } = await start();
     const guarded = routes.filter((r) => r.url !== "/owner/login");
-    expect(guarded.length).toBeGreaterThanOrEqual(2);
+    expect(guarded.map((r) => `${r.method} ${r.url}`)).toEqual(
+      expect.arrayContaining([
+        "GET /owner/conversations/:id",
+        "POST /owner/handoffs/:id/resolve",
+        "GET /owner/metrics",
+        "GET /owner/live/stream",
+      ]),
+    );
     for (const r of guarded) {
       const url = r.url.replace(/:[a-zA-Z]+/g, "x");
       for (const cookie of [undefined, "fd_owner=forged", "fd_owner="]) {

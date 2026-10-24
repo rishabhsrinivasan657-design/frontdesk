@@ -17,6 +17,8 @@ import type { OwnerContext } from "./owner/context.js";
 import type { OwnerRouteSet } from "./owner/plugin.js";
 import { pgOwnerReads } from "./owner/reads.js";
 import { ownerRestRoutes } from "./owner/routes.js";
+import { OwnerFeed } from "./owner/feed.js";
+import { ownerLiveRoutes } from "./owner/live.js";
 import { RedisOwnerSessionStore } from "./owner/session-store.js";
 
 export const REPO_ROOT = resolve(import.meta.dirname, "../../..");
@@ -94,7 +96,10 @@ export async function buildDeps(env: Env): Promise<{
   const owner = readOwnerEnv(env, redis);
 
   const now = () => clock.now();
+  const hub = new SessionHub();
+  const feed = new OwnerFeed();
   const ownerRoutes = [
+    ownerLiveRoutes({ hub, sessions: deps.sessions, clock, feed }),
     ownerRestRoutes({
       reads: pgOwnerReads(pg.db, { timezone: config.business.timezone, now }),
       calendarId: google ? google.calendarId : null,
@@ -111,7 +116,8 @@ export async function buildDeps(env: Env): Promise<{
       price,
       newSessionId: () => `sess_${randomUUID()}`,
       logger: { error: (obj, msg) => console.error(msg, obj) },
-      hub: new SessionHub(),
+      hub,
+      feed,
     },
     summary: `calendar=${google ? "google" : "in-memory"} llm=${llm.model} owner=${owner ? "on" : "off"}${fixedNow ? " now=fixed" : ""}`,
     async close() {

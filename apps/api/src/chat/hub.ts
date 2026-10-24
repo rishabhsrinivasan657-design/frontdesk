@@ -30,6 +30,11 @@ export class SessionHub {
   private readonly sockets = new Map<string, ChatSocket>();
   private readonly turns = new Map<string, Promise<void>>();
 
+  /** Sessions with a live socket right now, for the owner's Live view. */
+  activeSessions(): string[] {
+    return [...this.sockets.keys()];
+  }
+
   /** Settles once the session's turn in flight, from any socket, has finished and been saved. */
   settled(sessionId: string): Promise<void> {
     return this.turns.get(sessionId) ?? Promise.resolve();

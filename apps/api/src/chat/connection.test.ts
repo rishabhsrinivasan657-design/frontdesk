@@ -5,6 +5,7 @@ import { BOOK, DETAILS, memoryDeps } from "../test-deps.js";
 import { type ChatContext, type ChatSocket, openChat } from "./connection.js";
 import { InMemoryConversationLog } from "./conversation-log.js";
 import { SessionHub } from "./hub.js";
+import { type LiveEvent, OwnerFeed } from "../owner/feed.js";
 
 class FakeSocket implements ChatSocket {
   readonly sent: ServerMessage[] = [];
@@ -69,6 +70,38 @@ async function toReadBack(ctx: ChatContext) {
 }
 
 describe("openChat", () => {
+  it("publishes session, turn, pending and handoff events to the owner feed", async () => {
+    const { ctx } = context();
+    const feed = new OwnerFeed();
+    const events: LiveEvent[] = [];
+    feed.subscribe((e) => events.push(e));
+    ctx.feed = feed;
+    const { chat } = await toReadBack(ctx);
+    expect(events.map((e) => e.type)).toEqual(["session_open", "turn", "pending", "turn"]);
+    expect(events[1]).toMatchObject({ type: "turn", sessionId: chat.sessionId, callerText: BOOK });
+    expect(events[2]).toMatchObject({ type: "pending", sessionId: chat.sessionId });
+    await chat.onMessage(say("Yes, please"));
+    expect(events.slice(4).map((e) => e.type)).toEqual(["pending_cleared", "turn"]);
+    expect(events[4]).toMatchObject({ status: "executed" });
+    chat.close();
+    expect(events.at(-1)).toMatchObject({ type: "session_closed", sessionId: chat.sessionId });
+  });
+
+  it("a replaced socket closing doesn't report the session closed", async () => {
+    const { ctx } = context();
+    const feed = new OwnerFeed();
+    const events: LiveEvent[] = [];
+    feed.subscribe((e) => events.push(e));
+    ctx.feed = feed;
+    const first = await openChat(new FakeSocket(), ctx);
+    await first.onMessage(say("what are your hours?"));
+    const second = await openChat(new FakeSocket(), ctx, first.sessionId);
+    expect(second.sessionId).toBe(first.sessionId);
+    first.close();
+    expect(events.map((e) => e.type)).not.toContain("session_closed");
+    expect(ctx.hub.activeSessions()).toEqual([first.sessionId]);
+  });
+
   it("sends a new session message with a fresh id", async () => {
     const { ctx } = context();
     const socket = new FakeSocket();
