@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "key": "e60b9019c1412f89986500c6e210806dd8c1b822c82a4678066ae7008ed698be",
+  "key": "dbe7bbfb732b769ccdb0e3c3920f1ba1b8ef6ab44b2859c8f21d3ead44994f0d",
   "templateId": "caller-sim",
   "templateHash": "142665a82d4756baa33c10e0fbfe1032f43eb1489b66a750bc4574ca858e16ba",
   "model": "gemma3:4b",
@@ -19,40 +19,24 @@
       },
       {
         "role": "assistant",
-        "text": "Hello, my name is Dev Shah. I'm calling about an anniversary dinner."
+        "text": "Hi, my name is Dev Shah. I'm calling about an anniversary dinner."
       },
       {
         "role": "user",
-        "text": "Happy early anniversary, Dev! We'd love to host you and your partner for dinner. What date and time are you thinking of, and how many people will be in your party?"
-      },
-      {
-        "role": "assistant",
-        "text": "Next Saturday, the 18th, around 7:30pm. It’ll be two people."
-      },
-      {
-        "role": "user",
-        "text": "I have an opening for two people next Saturday, November 14th, at 7:30 PM. Would you like me to book that for you, and could I have your phone number or email address for the reservation?"
-      },
-      {
-        "role": "assistant",
-        "text": "No, not yet. I just wanted to check a couple of things first."
-      },
-      {
-        "role": "user",
-        "text": "Of course! What questions can I answer for you?"
+        "text": "Welcome to Casa Fiorella! I'd love to help you plan your anniversary dinner. How many guests will be joining you, and what date and time were you hoping for?"
       }
     ],
     "temperature": 0.4
   },
   "response": {
     "value": {
-      "say": "Could we bring our own wine? And where is the best place to park?",
+      "say": "Two people, and I was thinking Saturday, the 18th, around 7:30pm.",
       "done": false
     },
     "usage": {
-      "inputTokens": 539,
-      "outputTokens": 26
+      "inputTokens": 414,
+      "outputTokens": 33
     }
   },
-  "recordedAt": "2026-10-24T07:57:05.812Z"
+  "recordedAt": "2026-10-24T14:45:04.349Z"
 }

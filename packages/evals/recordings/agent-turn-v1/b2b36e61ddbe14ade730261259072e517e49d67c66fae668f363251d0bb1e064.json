@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "key": "ef9c1ef29352c62164c0e95d9e2d21c5a24953ee284232c67a0a8ccb2285446c",
+  "key": "b2b36e61ddbe14ade730261259072e517e49d67c66fae668f363251d0bb1e064",
   "templateId": "agent-turn-v1",
   "templateHash": "78a802b3dbdce2ffdd6f5caeef0f72398da616e0554bb5515eb93d60b8b2fe63",
   "model": "gemini-3.5-flash-lite",
@@ -15,15 +15,101 @@
     "messages": [
       {
         "role": "user",
-        "text": "<caller_message>\nHello, my name is Dev Shah. I’m calling about an anniversary dinner.\n</caller_message>"
+        "text": "<caller_message>\nHi, my name is Dev Shah. I'm calling about an anniversary dinner.\n</caller_message>"
       },
       {
         "role": "assistant",
-        "text": "@meta {\"confidence\":1.0,\"onTopic\":true}\nWelcome to Casa Fiorella, and happy early anniversary to you and your guest! I'd be delighted to help you set up a table for your celebration. For how many people and what date would you like to book?"
+        "text": "@meta {\"confidence\":1.0,\"onTopic\":true}\nWelcome to Casa Fiorella! I'd love to help you plan your anniversary dinner. How many guests will be joining you, and what date and time were you hoping for?"
       },
       {
         "role": "user",
-        "text": "<caller_message>\nTwo people, for Saturday, November 4th.\n</caller_message>"
+        "text": "<caller_message>\nTwo people, and I was thinking Saturday, the 18th, around 7:30pm.\n</caller_message>"
+      },
+      {
+        "role": "assistant",
+        "text": "",
+        "toolCalls": [
+          {
+            "id": "call_800491",
+            "name": "check_availability",
+            "args": {
+              "partySize": 2,
+              "time": "19:30",
+              "date": "2026-11-18"
+            },
+            "signature": "EmAKXgFpFH0T/jVZpys1PMuAusuO997gZkRFQN04wuLftNF6uYcq7v0leBWV9VTtenuma9b2FysFsSQHSGbAZhE52/zxI0DDG07tLmszhjkKLenb7PGgEGPGbwrxBaEOIa4="
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "callId": "call_800491",
+        "name": "check_availability",
+        "result": {
+          "ok": true,
+          "data": {
+            "date": "2026-11-18",
+            "partySize": 2,
+            "available": true,
+            "slots": [
+              {
+                "slotId": "2026-11-18T19:30@t2-1#2",
+                "time": "19:30",
+                "when": "Wednesday, November 18 at 7:30 PM"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "role": "assistant",
+        "text": "@meta {\"confidence\":1.0,\"onTopic\":true}\nWe have a table available for two on Wednesday, November 18 at 7:30 PM. To get this booked for your anniversary dinner, may I have a contact phone number or email address?"
+      },
+      {
+        "role": "user",
+        "text": "<caller_message>\nNo, I don’t want to book yet. I just wanted to ask a few questions.\n</caller_message>"
+      },
+      {
+        "role": "assistant",
+        "text": "@meta {\"confidence\":1.0,\"onTopic\":true}\nOf course! What questions can I answer for you?"
+      },
+      {
+        "role": "user",
+        "text": "<caller_message>\nCould you tell me if it’s okay to bring our own wine? And where is the best place to park?\n</caller_message>"
+      },
+      {
+        "role": "assistant",
+        "text": "",
+        "toolCalls": [
+          {
+            "id": "call_808101",
+            "name": "lookup_faq",
+            "args": {
+              "query": "corkage bring your own wine parking"
+            },
+            "signature": "EmAKXgFpFH0TI6W+PcIIX1hFTunIHZ2glce7TFEC+LQvXzCFy9/rCDO4QyjBIN1hvRkU5ogVDf/243A299b/Wi0Vmdjhm45X2XtpGizVCspOabcvbG6xc+l+wAq/u30FPRY="
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "callId": "call_808101",
+        "name": "lookup_faq",
+        "result": {
+          "ok": true,
+          "data": {
+            "answers": [
+              {
+                "id": "parking",
+                "a": "There's metered street parking on Mulberry Lane and a public garage one block east on Court Street."
+              },
+              {
+                "id": "corkage",
+                "a": "Yes, corkage is $25 per bottle, with a limit of two bottles per table."
+              }
+            ]
+          }
+        }
       }
     ],
     "tools": [
@@ -256,25 +342,33 @@
   "response": {
     "chunks": [
       {
-        "type": "tool_call",
-        "call": {
-          "id": "call_591213",
-          "name": "check_availability",
-          "args": {
-            "partySize": 2,
-            "date": "2026-12-05"
-          },
-          "signature": "EmAKXgFpFH0Tjrlhgqio4l1JlnAXmEV5GjwrLBbCCcao0SrepKUF7vnwZoHvHd7PFqdytzEnnmE34DNs0h0iby8p+LeUNQVd5XGuIKZty5qLdTJTea70I+RyP5Y/kEOINdo="
-        }
+        "type": "text",
+        "text": "@"
+      },
+      {
+        "type": "text",
+        "text": "meta {\"confidence\":1.0,\"onTopic\":true}\nYes, you are"
+      },
+      {
+        "type": "text",
+        "text": " welcome to bring your own wine! Corkage is $25 per bottle, with a limit of two bottles per table"
+      },
+      {
+        "type": "text",
+        "text": ". For parking, there is metered street parking on Mulberry Lane and a public garage one block east on Court Street."
+      },
+      {
+        "type": "text",
+        "text": " Let me know if you have any other questions!"
       },
       {
         "type": "usage",
         "usage": {
-          "inputTokens": 1611,
-          "outputTokens": 30
+          "inputTokens": 2016,
+          "outputTokens": 77
         }
       }
     ]
   },
-  "recordedAt": "2026-10-24T07:55:02.828Z"
+  "recordedAt": "2026-10-24T14:45:35.399Z"
 }

@@ -5,6 +5,13 @@ import type { ToolSpec } from "../../llm/types.js";
 const id = z.string().min(1).max(100);
 const name = z.string().trim().min(1).max(100);
 const contact = z.string().trim().min(3).max(100);
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE = /^\+?[\d\s().-]+$/;
+/** A phone number (7–15 digits) or an email, so the read-back never says "contact Dev Shah". */
+const bookingContact = contact.refine(
+  (value) => EMAIL.test(value) || (PHONE.test(value) && /^(\D*\d){7,15}\D*$/.test(value)),
+  "contact must be the caller's phone number or email; ask the caller for one",
+);
 const partySize = z.number().int().min(1).max(50);
 
 /** Zod argument schemas for the allow-listed tools (spec §6). */
@@ -20,7 +27,7 @@ export const TOOL_ARGS = {
   book: z.strictObject({
     slotId: id.describe("A slotId returned by check_availability in this conversation"),
     name,
-    contact: contact.describe("Email or phone number"),
+    contact: bookingContact.describe("Email or phone number"),
     partySize,
     notes: z.string().max(500).default("").describe("Allergies and requests, verbatim"),
   }),

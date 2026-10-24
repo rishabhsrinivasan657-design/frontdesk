@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "key": "c729abb087d3fabfcf52fbf2f52c693325213bd75b00a7b04111ffce10015e8b",
+  "key": "e91874e8920804a641e14c9e791195bb1568bd6fa098ac042329abf28f64f5d3",
   "templateId": "agent-turn-v1",
   "templateHash": "78a802b3dbdce2ffdd6f5caeef0f72398da616e0554bb5515eb93d60b8b2fe63",
   "model": "gemini-3.5-flash-lite",
@@ -15,7 +15,67 @@
     "messages": [
       {
         "role": "user",
-        "text": "<caller_message>\nHello, my name is Dev Shah. I'm calling about an anniversary dinner.\n</caller_message>"
+        "text": "<caller_message>\nHi, my name is Dev Shah. I'm calling about an anniversary dinner.\n</caller_message>"
+      },
+      {
+        "role": "assistant",
+        "text": "@meta {\"confidence\":1.0,\"onTopic\":true}\nWelcome to Casa Fiorella! I'd love to help you plan your anniversary dinner. How many guests will be joining you, and what date and time were you hoping for?"
+      },
+      {
+        "role": "user",
+        "text": "<caller_message>\nTwo people, and I was thinking Saturday, the 18th, around 7:30pm.\n</caller_message>"
+      },
+      {
+        "role": "assistant",
+        "text": "",
+        "toolCalls": [
+          {
+            "id": "call_800491",
+            "name": "check_availability",
+            "args": {
+              "partySize": 2,
+              "time": "19:30",
+              "date": "2026-11-18"
+            },
+            "signature": "EmAKXgFpFH0T/jVZpys1PMuAusuO997gZkRFQN04wuLftNF6uYcq7v0leBWV9VTtenuma9b2FysFsSQHSGbAZhE52/zxI0DDG07tLmszhjkKLenb7PGgEGPGbwrxBaEOIa4="
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "callId": "call_800491",
+        "name": "check_availability",
+        "result": {
+          "ok": true,
+          "data": {
+            "date": "2026-11-18",
+            "partySize": 2,
+            "available": true,
+            "slots": [
+              {
+                "slotId": "2026-11-18T19:30@t2-1#2",
+                "time": "19:30",
+                "when": "Wednesday, November 18 at 7:30 PM"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "role": "assistant",
+        "text": "@meta {\"confidence\":1.0,\"onTopic\":true}\nWe have a table available for two on Wednesday, November 18 at 7:30 PM. To get this booked for your anniversary dinner, may I have a contact phone number or email address?"
+      },
+      {
+        "role": "user",
+        "text": "<caller_message>\nNo, I don’t want to book yet. I just wanted to ask a few questions.\n</caller_message>"
+      },
+      {
+        "role": "assistant",
+        "text": "@meta {\"confidence\":1.0,\"onTopic\":true}\nOf course! What questions can I answer for you?"
+      },
+      {
+        "role": "user",
+        "text": "<caller_message>\nCould you tell me if it’s okay to bring our own wine? And where is the best place to park?\n</caller_message>"
       }
     ],
     "tools": [
@@ -250,22 +310,22 @@
       {
         "type": "tool_call",
         "call": {
-          "id": "call_383177",
+          "id": "call_808101",
           "name": "lookup_faq",
           "args": {
-            "query": "anniversary"
+            "query": "corkage bring your own wine parking"
           },
-          "signature": "EmAKXgFpFH0TglFa33rrPSdwDn+S2QpLzK4c4DMlZ1OyVlWCchNt0CqlYkOiBRQX1Ce8eLhcamXcQeMTal2JqGuQxlVEZZoQU1bj2f6VN9wR1eYvMTKJZ3VFTs5IoLBnOEM="
+          "signature": "EmAKXgFpFH0TI6W+PcIIX1hFTunIHZ2glce7TFEC+LQvXzCFy9/rCDO4QyjBIN1hvRkU5ogVDf/243A299b/Wi0Vmdjhm45X2XtpGizVCspOabcvbG6xc+l+wAq/u30FPRY="
         }
       },
       {
         "type": "usage",
         "usage": {
-          "inputTokens": 1526,
-          "outputTokens": 17
+          "inputTokens": 1909,
+          "outputTokens": 23
         }
       }
     ]
   },
-  "recordedAt": "2026-10-24T07:56:59.137Z"
+  "recordedAt": "2026-10-24T14:45:30.657Z"
 }

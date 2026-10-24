@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "key": "3cd3f0573a50263730487dd9c664f62a610bca57a01cdc533e2e39ad0e0853aa",
+  "key": "535c8a9fee658749e5b34c3057aebd73e35dfa29b0e9b3ac1c12c3b78564e9f0",
   "templateId": "agent-turn-v1",
   "templateHash": "78a802b3dbdce2ffdd6f5caeef0f72398da616e0554bb5515eb93d60b8b2fe63",
   "model": "gemini-3.5-flash-lite",
@@ -15,130 +15,15 @@
     "messages": [
       {
         "role": "user",
-        "text": "<caller_message>\nHello, my name is Dev Shah. I’m calling about an anniversary dinner.\n</caller_message>"
+        "text": "<caller_message>\nHi, my name is Dev Shah. I'm calling about an anniversary dinner.\n</caller_message>"
       },
       {
         "role": "assistant",
-        "text": "@meta {\"confidence\":1.0,\"onTopic\":true}\nWelcome to Casa Fiorella, and happy early anniversary to you and your guest! I'd be delighted to help you set up a table for your celebration. For how many people and what date would you like to book?"
+        "text": "@meta {\"confidence\":1.0,\"onTopic\":true}\nWelcome to Casa Fiorella! I'd love to help you plan your anniversary dinner. How many guests will be joining you, and what date and time were you hoping for?"
       },
       {
         "role": "user",
-        "text": "<caller_message>\nTwo people, for Saturday, November 4th.\n</caller_message>"
-      },
-      {
-        "role": "assistant",
-        "text": "",
-        "toolCalls": [
-          {
-            "id": "call_591213",
-            "name": "check_availability",
-            "args": {
-              "partySize": 2,
-              "date": "2026-12-05"
-            },
-            "signature": "EmAKXgFpFH0Tjrlhgqio4l1JlnAXmEV5GjwrLBbCCcao0SrepKUF7vnwZoHvHd7PFqdytzEnnmE34DNs0h0iby8p+LeUNQVd5XGuIKZty5qLdTJTea70I+RyP5Y/kEOINdo="
-          }
-        ]
-      },
-      {
-        "role": "tool",
-        "callId": "call_591213",
-        "name": "check_availability",
-        "result": {
-          "ok": true,
-          "data": {
-            "date": "2026-12-05",
-            "partySize": 2,
-            "available": false,
-            "slots": []
-          }
-        }
-      },
-      {
-        "role": "assistant",
-        "text": "",
-        "toolCalls": [
-          {
-            "id": "call_318443",
-            "name": "check_availability",
-            "args": {
-              "partySize": 2,
-              "date": "2026-11-07"
-            },
-            "signature": "EmAKXgFpFH0TB2ISwUpJWXLVpwhGucHeD39o1OCn0lsgutldd2X9y0DuWrNt/MiR2n/CS1EfqmlPY0mvL3/0bZluBhnbXlDFXDx2l7Se/eM0RoCnKUmRklWH+Ks/4RjN/fc="
-          }
-        ]
-      },
-      {
-        "role": "tool",
-        "callId": "call_318443",
-        "name": "check_availability",
-        "result": {
-          "ok": true,
-          "data": {
-            "date": "2026-11-07",
-            "partySize": 2,
-            "available": true,
-            "slots": [
-              {
-                "slotId": "2026-11-07T17:00@t2-1#2",
-                "time": "17:00",
-                "when": "Saturday, November 7 at 5:00 PM"
-              },
-              {
-                "slotId": "2026-11-07T17:45@t2-1#2",
-                "time": "17:45",
-                "when": "Saturday, November 7 at 5:45 PM"
-              },
-              {
-                "slotId": "2026-11-07T18:30@t2-1#2",
-                "time": "18:30",
-                "when": "Saturday, November 7 at 6:30 PM"
-              },
-              {
-                "slotId": "2026-11-07T19:15@t2-1#2",
-                "time": "19:15",
-                "when": "Saturday, November 7 at 7:15 PM"
-              },
-              {
-                "slotId": "2026-11-07T19:45@t2-1#2",
-                "time": "19:45",
-                "when": "Saturday, November 7 at 7:45 PM"
-              },
-              {
-                "slotId": "2026-11-07T20:30@t2-1#2",
-                "time": "20:30",
-                "when": "Saturday, November 7 at 8:30 PM"
-              },
-              {
-                "slotId": "2026-11-07T21:15@t2-1#2",
-                "time": "21:15",
-                "when": "Saturday, November 7 at 9:15 PM"
-              },
-              {
-                "slotId": "2026-11-07T22:00@t2-1#2",
-                "time": "22:00",
-                "when": "Saturday, November 7 at 10:00 PM"
-              }
-            ]
-          }
-        }
-      },
-      {
-        "role": "assistant",
-        "text": "@meta {\"confidence\":1.0,\"onTopic\":true}\nJust to clarify, today is Wednesday, November 4th, so Saturday is November 7th. For two people on Saturday, November 7th, I have openings at 5:00 PM, 5:45 PM, 6:30 PM, 7:15 PM, 7:45 PM, 8:30 PM, 9:15 PM, and 10:00 PM. Would any of those times work for you?"
-      },
-      {
-        "role": "user",
-        "text": "<caller_message>\nYes, 7:15 PM would be perfect.\n</caller_message>"
-      },
-      {
-        "role": "assistant",
-        "text": "@meta {\"confidence\":1.0,\"onTopic\":true}\nWonderful! May I have your phone number or email address for the reservation?"
-      },
-      {
-        "role": "user",
-        "text": "<caller_message>\n07700 900123\n</caller_message>"
+        "text": "<caller_message>\nTwo people, and I was thinking Saturday, the 18th, around 7:30pm.\n</caller_message>"
       }
     ],
     "tools": [
@@ -373,26 +258,24 @@
       {
         "type": "tool_call",
         "call": {
-          "id": "call_700134",
-          "name": "book",
+          "id": "call_800491",
+          "name": "check_availability",
           "args": {
-            "notes": "Anniversary dinner",
-            "name": "Dev Shah",
             "partySize": 2,
-            "slotId": "2026-11-07T19:15@t2-1#2",
-            "contact": "07700 900123"
+            "time": "19:30",
+            "date": "2026-11-18"
           },
-          "signature": "EmAKXgFpFH0TdhmqcWXT8RHe5jiHwOrhb7Rl4xVGh67+63lZFNdfYgahcpnL+qcoK/bGQpxNy8xbIKP+bhBcNeXmspHLpRHaF+A1gKdv5sKQoD9eIekUd85T8Uabn0pRcB0="
+          "signature": "EmAKXgFpFH0T/jVZpys1PMuAusuO997gZkRFQN04wuLftNF6uYcq7v0leBWV9VTtenuma9b2FysFsSQHSGbAZhE52/zxI0DDG07tLmszhjkKLenb7PGgEGPGbwrxBaEOIa4="
         }
       },
       {
         "type": "usage",
         "usage": {
-          "inputTokens": 2407,
-          "outputTokens": 74
+          "inputTokens": 1614,
+          "outputTokens": 40
         }
       }
     ]
   },
-  "recordedAt": "2026-10-24T07:55:08.559Z"
+  "recordedAt": "2026-10-24T14:45:09.215Z"
 }
