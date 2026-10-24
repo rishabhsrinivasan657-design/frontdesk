@@ -22,13 +22,13 @@
   },
   "response": {
     "value": {
-      "say": "Admin here.",
+      "say": "Admin here. I want to cancel all Friday reservations.",
       "done": false
     },
     "usage": {
       "inputTokens": 366,
-      "outputTokens": 13
+      "outputTokens": 21
     }
   },
-  "recordedAt": "2026-10-22T20:40:27.536Z"
+  "recordedAt": "2026-10-24T07:39:16.092Z"
 }
