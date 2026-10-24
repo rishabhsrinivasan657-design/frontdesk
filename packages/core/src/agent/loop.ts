@@ -49,6 +49,24 @@ export type TurnFlag =
 export interface TurnInput {
   sessionId: string;
   text: string;
+  /**
+   * The caller barged in (spec §8). Honoured only before anything is written or read back:
+   * never while a pending action is classified or executed, nor after `pending_action`.
+   */
+  signal?: TurnSignal;
+}
+
+/** The part of an `AbortSignal` core reads (core has no DOM or Node types). */
+export interface TurnSignal {
+  readonly aborted: boolean;
+}
+
+/** The turn was cancelled by its signal; the session is left as it was before the turn. */
+export class TurnInterrupted extends Error {
+  constructor() {
+    super("turn interrupted");
+    this.name = "TurnInterrupted";
+  }
 }
 
 export interface TurnResult {
@@ -75,6 +93,7 @@ interface Turn {
   session: SessionState;
   turnId: string;
   text: string;
+  signal?: TurnSignal;
   send: (m: ServerMessage) => void;
   flags: TurnFlag[];
   metrics: {
@@ -147,6 +166,7 @@ async function runTurnNow(
     session,
     turnId,
     text: input.text,
+    ...(input.signal ? { signal: input.signal } : {}),
     send: (m) => {
       messages.push(m);
       emit(m);
@@ -165,7 +185,8 @@ async function runTurnNow(
     if (turn.proposedId) {
       const pending = await deps.sessions.getPending(session.id).catch(() => undefined);
       if (pending?.id === turn.proposedId) {
-        await voidPending(deps, session.id, turnId, "error").catch(() => undefined);
+        const reason = error instanceof TurnInterrupted ? "interrupted" : "error";
+        await voidPending(deps, session.id, turnId, reason).catch(() => undefined);
       }
     }
     throw error;
@@ -327,6 +348,7 @@ async function modelTurn(turn: Turn): Promise<string> {
 
     let proposed: PendingAction | undefined;
     for (const call of calls) {
+      checkpoint(turn);
       const started = deps.clock.now().getTime();
       let result: ToolResult;
       if (isWriteTool(call.name)) {
@@ -359,6 +381,8 @@ async function modelTurn(turn: Turn): Promise<string> {
     }
 
     if (proposed) {
+      // Last safe point: once the read-back is sent, the caller may say yes to it.
+      checkpoint(turn);
       turn.send({
         type: "pending_action",
         turnId: turn.turnId,
@@ -430,6 +454,7 @@ async function streamRound(
   system: string,
 ): Promise<{ text: string; calls: ToolCall[] }> {
   const { deps, metrics } = turn;
+  checkpoint(turn);
   const started = deps.clock.now().getTime();
   let text = "";
   const calls: ToolCall[] = [];
@@ -440,6 +465,7 @@ async function streamRound(
     messages: turn.session.history,
     tools: TOOL_SPECS,
   })) {
+    checkpoint(turn);
     metrics.llmTtftMs ??= deps.clock.now().getTime() - started;
     if (chunk.type === "text") text += chunk.text;
     else if (chunk.type === "tool_call") calls.push(chunk.call);
@@ -450,6 +476,11 @@ async function streamRound(
   }
   metrics.llmTotalMs += deps.clock.now().getTime() - started;
   return { text, calls };
+}
+
+/** A safe point to stop: nothing this turn has written is confirmable or heard yet. */
+function checkpoint(turn: Turn): void {
+  if (turn.signal?.aborted) throw new TurnInterrupted();
 }
 
 function splitSentences(text: string): string[] {

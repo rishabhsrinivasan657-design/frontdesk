@@ -74,6 +74,8 @@ export const ServerMessageSchema = z.discriminatedUnion("type", [
       .optional(),
     handoff: z.strictObject({ reason: z.enum(HANDOFF_REASONS), message: z.string() }).optional(),
   }),
+  /** The in-flight turn was cancelled by `interrupt`: nothing from it will follow. */
+  z.strictObject({ type: z.literal("interrupted") }),
   z.strictObject({
     type: z.literal("error"),
     code: z.enum(["bad_message", "busy", "server_error"]),

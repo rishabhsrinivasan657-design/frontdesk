@@ -48,7 +48,11 @@ export default defineConfig({
       url: `http://localhost:${WEB_PORT}/talk`,
       reuseExistingServer: false,
       timeout: 180_000,
-      env: { NEXT_PUBLIC_API_WS_URL: `ws://localhost:${API_PORT}/ws` },
+      // The voice test hook is compiled in only for this build (voice/providers.ts).
+      env: {
+        NEXT_PUBLIC_API_WS_URL: `ws://localhost:${API_PORT}/ws`,
+        NEXT_PUBLIC_VOICE_TEST_HOOK: "1",
+      },
     },
   ],
 });

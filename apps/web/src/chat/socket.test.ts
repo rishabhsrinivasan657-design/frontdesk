@@ -143,6 +143,29 @@ describe("connectChat", () => {
     ]);
   });
 
+  it("sendText carries voice timings", () => {
+    const { chat } = setup();
+    latest().open();
+    chat.sendText("a table for 4", { speechEnd: 1000, sttFinal: 1300 });
+    expect(JSON.parse(latest().sent[0]!)).toEqual({
+      type: "user_text",
+      text: "a table for 4",
+      timings: { speechEnd: 1000, sttFinal: 1300 },
+    });
+  });
+
+  it("sendInterrupt and sendTtsStarted send their messages, only while open", () => {
+    const { chat } = setup();
+    expect(chat.sendInterrupt()).toBe(false);
+    latest().open();
+    expect(chat.sendInterrupt()).toBe(true);
+    expect(chat.sendTtsStarted("turn_1", 1730000000000)).toBe(true);
+    expect(latest().sent.map((m) => JSON.parse(m) as unknown)).toEqual([
+      { type: "interrupt" },
+      { type: "tts_started", turnId: "turn_1", at: 1730000000000 },
+    ]);
+  });
+
   it("passes server messages on with a timestamp", () => {
     const { events } = setup();
     latest().open();

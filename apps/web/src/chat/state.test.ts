@@ -64,6 +64,16 @@ describe("chatReducer", () => {
     expect(state.busy).toBe(true);
   });
 
+  it("interrupted clears busy without a notice", () => {
+    const state = run([
+      { type: "local_send", text: "Table for 4?", at: 10 },
+      server({ type: "interrupted" }),
+    ]);
+    expect(state.busy).toBe(false);
+    expect(state.notice).toBeUndefined();
+    expect(state.messages).toHaveLength(1);
+  });
+
   it("sentences of one turn join one agent bubble", () => {
     const state = run([
       server({ type: "agent_sentence", turnId: "turn_1", text: "That time is open." }),

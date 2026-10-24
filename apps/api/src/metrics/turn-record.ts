@@ -13,6 +13,8 @@ export interface TurnRecordInput {
   timings: { speechEnd?: number; sttFinal?: number };
   /** Server time from receiving the caller's text to the first reply message. */
   firstOutputMs?: number;
+  /** Server time from sending the first sentence to hearing that speech started (M7). */
+  ttsStartMs?: number;
   price: Price;
   now: Date;
 }
@@ -23,18 +25,19 @@ export function toTurnRecord(input: TurnRecordInput): TurnRecord {
   if (metrics?.type !== "turn_metrics") throw new Error("turn has no turn_metrics message");
   const { speechEnd, sttFinal } = input.timings;
   const round = (ms: number | undefined) => (ms === undefined ? null : Math.round(ms));
+  const sttMs =
+    speechEnd !== undefined && sttFinal !== undefined ? Math.round(sttFinal - speechEnd) : null;
   return {
     id: input.id,
     conversationId: input.conversationId,
     turnIndex: input.turnIndex,
     callerText: input.callerText,
     agentText: input.result.reply,
-    sttMs:
-      speechEnd !== undefined && sttFinal !== undefined ? Math.round(sttFinal - speechEnd) : null,
+    sttMs,
     llmTtftMs: round(metrics.llmTtftMs),
     llmTotalMs: round(metrics.llmTotalMs),
     toolMs: metrics.toolMs.map(Math.round),
-    ttsStartMs: null,
+    ttsStartMs: round(input.ttsStartMs),
     totalMs: round(metrics.totalMs),
     tokensIn: metrics.tokensIn,
     tokensOut: metrics.tokensOut,
@@ -48,6 +51,8 @@ export function toTurnRecord(input: TurnRecordInput): TurnRecord {
         ...(metrics.llmTtftMs !== undefined ? { llmTtftMs: metrics.llmTtftMs } : {}),
         toolMs: metrics.toolMs,
         ...(input.firstOutputMs !== undefined ? { firstOutputMs: input.firstOutputMs } : {}),
+        ...(sttMs !== null ? { sttMs } : {}),
+        ...(input.ttsStartMs !== undefined ? { ttsStartMs: input.ttsStartMs } : {}),
       }),
     ],
     createdAt: input.now.toISOString(),

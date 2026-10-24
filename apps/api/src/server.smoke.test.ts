@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { createConfirmationQueue } from "@frontdesk/worker";
 import { createDb, migrate, schema } from "@frontdesk/db";
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildDeps } from "./deps.js";
@@ -80,7 +80,8 @@ describe("api against Redis and Postgres", () => {
     const stages = await pg.db
       .select()
       .from(schema.auditLog)
-      .where(eq(schema.auditLog.actionId, pending.actionId));
+      .where(eq(schema.auditLog.actionId, pending.actionId))
+      .orderBy(asc(schema.auditLog.seq));
     expect(stages.map((s) => s.stage)).toEqual(["proposed", "confirmed", "executed"]);
 
     const job = await queue.getJob(`confirm-${pending.actionId}`);

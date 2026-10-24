@@ -142,6 +142,25 @@ describe("PgConversations", () => {
     expect(await conversations.turns(conversationId)).toHaveLength(1);
   });
 
+  it("setTtsStart fills tts_start_ms and appends flags only while it is null", async () => {
+    const conversationId = id("s");
+    await conversations.start({
+      id: conversationId,
+      source: "live",
+      startedAt: "2026-11-06T23:02:59.000Z",
+    });
+    const t = { ...turn(conversationId), ttsStartMs: null, flags: ["injection_pattern"] };
+    await conversations.recordTurn(t);
+    await conversations.setTtsStart(conversationId, t.id, 420, ["over_p95_tts_start"]);
+    await conversations.setTtsStart(conversationId, t.id, 99, ["second"]);
+    await conversations.setTtsStart(id("s"), t.id, 1, ["other_conversation"]);
+    const [row] = await conversations.turns(conversationId);
+    expect(row).toMatchObject({
+      ttsStartMs: 420,
+      flags: ["injection_pattern", "over_p95_tts_start"],
+    });
+  });
+
   it("stores a turn with every metric and reads it back", async () => {
     const conversationId = id("s");
     await conversations.start({

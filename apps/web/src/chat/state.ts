@@ -132,6 +132,9 @@ function onServer(state: ChatState, m: ServerMessage, at: number): ChatState {
         },
       };
     }
+    case "interrupted":
+      // The caller barged in; the cancelled turn sends nothing more.
+      return { ...state, busy: false };
     case "error": {
       // The server dropped a message it answered `busy` to: don't show it as sent.
       const last = state.messages.at(-1);

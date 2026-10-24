@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import type { Db } from "./client.js";
 import { conversations, feedback, turns } from "./schema.js";
 import { iso } from "./time.js";
@@ -47,6 +47,28 @@ export class PgConversations {
 
   async recordTurn(t: TurnRecord): Promise<void> {
     await this.db.insert(turns).values(t);
+  }
+
+  /** Fills tts_start_ms (and appends flags) once: a turn that already has one is left alone. */
+  async setTtsStart(
+    conversationId: string,
+    turnId: string,
+    ms: number,
+    flags: string[],
+  ): Promise<void> {
+    await this.db
+      .update(turns)
+      .set({
+        ttsStartMs: ms,
+        flags: sql`${turns.flags} || ${JSON.stringify(flags)}::jsonb`,
+      })
+      .where(
+        and(
+          eq(turns.id, turnId),
+          eq(turns.conversationId, conversationId),
+          isNull(turns.ttsStartMs),
+        ),
+      );
   }
 
   async turns(conversationId: string): Promise<TurnRecord[]> {

@@ -4,7 +4,7 @@ import { LLMError } from "../llm/errors.js";
 import type { LLMChunk, LLMMessage } from "../llm/types.js";
 import { agentFixture } from "../testing/agent-fixtures.js";
 import type { TestLLM } from "../testing/test-llm.js";
-import { readOnlyCalendar, runTurn } from "./loop.js";
+import { TurnInterrupted, readOnlyCalendar, runTurn } from "./loop.js";
 
 const text = (t: string): LLMChunk => ({ type: "text", text: t });
 let callSeq = 0;
@@ -21,6 +21,12 @@ function queue(llm: TestLLM, ...responses: LLMChunk[][]): void {
 const CHECK = { date: "2026-11-07", time: "19:00", partySize: 4 };
 const SLOT = "2026-11-07T19:00@t4-1#4";
 const BOOK = { slotId: SLOT, name: "Bo Chen", contact: "bo@example.com", partySize: 4, notes: "" };
+
+/** Stands in for an AbortController (core has no DOM types). */
+function abortable() {
+  const signal = { aborted: false };
+  return { signal, abort: () => void (signal.aborted = true) };
+}
 
 function setup() {
   const fx = agentFixture(testConfig());
@@ -179,6 +185,107 @@ describe("runTurn", () => {
     await expect(proposeBooking(s)).rejects.toThrow("store down");
     expect(await s.deps.sessions.getPending("s1")).toBeUndefined();
     expect(s.deps.audit.entries().at(-1)).toMatchObject({ stage: "voided", reason: "error" });
+  });
+
+  it("an abort mid-stream rejects with TurnInterrupted and saves nothing", async () => {
+    const s = setup();
+    const controller = abortable();
+    s.llm.onStream(() => {
+      controller.abort();
+      return [text("Street parking only.")];
+    });
+    const emitted: string[] = [];
+    await expect(
+      runTurn(s.deps, { sessionId: "s1", text: "parking?", signal: controller.signal }, (m) =>
+        emitted.push(m.type),
+      ),
+    ).rejects.toBeInstanceOf(TurnInterrupted);
+    expect(emitted).toEqual([]);
+    expect(await s.deps.sessions.load("s1")).toBeUndefined();
+  });
+
+  it("an abort after propose voids this turn's proposal", async () => {
+    const s = setup();
+    const controller = abortable();
+    queue(
+      s.llm,
+      [call("check_availability", CHECK)],
+      [call("book", BOOK), call("check_availability", CHECK)],
+    );
+    const put = s.deps.sessions.putPending.bind(s.deps.sessions);
+    s.deps.sessions.putPending = async (action) => {
+      await put(action);
+      controller.abort();
+    };
+    const emitted: string[] = [];
+    await expect(
+      runTurn(
+        s.deps,
+        {
+          sessionId: "s1",
+          text: "Saturday 7pm for 4, Bo Chen, bo@example.com",
+          signal: controller.signal,
+        },
+        (m) => emitted.push(m.type),
+      ),
+    ).rejects.toBeInstanceOf(TurnInterrupted);
+    expect(emitted).not.toContain("pending_action");
+    expect(await s.deps.sessions.getPending("s1")).toBeUndefined();
+    expect(s.deps.audit.entries().at(-1)).toMatchObject({ stage: "voided", reason: "interrupted" });
+  });
+
+  it("an abort during a lone propose voids it before the read-back is sent", async () => {
+    const s = setup();
+    const controller = abortable();
+    queue(s.llm, [call("check_availability", CHECK)], [call("book", BOOK)]);
+    const put = s.deps.sessions.putPending.bind(s.deps.sessions);
+    s.deps.sessions.putPending = async (action) => {
+      await put(action);
+      controller.abort();
+    };
+    const emitted: string[] = [];
+    await expect(
+      runTurn(
+        s.deps,
+        { sessionId: "s1", text: "Saturday 7pm for 4", signal: controller.signal },
+        (m) => emitted.push(m.type),
+      ),
+    ).rejects.toBeInstanceOf(TurnInterrupted);
+    expect(emitted).toEqual([]);
+    expect(await s.deps.sessions.getPending("s1")).toBeUndefined();
+    expect(s.deps.audit.entries().at(-1)).toMatchObject({ stage: "voided", reason: "interrupted" });
+  });
+
+  it("an abort during a confirm turn still executes once", async () => {
+    const s = setup();
+    await proposeBooking(s);
+    const controller = abortable();
+    controller.abort();
+    const result = await runTurn(s.deps, {
+      sessionId: "s1",
+      text: "yes",
+      signal: controller.signal,
+    });
+    expect(result.messages[0]).toMatchObject({ type: "action_result", status: "executed" });
+    expect(s.deps.calendar.writes.map((w) => w.op)).toEqual(["create"]);
+  });
+
+  it("an already-aborted signal never touches an earlier turn's pending action", async () => {
+    const s = setup();
+    await proposeBooking(s);
+    const pending = await s.deps.sessions.getPending("s1");
+    queue(s.llm, [text("We close at 10pm.")]);
+    const controller = abortable();
+    controller.abort();
+    await expect(
+      runTurn(s.deps, {
+        sessionId: "s1",
+        text: "what time do you close?",
+        signal: controller.signal,
+      }),
+    ).rejects.toBeInstanceOf(TurnInterrupted);
+    expect((await s.deps.sessions.getPending("s1"))?.id).toBe(pending!.id);
+    expect(s.deps.calendar.writes).toEqual([]);
   });
 
   it("serializes concurrent turns on one session so a handoff is not lost", async () => {

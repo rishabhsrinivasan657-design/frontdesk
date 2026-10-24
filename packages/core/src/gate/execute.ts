@@ -42,7 +42,8 @@ export type ExecutionOutcome =
       alternatives?: Slot[];
     };
 
-type VoidReason = "deny" | "change" | "expired" | "superseded" | "handoff" | "error";
+type VoidReason =
+  "deny" | "change" | "expired" | "superseded" | "handoff" | "error" | "interrupted";
 
 class SlotGone extends Error {
   constructor(

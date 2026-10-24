@@ -41,9 +41,11 @@ export async function auditTrail(session: string): Promise<{ actionId: string; s
 
 export async function storedTurns(
   session: string,
-): Promise<{ turnIndex: number; totalMs: number | null }[]> {
+): Promise<
+  { turnIndex: number; totalMs: number | null; sttMs: number | null; ttsStartMs: number | null }[]
+> {
   return query(
-    'select turn_index as "turnIndex", total_ms as "totalMs" from turns where conversation_id = $1 order by turn_index',
+    'select turn_index as "turnIndex", total_ms as "totalMs", stt_ms as "sttMs", tts_start_ms as "ttsStartMs" from turns where conversation_id = $1 order by turn_index',
     [session],
   );
 }

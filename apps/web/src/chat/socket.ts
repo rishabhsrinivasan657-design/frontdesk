@@ -7,8 +7,12 @@ export const REPLACED = 4000;
 const BACKOFF_MS = [250, 500, 1000, 2000, 4000];
 
 export interface ChatConnection {
-  /** Sends the caller's text. False if the socket isn't open (nothing is queued). */
-  sendText(text: string): boolean;
+  /** Sends the caller's text (typed, or a voice transcript with its timings). False if not open. */
+  sendText(text: string, timings?: { speechEnd?: number; sttFinal?: number }): boolean;
+  /** Barge-in: asks the server to cancel the reply in flight. */
+  sendInterrupt(): boolean;
+  /** The first sentence of `turnId` started playing. */
+  sendTtsStarted(turnId: string, at: number): boolean;
   close(): void;
 }
 
@@ -61,13 +65,16 @@ export function connectChat(opts: ConnectOptions): ChatConnection {
 
   open();
 
+  function send(message: ClientMessage): boolean {
+    if (!socket || socket.readyState !== Impl.OPEN) return false;
+    socket.send(JSON.stringify(message));
+    return true;
+  }
+
   return {
-    sendText(text) {
-      if (!socket || socket.readyState !== Impl.OPEN) return false;
-      const message: ClientMessage = { type: "user_text", text, timings: {} };
-      socket.send(JSON.stringify(message));
-      return true;
-    },
+    sendText: (text, timings = {}) => send({ type: "user_text", text, timings }),
+    sendInterrupt: () => send({ type: "interrupt" }),
+    sendTtsStarted: (turnId, at) => send({ type: "tts_started", turnId, at }),
     close() {
       stopped = true;
       clearTimeout(timer);

@@ -18,6 +18,8 @@ export interface ConversationLog {
   /** Idempotent: starting a conversation that exists does nothing. */
   start(c: ConversationStart): Promise<void>;
   recordTurn(t: TurnRecord): Promise<void>;
+  /** Fills a stored turn's tts_start_ms (and adds flags) unless it already has one. */
+  setTtsStart(conversationId: string, turnId: string, ms: number, flags: string[]): Promise<void>;
   end(id: string, e: ConversationEnd): Promise<void>;
 }
 
@@ -25,6 +27,8 @@ export class InMemoryConversationLog implements ConversationLog {
   readonly started: ConversationStart[] = [];
   readonly turns: TurnRecord[] = [];
   readonly ended: (ConversationEnd & { id: string })[] = [];
+  readonly ttsStarts: { conversationId: string; turnId: string; ms: number; flags: string[] }[] =
+    [];
 
   start(c: ConversationStart): Promise<void> {
     if (!this.started.some((s) => s.id === c.id)) this.started.push(c);
@@ -33,6 +37,16 @@ export class InMemoryConversationLog implements ConversationLog {
 
   recordTurn(t: TurnRecord): Promise<void> {
     this.turns.push(t);
+    return Promise.resolve();
+  }
+
+  setTtsStart(conversationId: string, turnId: string, ms: number, flags: string[]): Promise<void> {
+    this.ttsStarts.push({ conversationId, turnId, ms, flags });
+    const row = this.turns.find((t) => t.id === turnId && t.conversationId === conversationId);
+    if (row && row.ttsStartMs === null) {
+      row.ttsStartMs = ms;
+      row.flags = [...row.flags, ...flags];
+    }
     return Promise.resolve();
   }
 
