@@ -234,6 +234,28 @@ describe("runTurn", () => {
     expect(s.deps.audit.entries().at(-1)).toMatchObject({ stage: "voided", reason: "interrupted" });
   });
 
+  it("an abort during a lone propose voids it before the read-back is sent", async () => {
+    const s = setup();
+    const controller = abortable();
+    queue(s.llm, [call("check_availability", CHECK)], [call("book", BOOK)]);
+    const put = s.deps.sessions.putPending.bind(s.deps.sessions);
+    s.deps.sessions.putPending = async (action) => {
+      await put(action);
+      controller.abort();
+    };
+    const emitted: string[] = [];
+    await expect(
+      runTurn(
+        s.deps,
+        { sessionId: "s1", text: "Saturday 7pm for 4", signal: controller.signal },
+        (m) => emitted.push(m.type),
+      ),
+    ).rejects.toBeInstanceOf(TurnInterrupted);
+    expect(emitted).toEqual([]);
+    expect(await s.deps.sessions.getPending("s1")).toBeUndefined();
+    expect(s.deps.audit.entries().at(-1)).toMatchObject({ stage: "voided", reason: "interrupted" });
+  });
+
   it("an abort during a confirm turn still executes once", async () => {
     const s = setup();
     await proposeBooking(s);

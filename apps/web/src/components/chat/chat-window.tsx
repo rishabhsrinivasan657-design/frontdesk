@@ -10,7 +10,7 @@ import { ConfirmationCard } from "./confirmation-card";
 import { HandoffBanner } from "./handoff-banner";
 import { LatencyBadge } from "./latency-badge";
 import { MessageList } from "./message-list";
-import { MicButton, VOICE_NOTICE } from "./mic-button";
+import { DROPPED_NOTICE, MicButton, VOICE_NOTICE } from "./mic-button";
 
 const STATUS = {
   connecting: "Connecting…",
@@ -31,7 +31,7 @@ export function ChatWindow({ url, businessName }: { url: string; businessName: s
     return ok;
   };
   const reply = (text: string) => void send(text);
-  const voiceNotice = VOICE_NOTICE[voice.status];
+  const voiceNotice = voice.dropped ? DROPPED_NOTICE : VOICE_NOTICE[voice.status];
   const end = useRef<HTMLDivElement>(null);
   const last = state.messages.at(-1);
   // Follow the newest content: a new or growing reply, the card and its outcome, the banner.

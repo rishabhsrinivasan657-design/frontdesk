@@ -14,6 +14,8 @@ export interface VoiceControllerDeps {
   onStatus(status: VoiceStatus): void;
   onInterim(text: string): void;
   onSttMs(ms: number | undefined): void;
+  /** A transcript was not sent: the reply it barged in on couldn't be cancelled. */
+  onDropped(): void;
 }
 
 /**
@@ -26,6 +28,10 @@ export class VoiceController {
   private _used = false;
   /** A final transcript the chat couldn't take yet (the interrupted turn is still unwinding). */
   private held: { text: string; timings: Timings } | undefined;
+  /** We barged in on a turn in flight and don't yet know if the server could cancel it. */
+  private cancelling = false;
+  /** The utterance in progress started before an uncancellable reply: don't send it. */
+  private stale = false;
 
   constructor(private readonly deps: VoiceControllerDeps) {
     this._status = deps.stt.supported ? "idle" : "unsupported";
@@ -47,7 +53,9 @@ export class VoiceController {
       return;
     }
     this._used = true;
+    this.stale = false;
     if (this.deps.speaker.speaking || chatBusy) this.bargeIn();
+    if (chatBusy) this.cancelling = true;
     this.setStatus("listening");
     this.deps.stt.start(this.handlers());
   }
@@ -55,6 +63,39 @@ export class VoiceController {
   /** The chat finished a turn (or its cancellation): send a held transcript now. */
   chatIdle(): void {
     this.flush();
+  }
+
+  /**
+   * The turn we may have barged in on ended. `interrupted`: cancelled, so what the caller said
+   * goes through. `completed`: the server couldn't cancel it (a booking executed, a read-back
+   * sent), so the caller hears that reply first, and what they said before hearing it is not
+   * sent: it must never be classified against a read-back they didn't hear.
+   */
+  turnEnded(how: "interrupted" | "completed"): void {
+    if (!this.cancelling) return;
+    this.cancelling = false;
+    if (how === "interrupted") return;
+    this.deps.speaker.replay();
+    if (this.held) {
+      this.held = undefined;
+      this.deps.onDropped();
+    } else if (this._status === "listening") {
+      this.stale = true;
+    }
+  }
+
+  /** The caller typed or clicked instead: forget anything spoken but unsent. */
+  typed(): void {
+    this.held = undefined;
+    this.stale = false;
+    this.cancelling = false;
+    this.deps.speaker.unmute();
+  }
+
+  /** The socket dropped: a held transcript belongs to a conversation state that's gone. */
+  reset(): void {
+    this.held = undefined;
+    this.cancelling = false;
   }
 
   private bargeIn(): void {
@@ -73,6 +114,11 @@ export class VoiceController {
         this.deps.onSttMs(
           timings.speechEnd !== undefined ? timings.sttFinal - timings.speechEnd : undefined,
         );
+        if (this.stale) {
+          this.stale = false;
+          this.deps.onDropped();
+          return;
+        }
         this.held = { text, timings };
         this.flush();
       },

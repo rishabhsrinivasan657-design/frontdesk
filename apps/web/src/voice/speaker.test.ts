@@ -71,4 +71,23 @@ describe("Speaker", () => {
     speaker.enqueue("turn_2", "Fresh.");
     expect(tts.spoken).toEqual(["One.", "Fresh."]);
   });
+
+  it("replay speaks what arrived while muted, and unmute forgets it", () => {
+    const { tts, speaker } = setup();
+    speaker.enqueue("turn_1", "Old.");
+    speaker.stop();
+    speaker.enqueue("turn_2", "You're all set.");
+    speaker.enqueue("turn_2", "See you Saturday.");
+    speaker.replay();
+    expect(tts.spoken).toEqual(["Old.", "You're all set."]);
+    tts.start();
+    tts.end();
+    expect(tts.spoken.at(-1)).toBe("See you Saturday.");
+
+    speaker.stop();
+    speaker.enqueue("turn_3", "Dropped.");
+    speaker.unmute();
+    speaker.replay();
+    expect(tts.spoken).not.toContain("Dropped.");
+  });
 });

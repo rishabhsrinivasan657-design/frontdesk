@@ -1,6 +1,9 @@
 import type { VoiceStatus } from "@/voice/controller";
 import { Button } from "@/components/ui/button";
 
+export const DROPPED_NOTICE =
+  "The receptionist had already answered, so that wasn't sent. Listen, then press Speak again.";
+
 export const VOICE_NOTICE: Partial<Record<VoiceStatus, string>> = {
   unsupported:
     "Voice isn't available in this browser. Try Chrome, Edge or Safari — or just type below.",

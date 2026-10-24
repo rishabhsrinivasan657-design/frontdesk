@@ -19,6 +19,8 @@ export function useVoice(chat: Chat) {
   const [status, setStatus] = useState<VoiceStatus>("idle");
   const [interim, setInterim] = useState("");
   const [latency, setLatency] = useState<VoiceLatency>({});
+  /** The last transcript wasn't sent (it barged in on a reply that couldn't be cancelled). */
+  const [dropped, setDropped] = useState(false);
   const chatRef = useRef(chat);
   const voice = useRef<{ controller: VoiceController; speaker: Speaker } | undefined>(undefined);
 
@@ -43,11 +45,15 @@ export function useVoice(chat: Chat) {
       onStatus: setStatus,
       onInterim: setInterim,
       onSttMs: (ms) => setLatency(ms !== undefined ? { sttMs: Math.round(ms) } : {}),
+      onDropped: () => setDropped(true),
     });
     voice.current = { controller, speaker };
     setStatus(controller.status);
     const off = chatRef.current.onServerMessage((m) => {
       if (m.type === "agent_sentence" && controller.used) speaker.enqueue(m.turnId, m.text);
+      // How the turn we may have barged in on ended (see VoiceController.turnEnded).
+      if (m.type === "turn_metrics") controller.turnEnded("completed");
+      if (m.type === "interrupted" || m.type === "error") controller.turnEnded("interrupted");
     });
     return () => {
       off();
@@ -61,12 +67,21 @@ export function useVoice(chat: Chat) {
     if (!chat.state.busy) voice.current?.controller.chatIdle();
   }, [chat.state.busy]);
 
-  const press = useCallback(() => voice.current?.controller.press(chatRef.current.state.busy), []);
-  /** The caller typed or clicked instead: speak that turn's reply, drop stale voice timings. */
+  // A dropped socket: a transcript held for the old connection must not be sent on the new one.
+  useEffect(() => {
+    if (chat.state.status !== "open") voice.current?.controller.reset();
+  }, [chat.state.status]);
+
+  const press = useCallback(() => {
+    setDropped(false);
+    voice.current?.controller.press(chatRef.current.state.busy);
+  }, []);
+  /** The caller typed or clicked instead: speak that turn's reply, forget unsent speech. */
   const typed = useCallback(() => {
-    voice.current?.speaker.unmute();
+    voice.current?.controller.typed();
+    setDropped(false);
     setLatency({});
   }, []);
 
-  return { status, interim, latency, press, typed };
+  return { status, interim, latency, dropped, press, typed };
 }

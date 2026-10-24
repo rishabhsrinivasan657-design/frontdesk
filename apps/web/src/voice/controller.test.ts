@@ -22,6 +22,7 @@ function setup(opts: { supported?: boolean; accept?: boolean } = {}) {
     onStatus: (s: VoiceStatus) => statuses.push(s),
     onInterim: vi.fn(),
     onSttMs: vi.fn(),
+    onDropped: vi.fn(),
   };
   const controller = new VoiceController(deps);
   return {
@@ -132,5 +133,54 @@ describe("VoiceController", () => {
     s.stt.handlers!.onError("no-speech");
     s.stt.handlers!.onEnd();
     expect(s.controller.status).toBe("idle");
+  });
+
+  it("a turn that couldn't be cancelled is spoken, and the held transcript is dropped", () => {
+    const s = setup({ accept: false });
+    s.controller.press(true);
+    s.stt.handlers!.onFinal("yes, and it's a birthday", { sttFinal: 1 });
+    // The server finished the turn anyway: its read-back arrives while we're muted.
+    s.speaker.enqueue("turn_1", "To confirm: a table for 4. Shall I book it?");
+    expect(s.tts.spoken).toEqual([]);
+    s.controller.turnEnded("completed");
+    s.accept(true);
+    s.controller.chatIdle();
+    expect(s.sent).toEqual([]);
+    expect(s.deps.onDropped).toHaveBeenCalledOnce();
+    expect(s.tts.spoken).toEqual(["To confirm: a table for 4. Shall I book it?"]);
+  });
+
+  it("speech still going when an uncancellable turn ends is not sent either", () => {
+    const s = setup();
+    s.controller.press(true);
+    s.controller.turnEnded("completed");
+    s.stt.handlers!.onFinal("yes", { sttFinal: 1 });
+    expect(s.sent).toEqual([]);
+    expect(s.deps.onDropped).toHaveBeenCalledOnce();
+    s.controller.press(false);
+    s.stt.handlers!.onFinal("yes", { sttFinal: 2 });
+    expect(s.sent.map(([t]) => t)).toEqual(["yes"]);
+  });
+
+  it("a cancelled turn lets the held transcript through", () => {
+    const s = setup({ accept: false });
+    s.controller.press(true);
+    s.stt.handlers!.onFinal("actually 8pm", { sttFinal: 1 });
+    s.controller.turnEnded("interrupted");
+    s.accept(true);
+    s.controller.chatIdle();
+    expect(s.sent.map(([t]) => t)).toEqual(["actually 8pm"]);
+  });
+
+  it("typing or a dropped socket forgets a held transcript", () => {
+    for (const forget of ["typed", "reset"] as const) {
+      const s = setup({ accept: false });
+      s.controller.press(true);
+      s.stt.handlers!.onFinal("yes, sounds good", { sttFinal: 1 });
+      s.controller[forget]();
+      s.accept(true);
+      s.controller.chatIdle();
+      expect(s.sent).toEqual([]);
+    }
   });
 });

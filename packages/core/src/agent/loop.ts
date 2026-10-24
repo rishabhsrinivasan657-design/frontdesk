@@ -381,6 +381,8 @@ async function modelTurn(turn: Turn): Promise<string> {
     }
 
     if (proposed) {
+      // Last safe point: once the read-back is sent, the caller may say yes to it.
+      checkpoint(turn);
       turn.send({
         type: "pending_action",
         turnId: turn.turnId,
