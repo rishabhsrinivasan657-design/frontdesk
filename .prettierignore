@@ -5,3 +5,6 @@ docs/superpowers
 packages/evals/recordings
 # Written by drizzle-kit; reformatting would fight the generator.
 packages/db/drizzle/meta
+.next
+next-env.d.ts
+test-results

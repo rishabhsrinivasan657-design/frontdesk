@@ -10,7 +10,7 @@ import {
 import type { Price } from "@frontdesk/llm";
 import { toTurnRecord } from "../metrics/turn-record.js";
 import type { ConversationLog } from "./conversation-log.js";
-import type { SessionHub } from "./hub.js";
+import type { SessionHub, Turn } from "./hub.js";
 import { safeError, sessionTag } from "./log-safety.js";
 
 export interface ChatContext {
@@ -56,21 +56,29 @@ export async function openChat(
 ): Promise<Chat> {
   const { deps } = ctx;
   const send = (m: ServerMessage) => socket.send(JSON.stringify(m));
+  // A turn still running for this session (on a closed or replaced socket) must be saved
+  // before its state is read; on a brand-new session it is the first save.
+  if (requestedSessionId) await ctx.hub.settled(requestedSessionId);
   const existing = requestedSessionId ? await deps.sessions.load(requestedSessionId) : undefined;
   const sessionId = existing?.id ?? ctx.newSessionId();
   const claim = ctx.hub.claim(sessionId, socket);
-  // A turn still running on the replaced socket must be saved before its state is restored.
-  await claim.previousTurn;
+  await ctx.hub.settled(sessionId);
   send(await sessionMessage(deps, sessionId, existing !== undefined));
 
   /** Runs one turn; resolves once its last message is sent, before the turn is stored. */
-  async function runOne(text: string): Promise<{ result: TurnResult; firstOutputMs?: number }> {
+  async function runOne(
+    text: string,
+    turn: Turn,
+  ): Promise<{ result: TurnResult; firstOutputMs?: number }> {
     const started = performance.now();
     let firstOutputMs: number | undefined;
     const result = await runTurn(deps, { sessionId, text }, (m) => {
       if (firstOutputMs === undefined && FIRST_OUTPUT.has(m.type)) {
         firstOutputMs = performance.now() - started;
       }
+      // The caller has the whole reply and may answer at once; core queues that turn behind
+      // this one's save.
+      if (m.type === "turn_metrics") turn.replied();
       send(m);
     });
     return { result, ...(firstOutputMs !== undefined ? { firstOutputMs } : {}) };
@@ -101,16 +109,16 @@ export async function openChat(
         return;
       }
       // Busy until the reply is complete; the turn is stored after, while the next may start.
-      const end = claim.begin();
+      const inflight = claim.begin();
       let turn: Awaited<ReturnType<typeof runOne>>;
       try {
-        turn = await runOne(message.text);
+        turn = await runOne(message.text, inflight);
       } catch (error) {
         ctx.logger.error({ err: safeError(error), session: sessionTag(sessionId) }, "turn failed");
         send({ type: "error", code: "server_error", message: SERVER_ERROR_MESSAGE });
         return;
       } finally {
-        end();
+        inflight.done();
       }
       await record(
         ctx,

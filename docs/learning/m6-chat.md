@@ -1,6 +1,6 @@
 # M6: Chat over WebSockets (learning guide)
 
-M6 is the first milestone you can use. A caller types at `/talk`, the browser sends each message over a WebSocket, and the api runs the same M3 agent loop the tests and evals use. Sessions live in Redis, so a dropped connection picks up where it left off. Every turn's latency, tokens and cost are stored in Postgres. Part A (this PR) built the api. Part B adds the web page, Playwright and CI.
+M6 is the first milestone you can use. A caller types at `/talk`, the browser sends each message over a WebSocket, and the api runs the same M3 agent loop the tests and evals use. Sessions live in Redis, so a dropped connection picks up where it left off. Every turn's latency, tokens and cost are stored in Postgres. M6 shipped in two PRs: Part A built the api (`apps/api`), and Part B built the `/talk` page (`apps/web`), the Playwright tests and their CI job. To try it without keys: `pnpm infra:up`, then `LLM_PROVIDER=scripted FRONTDESK_NOW=2026-11-04T14:00:00-05:00 QUEUE_PREFIX=dev GOOGLE_CALENDAR_ID= pnpm api` and `pnpm web`, open http://localhost:3000/talk, and type "A table for 4 on 2026-11-07 at 19:00". The blank `GOOGLE_CALENDAR_ID` matters: with your `.env` credentials the api would otherwise book into the real demo calendar. Plain `pnpm api` (plus `pnpm --filter @frontdesk/worker start`) is the real thing: Gemini, Google Calendar and Gmail.
 
 ## 1. Reading order
 
@@ -14,7 +14,12 @@ M6 is the first milestone you can use. A caller types at `/talk`, the browser se
 | 6   | `metrics/latency.ts` + `metrics/turn-record.ts`                     | The p95 budget from spec §8, and the per-turn row written to `turns`.                                                                  |
 | 7   | `llm/scripted.ts` + `llm/build.ts`                                  | A keyless, deterministic receptionist for tests and e2e, and how env picks Gemini or it.                                               |
 | 8   | `deps.ts` + `main.ts`                                               | Picks every adapter from `.env` (Google or in-memory calendar, Redis, Postgres, the email queue) and starts the server.                |
-| 9   | `chat/connection.test.ts`, `server.test.ts`, `server.smoke.test.ts` | The behavior, end to end: unit tests in memory, then a real socket, then real Redis and Postgres.                                      |
+| 9   | `chat/hub.ts`                                                       | One live socket per session: a new tab or reconnect takes over, and waits for a turn still running.                                    |
+| 10  | `chat/connection.test.ts`, `server.test.ts`, `server.smoke.test.ts` | The behavior, end to end: unit tests in memory, then a real socket, then real Redis and Postgres.                                      |
+| 11  | `apps/web/src/chat/state.ts`                                        | The browser's chat state: one reducer turns each server message into what's on screen.                                                 |
+| 12  | `apps/web/src/chat/socket.ts` + `use-chat.ts`                       | Opens the socket, keeps the session id in `sessionStorage`, reconnects with backoff, and can only send caller text.                    |
+| 13  | `apps/web/src/components/chat/*.tsx`                                | The widget: messages, the Confirm / Change card, the handoff banner, the latency readout (shadcn/ui + Tailwind).                       |
+| 14  | `e2e/playwright.config.ts` + `e2e/talk.spec.ts`                     | Starts api + web with the scripted LLM and a fixed clock, then books, changes, hands off and reconnects in a real browser.             |
 
 ## 2. Key concepts
 
@@ -23,23 +28,29 @@ M6 is the first milestone you can use. A caller types at `/talk`, the browser se
 - **Session + reconnect.** The server picks a random session id (`sess_<uuid>`) and sends it in the first `session` message. The browser keeps it. If the connection drops, it reconnects with `?sessionId=…`. The server loads the conversation from Redis and sends it back, including a read-back that is still waiting for "yes". An id the server doesn't know gets a fresh one, so nobody can pick their own.
 - **Server vs client trust.** The browser is not trusted. It can only send caller _text_. The Confirm button sends the words "Yes, please", which go through the same gate as anything typed. No message type means "execute action X", and anything that isn't a valid message is refused with `bad_message`. The origin check stops another website from opening a socket in your name.
 - **One turn at a time.** While a turn runs, a second message gets `busy`. Otherwise a flood of messages would queue up paid LLM calls.
+- **End-to-end (e2e) tests.** Unit tests check one piece with fakes around it. An e2e test runs the whole system the way a person would: Playwright opens a real Chromium, types into `/talk`, clicks Confirm, and then checks Postgres for the audit trail. They are slower, so a few of them cover the main journeys. They stay keyless and repeatable because the api runs the scripted LLM, an in-memory calendar and a clock that starts at Wed 4 Nov 2026 14:00 (`FRONTDESK_NOW`) and then runs normally.
 - **Latency percentiles.** p50 is the typical turn (half are faster). p95 is the slow tail (19 of 20 are faster). The budget sets a p95 for each stage (LLM first token 1.5 s, each tool 0.8 s, chat first reply 1.8 s). A single turn over any of them is flagged in `turns.flags` (`over_p95_…`), so the dashboard (M8) can show the slow ones.
 
 ## 3. Potential holes and the tests that guard them
 
-| What could go wrong                                                  | Guarded by                                                                                             |
-| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| A crafted message like `{type:"confirm", actionId}` books a table    | `connection.test.ts` › "rejects a crafted confirm message and writes nothing"                          |
-| Extra fields sneak into `user_text`                                  | `connection.test.ts` › "rejects unknown fields on user_text"                                           |
-| A client picks its own session id                                    | `connection.test.ts` › "never adopts an unknown client session id"                                     |
-| Another website opens a socket as the visitor                        | `server.test.ts` › "refuses an upgrade from a foreign origin"                                          |
-| A flood of messages stacks LLM calls                                 | `connection.test.ts` › "answers busy while a turn is in flight"                                        |
-| The next message is refused right after a reply (storing still runs) | `connection.test.ts` › "accepts the next message as soon as turn_metrics arrives"                      |
-| Dates come back from Redis as strings and break the re-check         | `session-store-contract.ts` › "round-trips Dates in session and pending action"                        |
-| Two "yes" messages both take the pending action                      | `redis.smoke.test.ts` › "takePending is atomic under 20 concurrent calls"                              |
-| A dropped connection loses the waiting read-back                     | `server.test.ts` › "resumes with ?sessionId…"; `server.smoke.test.ts` › "confirms after reconnecting…" |
-| Postgres being down breaks the chat                                  | `connection.test.ts` › "a failing conversation log doesn't break the turn"                             |
-| Test bookings email real people through the worker                   | `QUEUE_PREFIX`: tests and e2e queue jobs under their own prefix                                        |
+| What could go wrong                                                     | Guarded by                                                                                                                |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| A crafted message like `{type:"confirm", actionId}` books a table       | `connection.test.ts` › "rejects a crafted confirm message and writes nothing"                                             |
+| Extra fields sneak into `user_text`                                     | `connection.test.ts` › "rejects unknown fields on user_text"                                                              |
+| A client picks its own session id                                       | `connection.test.ts` › "never adopts an unknown client session id"                                                        |
+| Another website opens a socket as the visitor                           | `server.test.ts` › "refuses an upgrade from a foreign origin"                                                             |
+| A flood of messages stacks LLM calls                                    | `connection.test.ts` › "answers busy while a turn is in flight"                                                           |
+| The next message is refused right after a reply (storing still runs)    | `connection.test.ts` › "accepts the next message as soon as turn_metrics arrives"                                         |
+| Dates come back from Redis as strings and break the re-check            | `session-store-contract.ts` › "round-trips Dates in session and pending action"                                           |
+| Two "yes" messages both take the pending action                         | `redis.smoke.test.ts` › "takePending is atomic under 20 concurrent calls"                                                 |
+| A dropped connection loses the waiting read-back                        | `server.test.ts` › "resumes with ?sessionId…"; `server.smoke.test.ts` › "confirms after reconnecting…"                    |
+| Postgres being down breaks the chat                                     | `connection.test.ts` › "a failing conversation log doesn't break the turn"                                                |
+| A second tab, or a fast reconnect, confirms a read-back it never showed | `connection.test.ts` › "a resume during an in-flight turn waits…", "a second socket on the same session closes the first" |
+| The session id (the resume key) ends up in logs                         | `server.test.ts` › "never logs the session id from a reconnect URL"                                                       |
+| The browser forgets the pending card after a reload                     | `e2e/talk.spec.ts` › "reconnects mid-conversation and confirms"                                                           |
+| "Change" leaves the old booking confirmable                             | `e2e/talk.spec.ts` › "change before confirm voids the pending action" (audit shows `voided`)                              |
+| Two tabs keep stealing the session from each other                      | `socket.test.ts` › "stops when another tab takes over the session"                                                        |
+| Test bookings email real people through the worker                      | `QUEUE_PREFIX`: tests and e2e queue jobs under their own prefix                                                           |
 
 ## 4. Quiz
 
@@ -53,6 +64,8 @@ M6 is the first milestone you can use. A caller types at `/talk`, the browser se
 8. Why does a pending action's Redis key live 60 s longer than its `expiresAt`?
 9. What is the difference between p50 and p95, and when is a turn flagged?
 10. What is `ScriptedLLM` for, and why do its replies never mention a time or a price?
+11. You refresh the page while the Confirm card is showing. Step by step, how does the card come back?
+12. Why does the e2e suite need a fixed clock and blank `GOOGLE_*` variables?
 
 <details>
 <summary>Answers</summary>
@@ -67,5 +80,7 @@ M6 is the first milestone you can use. A caller types at `/talk`, the browser se
 8. So the loop can still find an action the caller said "yes" to just after it expired, and tell them it timed out instead of acting confused.
 9. p50 is the typical turn and p95 is the slow tail. A turn is flagged when any stage is over its p95 budget.
 10. It lets tests and Playwright run the real loop with no API key and the same result every time. Its replies state no times or prices, so the grounding check always passes.
+11. The id is in `sessionStorage`; the page reconnects with `?sessionId=`; the server finds the session in Redis, sees the pending action hasn't expired, and sends it in the `session` message; the reducer turns that into the card.
+12. "Saturday at 7 PM" must always be a future, open slot, so the api's clock starts at a known moment (`FRONTDESK_NOW`). Blank Google variables force the in-memory calendar, so tests never touch your real demo calendar, even on a machine whose `.env` has credentials.
 
 </details>

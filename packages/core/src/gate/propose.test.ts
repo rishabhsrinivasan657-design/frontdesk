@@ -212,6 +212,20 @@ describe("propose", () => {
     },
   );
 
+  it("rejects a book whose contact is the caller's name, not a phone or email", async () => {
+    const fx = agentFixture(testConfig(), []);
+    const slotId = await fx.offer("2026-11-06", "19:00", 2);
+    const result = await propose(fx.deps, fx.session, "turn_1", "book", {
+      slotId,
+      name: "Dev Shah",
+      contact: "Dev Shah",
+      partySize: 2,
+    });
+    expect(result).toMatchObject({ ok: false, error: "invalid_args" });
+    expect(JSON.stringify(result)).toContain("phone number or email");
+    expect(await fx.deps.sessions.getPending("s1")).toBeUndefined();
+  });
+
   it("rejects invalid args", async () => {
     const fx = agentFixture(testConfig());
     expect(await propose(fx.deps, fx.session, "turn_1", "book", { slotId: 7 })).toMatchObject({

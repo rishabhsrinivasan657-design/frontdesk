@@ -6,3 +6,6 @@ coverage
 playwright-report
 .superpowers
 .DS_Store
+.next
+next-env.d.ts
+test-results

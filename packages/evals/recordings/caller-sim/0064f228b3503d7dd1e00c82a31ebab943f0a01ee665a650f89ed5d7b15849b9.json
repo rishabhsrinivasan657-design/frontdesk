@@ -22,13 +22,13 @@
   },
   "response": {
     "value": {
-      "say": "Hi, I'm Dev Shah. I have a couple of questions about your restaurant.",
+      "say": "Hi, my name is Dev Shah. Can you tell me if you allow customers to bring their own wine?",
       "done": false
     },
     "usage": {
       "inputTokens": 388,
-      "outputTokens": 28
+      "outputTokens": 32
     }
   },
-  "recordedAt": "2026-10-24T14:35:38.250Z"
+  "recordedAt": "2026-10-24T15:00:00.333Z"
 }
