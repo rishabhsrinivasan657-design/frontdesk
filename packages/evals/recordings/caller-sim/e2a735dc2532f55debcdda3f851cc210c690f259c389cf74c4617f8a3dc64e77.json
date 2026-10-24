@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "key": "424bf508e77f6589fb91ac712cb4608976b6dfa03cf25bbb4ba2809ae24a189a",
+  "key": "e2a735dc2532f55debcdda3f851cc210c690f259c389cf74c4617f8a3dc64e77",
   "templateId": "caller-sim",
   "templateHash": "142665a82d4756baa33c10e0fbfe1032f43eb1489b66a750bc4574ca858e16ba",
   "model": "gemma3:4b",
@@ -19,24 +19,56 @@
       },
       {
         "role": "assistant",
-        "text": "Hello, my name is Dev Shah. I’m calling about an anniversary dinner."
+        "text": "Hi, my name is Dev Shah. I'm calling about an anniversary dinner."
       },
       {
         "role": "user",
-        "text": "Welcome to Casa Fiorella, and happy early anniversary to you and your guest! I'd be delighted to help you set up a table for your celebration. For how many people and what date would you like to book?"
+        "text": "Welcome to Casa Fiorella! I'd love to help you plan your anniversary dinner. How many guests will be joining you, and what date and time were you hoping for?"
+      },
+      {
+        "role": "assistant",
+        "text": "Two people, and I was thinking Saturday, the 18th, around 7:30pm."
+      },
+      {
+        "role": "user",
+        "text": "We have a table available for two on Wednesday, November 18 at 7:30 PM. To get this booked for your anniversary dinner, may I have a contact phone number or email address?"
+      },
+      {
+        "role": "assistant",
+        "text": "No, I don’t want to book yet. I just wanted to ask a few questions."
+      },
+      {
+        "role": "user",
+        "text": "Of course! What questions can I answer for you?"
+      },
+      {
+        "role": "assistant",
+        "text": "Could you tell me if it’s okay to bring our own wine? And where is the best place to park?"
+      },
+      {
+        "role": "user",
+        "text": "Yes, you are welcome to bring your own wine! Corkage is $25 per bottle, with a limit of two bottles per table. For parking, there is metered street parking on Mulberry Lane and a public garage one block east on Court Street. Let me know if you have any other questions!"
+      },
+      {
+        "role": "assistant",
+        "text": "That’s great, thanks!"
+      },
+      {
+        "role": "user",
+        "text": "You're very welcome! Please let me know whenever you're ready to book that table or if you need anything else for your anniversary dinner. Have a wonderful day!"
       }
     ],
     "temperature": 0.4
   },
   "response": {
     "value": {
-      "say": "Two people, for Saturday, November 4th.",
-      "done": false
+      "say": "Done",
+      "done": true
     },
     "usage": {
-      "inputTokens": 423,
-      "outputTokens": 21
+      "inputTokens": 686,
+      "outputTokens": 12
     }
   },
-  "recordedAt": "2026-10-24T07:55:02.063Z"
+  "recordedAt": "2026-10-24T14:45:42.371Z"
 }

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "key": "2b778e048bd38148faf12a4fee8c5a85156eb9b849b46a5ddfc96fe69a7ae144",
+  "key": "c4d3f8025bcf25fcacb3924017da2686a5dfdb269227011760732040c2f3a50d",
   "templateId": "agent-turn-v1",
   "templateHash": "78a802b3dbdce2ffdd6f5caeef0f72398da616e0554bb5515eb93d60b8b2fe63",
   "model": "gemini-3.5-flash-lite",
@@ -15,35 +15,35 @@
     "messages": [
       {
         "role": "user",
-        "text": "<caller_message>\nHi, my name is Dev Shah. I’m calling about an anniversary dinner.\n</caller_message>"
+        "text": "<caller_message>\nHi, my name is Dev Shah. I'm calling about an anniversary dinner.\n</caller_message>"
       },
       {
         "role": "assistant",
-        "text": "@meta {\"confidence\":1.0,\"onTopic\":true}\nHappy early anniversary, Dev! I'd love to help you plan that. How many guests will be joining you, and what date and time were you hoping for?"
+        "text": "@meta {\"confidence\":1.0,\"onTopic\":true}\nWelcome to Casa Fiorella! I'd love to help you plan your anniversary dinner. How many guests will be joining you, and what date and time were you hoping for?"
       },
       {
         "role": "user",
-        "text": "<caller_message>\nTwo people. Saturday the 18th at 7pm, please.\n</caller_message>"
+        "text": "<caller_message>\nTwo people, and I was thinking Saturday, the 18th, around 7:30pm.\n</caller_message>"
       },
       {
         "role": "assistant",
         "text": "",
         "toolCalls": [
           {
-            "id": "call_521299",
+            "id": "call_800491",
             "name": "check_availability",
             "args": {
-              "date": "2026-11-18",
-              "time": "19:00",
-              "partySize": 2
+              "partySize": 2,
+              "time": "19:30",
+              "date": "2026-11-18"
             },
-            "signature": "EmAKXgFpFH0TtAoq6yEuyQWPWYFrmwY+2RBd6caocXFc44im+7evFBjD+VXp3R8o9UGghsPzqkYrMRSbk/lDQZfPnLbOeFBBf0V6d11FI59Bd59AJ34YZBJw9jfEx533gAw="
+            "signature": "EmAKXgFpFH0T/jVZpys1PMuAusuO997gZkRFQN04wuLftNF6uYcq7v0leBWV9VTtenuma9b2FysFsSQHSGbAZhE52/zxI0DDG07tLmszhjkKLenb7PGgEGPGbwrxBaEOIa4="
           }
         ]
       },
       {
         "role": "tool",
-        "callId": "call_521299",
+        "callId": "call_800491",
         "name": "check_availability",
         "result": {
           "ok": true,
@@ -53,13 +53,21 @@
             "available": true,
             "slots": [
               {
-                "slotId": "2026-11-18T19:00@t2-1#2",
-                "time": "19:00",
-                "when": "Wednesday, November 18 at 7:00 PM"
+                "slotId": "2026-11-18T19:30@t2-1#2",
+                "time": "19:30",
+                "when": "Wednesday, November 18 at 7:30 PM"
               }
             ]
           }
         }
+      },
+      {
+        "role": "assistant",
+        "text": "@meta {\"confidence\":1.0,\"onTopic\":true}\nWe have a table available for two on Wednesday, November 18 at 7:30 PM. To get this booked for your anniversary dinner, may I have a contact phone number or email address?"
+      },
+      {
+        "role": "user",
+        "text": "<caller_message>\nNo, I don’t want to book yet. I just wanted to ask a few questions.\n</caller_message>"
       }
     ],
     "tools": [
@@ -297,28 +305,20 @@
       },
       {
         "type": "text",
-        "text": " {\"confidence\":1.0,\"onTopic\":true}\nI have an"
+        "text": " {\"confidence\":1.0,\"onTopic\":true}\nOf course! What questions"
       },
       {
         "type": "text",
-        "text": " opening for two on Wednesday, November 18th at 7:00 PM. Just to confirm, does your phone"
-      },
-      {
-        "type": "text",
-        "text": " number end in or what is the best contact number for you, and do you have any allergies or special requests for your"
-      },
-      {
-        "type": "text",
-        "text": " anniversary?"
+        "text": " can I answer for you?"
       },
       {
         "type": "usage",
         "usage": {
-          "inputTokens": 1745,
-          "outputTokens": 70
+          "inputTokens": 1845,
+          "outputTokens": 26
         }
       }
     ]
   },
-  "recordedAt": "2026-10-24T07:56:51.929Z"
+  "recordedAt": "2026-10-24T14:45:24.321Z"
 }

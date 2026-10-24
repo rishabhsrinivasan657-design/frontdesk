@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "key": "d26dcf52eb6df0d11a8b78f35a0260db5c6dcc494d84bb4b3c463f072a01d12b",
+  "key": "ccbde6a352d183ae2ce2cad8064f61cd500cb8ffe043f332f4ad6f5134bb8dbd",
   "templateId": "agent-turn-v1",
   "templateHash": "78a802b3dbdce2ffdd6f5caeef0f72398da616e0554bb5515eb93d60b8b2fe63",
   "model": "gemini-3.5-flash-lite",
@@ -15,92 +15,51 @@
     "messages": [
       {
         "role": "user",
-        "text": "<caller_message>\nHello, my name is Dev Shah. I'm calling about an anniversary dinner.\n</caller_message>"
+        "text": "<caller_message>\nHi, my name is Dev Shah. I'm calling about an anniversary dinner.\n</caller_message>"
       },
       {
         "role": "assistant",
-        "text": "",
-        "toolCalls": [
-          {
-            "id": "call_383177",
-            "name": "lookup_faq",
-            "args": {
-              "query": "anniversary"
-            },
-            "signature": "EmAKXgFpFH0TglFa33rrPSdwDn+S2QpLzK4c4DMlZ1OyVlWCchNt0CqlYkOiBRQX1Ce8eLhcamXcQeMTal2JqGuQxlVEZZoQU1bj2f6VN9wR1eYvMTKJZ3VFTs5IoLBnOEM="
-          }
-        ]
-      },
-      {
-        "role": "tool",
-        "callId": "call_383177",
-        "name": "lookup_faq",
-        "result": {
-          "ok": true,
-          "data": {
-            "answers": []
-          }
-        }
-      },
-      {
-        "role": "assistant",
-        "text": "@meta {\"confidence\":1.0,\"onTopic\":true}\nHappy early anniversary, Dev! We'd love to host you and your partner for dinner. What date and time are you thinking of, and how many people will be in your party?"
+        "text": "@meta {\"confidence\":1.0,\"onTopic\":true}\nWelcome to Casa Fiorella! I'd love to help you plan your anniversary dinner. How many guests will be joining you, and what date and time were you hoping for?"
       },
       {
         "role": "user",
-        "text": "<caller_message>\nNext Saturday, the 18th, around 7:30pm. It’ll be two people.\n</caller_message>"
+        "text": "<caller_message>\nTwo people, and I was thinking Saturday, the 18th, around 7:30pm.\n</caller_message>"
       },
       {
         "role": "assistant",
         "text": "",
         "toolCalls": [
           {
-            "id": "call_635355",
+            "id": "call_800491",
             "name": "check_availability",
             "args": {
               "partySize": 2,
               "time": "19:30",
-              "date": "2026-11-14"
+              "date": "2026-11-18"
             },
-            "signature": "EmAKXgFpFH0Tl1ap6hZdRiz2pWx15iJahR9Ocq4jr+7LEDGw4bM2mgER+dOj+kuG9yHleq1uh/wcxdixgLI7s1+M642RXtbFXq9iPaFSCXIXVSbfX0oTRe4CPaeBgJODpLg="
+            "signature": "EmAKXgFpFH0T/jVZpys1PMuAusuO997gZkRFQN04wuLftNF6uYcq7v0leBWV9VTtenuma9b2FysFsSQHSGbAZhE52/zxI0DDG07tLmszhjkKLenb7PGgEGPGbwrxBaEOIa4="
           }
         ]
       },
       {
         "role": "tool",
-        "callId": "call_635355",
+        "callId": "call_800491",
         "name": "check_availability",
         "result": {
           "ok": true,
           "data": {
-            "date": "2026-11-14",
+            "date": "2026-11-18",
             "partySize": 2,
             "available": true,
             "slots": [
               {
-                "slotId": "2026-11-14T19:30@t2-1#2",
+                "slotId": "2026-11-18T19:30@t2-1#2",
                 "time": "19:30",
-                "when": "Saturday, November 14 at 7:30 PM"
+                "when": "Wednesday, November 18 at 7:30 PM"
               }
             ]
           }
         }
-      },
-      {
-        "role": "assistant",
-        "text": "@meta {\"confidence\":1.0,\"onTopic\":true}\nI have an opening for two people next Saturday, November 14th, at 7:30 PM. Would you like me to book that for you, and could I have your phone number or email address for the reservation?"
-      },
-      {
-        "role": "user",
-        "text": "<caller_message>\nNo, not yet. I just wanted to check a couple of things first.\n</caller_message>"
-      },
-      {
-        "role": "assistant",
-        "text": "@meta {\"confidence\":1.0,\"onTopic\":true}\nOf course! What questions can I answer for you?"
-      },
-      {
-        "role": "user",
-        "text": "<caller_message>\nCould we bring our own wine? And where is the best place to park?\n</caller_message>"
       }
     ],
     "tools": [
@@ -333,24 +292,29 @@
   "response": {
     "chunks": [
       {
-        "type": "tool_call",
-        "call": {
-          "id": "call_552885",
-          "name": "lookup_faq",
-          "args": {
-            "query": "corkage wine parking"
-          },
-          "signature": "EmAKXgFpFH0T3lyFWzgV3e8itmdiRL0w3Zk1HA3SoVgpY4nx8Nwf9Pj6JEuMTeXChbo/Jbu7RV55qvmk+t2RQLlt12wg5xMQhOESAqIpRMilSEWFyS3e1FV1Q+fZ3jTuaLU="
-        }
+        "type": "text",
+        "text": "@meta"
+      },
+      {
+        "type": "text",
+        "text": " {\"confidence\":1.0,\"onTopic\":true}\nWe have a table available"
+      },
+      {
+        "type": "text",
+        "text": " for two on Wednesday, November 18 at 7:30 PM. To get this booked for your anniversary dinner, may I have"
+      },
+      {
+        "type": "text",
+        "text": " a contact phone number or email address?"
       },
       {
         "type": "usage",
         "usage": {
-          "inputTokens": 1943,
-          "outputTokens": 20
+          "inputTokens": 1754,
+          "outputTokens": 57
         }
       }
     ]
   },
-  "recordedAt": "2026-10-24T07:57:06.554Z"
+  "recordedAt": "2026-10-24T14:45:15.799Z"
 }
