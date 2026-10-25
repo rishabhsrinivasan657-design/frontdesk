@@ -10,6 +10,7 @@ export { BusinessConfigError, parseBusinessConfig } from "./config/parse.js";
 export { findSlots } from "./availability/find-slots.js";
 export {
   UnknownTableError,
+  agentPartyLimit,
   holdMinutesFor,
   tablesFromConfig,
   type Table,

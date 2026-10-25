@@ -1,4 +1,5 @@
 import type { Slot } from "../availability/types.js";
+import { agentPartyLimit } from "../availability/tables.js";
 import { HandoffSignal, fail, type ToolResult } from "../agent/tools/read-tools.js";
 import { TOOL_ARGS, type WriteToolName } from "../agent/tools/schemas.js";
 import type { ActionArgs, PendingAction, SessionState } from "../agent/types.js";
@@ -113,8 +114,7 @@ async function resolve(
       const parsed = TOOL_ARGS.book.safeParse(rawArgs);
       if (!parsed.success) return fail("invalid_args", parsed.error.message) as Failure;
       const args = parsed.data;
-      if (args.partySize > config.policies.maxPartyForAgent)
-        throw new HandoffSignal("party_too_large");
+      if (args.partySize > agentPartyLimit(config)) throw new HandoffSignal("party_too_large");
       const slot = offeredSlot(args.slotId);
       if ("error" in slot) return slot;
       if (slot.partySize !== args.partySize) {

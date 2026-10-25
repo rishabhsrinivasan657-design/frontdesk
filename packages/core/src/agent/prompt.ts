@@ -1,4 +1,5 @@
 import { DateTime } from "luxon";
+import { agentPartyLimit } from "../availability/tables.js";
 import { DAY_KEYS, type BusinessConfig } from "../config/schema.js";
 
 /** The unrendered turn prompt; recordings hash this text to detect staleness (M2 ruling 7). */
@@ -55,7 +56,7 @@ export function renderSystemPrompt(config: BusinessConfig, now: Date): string {
     closures: config.closures.map((c) => `${c.date} (${c.reason})`).join(", ") || "none",
     bookingWindowDays: config.policies.bookingWindowDays,
     minLeadMinutes: config.policies.minLeadMinutes,
-    maxParty: config.policies.maxPartyForAgent,
+    maxParty: agentPartyLimit(config),
     freeChangeHours: config.policies.freeChangeUntilHoursBefore,
     graceMinutes: config.policies.graceMinutes,
     room: config.privateRoom.name,

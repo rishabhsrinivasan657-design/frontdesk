@@ -65,6 +65,13 @@ describe("check_availability", () => {
     ).rejects.toMatchObject({ name: "HandoffSignal", reason: "party_too_large" });
   });
 
+  it("hands off a party larger than every table, even within maxPartyForAgent", async () => {
+    const { ctx } = setup();
+    await expect(
+      runReadTool("check_availability", { date: "2026-11-06", partySize: 7 }, ctx),
+    ).rejects.toMatchObject({ name: "HandoffSignal", reason: "party_too_large" });
+  });
+
   it("turns an impossible date into invalid_request", async () => {
     const { ctx, session } = setup();
     const result = await runReadTool(

@@ -10,7 +10,7 @@ describe("renderSystemPrompt", () => {
     expect(prompt).toContain("Wednesday, November 4, 2026 2:00 PM");
     expect(prompt).toContain("Mon closed");
     expect(prompt).toContain("Fri 17:00-23:00");
-    expect(prompt).toContain("1 to 8");
+    expect(prompt).toContain("1 to 6"); // the largest table seats 6 (agentPartyLimit)
   });
 });
 

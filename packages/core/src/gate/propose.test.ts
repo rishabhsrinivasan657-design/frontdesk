@@ -84,6 +84,13 @@ describe("propose", () => {
     expect((await fx.deps.sessions.getPending("s1"))?.id).toBe(second.action.id);
   });
 
+  it("hands off a booking for a party larger than every table", async () => {
+    const fx = agentFixture(testConfig());
+    await expect(
+      propose(fx.deps, fx.session, "turn_1", "book", book("2026-11-06T19:00@t6-1#7", 7)),
+    ).rejects.toMatchObject({ name: "HandoffSignal", reason: "party_too_large" });
+  });
+
   it("hands off a cancel inside the free-change window", async () => {
     const fx = agentFixture(testConfig());
     await fx.find("Ana Ruiz", "ana@example.com");

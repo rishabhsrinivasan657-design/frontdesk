@@ -1,5 +1,6 @@
 import { DateTime } from "luxon";
 import { findSlots } from "../../availability/find-slots.js";
+import { agentPartyLimit } from "../../availability/tables.js";
 import type { BusinessConfig } from "../../config/schema.js";
 import { type CalendarReader, CalendarUnavailableError } from "../../ports/calendar.js";
 import type { Clock } from "../../ports/clock.js";
@@ -55,7 +56,7 @@ async function checkAvailability(
   ctx: ReadToolContext,
 ): Promise<ToolResult> {
   const { config, session } = ctx;
-  if (args.partySize > config.policies.maxPartyForAgent) throw new HandoffSignal("party_too_large");
+  if (args.partySize > agentPartyLimit(config)) throw new HandoffSignal("party_too_large");
   const zone = config.business.timezone;
   const reservations = await reservationsAround(ctx.calendar, args.date, zone);
   let slots;
