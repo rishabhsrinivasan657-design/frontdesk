@@ -253,15 +253,11 @@
       },
       {
         "type": "text",
-        "text": " {\"confidence\":1.0,\"onTopic\":true}\nHi Raj!"
+        "text": " {\"confidence\":1.0,\"onTopic\":true}\nHello Raj! I"
       },
       {
         "type": "text",
-        "text": " I'd be happy to help you book a table for 2. What date and time would you like to come"
-      },
-      {
-        "type": "text",
-        "text": " in?"
+        "text": "'d be happy to help you book a table for 2. What date and time would you like to come in?"
       },
       {
         "type": "usage",
@@ -272,5 +268,5 @@
       }
     ]
   },
-  "recordedAt": "2026-10-25T18:18:28.078Z"
+  "recordedAt": "2026-10-25T18:57:23.938Z"
 }
