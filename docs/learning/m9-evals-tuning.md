@@ -1,22 +1,24 @@
 # M9: Evals tuning (learning guide)
 
-M9 turns M4's 15-scenario harness into evidence: **100 scenarios**, a tuning loop that fixed what they found, and a baseline with **0 unsafe actions**. It shipped in two PRs. **Part A** added the scenarios, three harness features, the agent fixes and the frozen-prompt recordings. **Part B** added the ~30-scenario CI subset, the targets and the baseline.
+M9 turns M4's 15-scenario harness into evidence: **100 scenarios**, a tuning loop that fixed what they found, and a baseline with **0 unsafe actions**. It shipped in two PRs. **Part A** added the scenarios, three harness features, the agent fixes and the frozen-prompt recordings. **Part B** folded in PR #22 (a party-size change is one confirmed reschedule, prompt `agent-turn-v5`), re-recorded all 100 on v5, and added the 30-scenario CI subset, the targets check and the final baseline.
 
 ## 1. Reading order
 
-| #   | File                                                                              | What it's for                                                                                                    |
-| --- | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| 1   | `docs/superpowers/plans/2026-10-25-m9-evals-tuning.md`                            | The plan: the scenario list by category, the quota budget, the two PRs.                                          |
-| 2   | `packages/evals/scenarios/*.yaml`                                                 | 100 scenarios. Read `policy-pending-expires`, `vague-party-grows-after-booking` and one `injection-*` first.     |
-| 3   | `packages/evals/src/scenarios.test.ts`                                            | Suite-level checks: ~100, ≥5 per category, and that "full slot" seeds really are full.                           |
-| 4   | `packages/evals/src/run.ts`                                                       | New: `readbackPauseMinutes` (lets a pending action expire), and the caller answers a question before hanging up. |
-| 5   | `packages/evals/src/wrappers.ts` › `withMetaTap`, `report.ts` › `confidenceSweep` | Records the agent's `@meta` confidence and shows what a higher threshold would do.                               |
-| 6   | `packages/evals/src/score.ts`                                                     | `extra_event` now counts bookings still in the calendar (a confirmed cancel + rebook isn't an extra table).      |
-| 7   | `packages/core/src/availability/tables.ts` › `agentPartyLimit`                    | Parties of 7–8 could never be seated (largest table 6, never combined): now they hand off.                       |
-| 8   | `packages/core/src/gate/propose.ts` › `sameCallerOverlapping`                     | Code guard: no second overlapping table for the same name and contact.                                           |
-| 9   | `packages/core/src/guardrails/grounding.ts` › `buildFacts`                        | Any date in the booking window is grounded (suggesting "Tuesday instead" no longer hands off).                   |
-| 10  | `packages/core/src/agent/prompt.ts` (`agent-turn-v4`)                             | The tuned rules. Each one is general; none names a scenario's person, dish or date.                              |
-| 11  | `packages/evals/ci-subset.json`, `baseline.json`, `targets.json`, `RESULTS.md`    | What CI replays, the scores it must hold, the targets, and the full-suite scoreboard.                            |
+| #   | File                                                                                        | What it's for                                                                                                    |
+| --- | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| 1   | `docs/superpowers/plans/2026-10-25-m9-evals-tuning.md`                                      | The plan: the scenario list by category, the quota budget, the two PRs.                                          |
+| 2   | `packages/evals/scenarios/*.yaml`                                                           | 100 scenarios. Read `policy-pending-expires`, `vague-party-grows-after-booking` and one `injection-*` first.     |
+| 3   | `packages/evals/src/scenarios.test.ts`                                                      | Suite-level checks: ~100, ≥5 per category, and that "full slot" seeds really are full.                           |
+| 4   | `packages/evals/src/run.ts`                                                                 | New: `readbackPauseMinutes` (lets a pending action expire), and the caller answers a question before hanging up. |
+| 5   | `packages/evals/src/wrappers.ts` › `withMetaTap`, `report.ts` › `confidenceSweep`           | Records the agent's `@meta` confidence and shows what a higher threshold would do.                               |
+| 6   | `packages/evals/src/score.ts`                                                               | `extra_event` now counts bookings still in the calendar (a confirmed cancel + rebook isn't an extra table).      |
+| 7   | `packages/core/src/availability/tables.ts` › `agentPartyLimit`                              | Parties of 7–8 could never be seated (largest table 6, never combined): now they hand off.                       |
+| 8   | `packages/core/src/gate/propose.ts` › `sameCallerOverlapping`                               | Code guard: no second overlapping table for the same name and contact.                                           |
+| 9   | `packages/core/src/guardrails/grounding.ts` › `buildFacts`                                  | Any date in the booking window is grounded (suggesting "Tuesday instead" no longer hands off).                   |
+| 10  | `packages/core/src/agent/prompt.ts` (`agent-turn-v5`)                                       | The tuned rules. Each one is general; none names a scenario's person, dish or date.                              |
+| 10b | `packages/core/src/gate/propose.ts` › `reschedule`, `ports/calendar.ts` › `moveReservation` | PR #22: "3 of us now" is one reschedule with a new party size, not cancel + book.                                |
+| 11  | `packages/evals/ci-subset.json`, `baseline.json`                                            | The 30 scenarios CI replays (every category, ≥3 of each risky one) and the scores they must hold.                |
+| 12  | `packages/evals/targets.json`, `gate.ts` › `checkTargets`, `RESULTS.md`                     | `pnpm eval:targets`: all 100, offline, must clear the targets; and the full-suite scoreboard.                    |
 
 ## 2. Key concepts
 
@@ -27,6 +29,7 @@ M9 turns M4's 15-scenario harness into evidence: **100 scenarios**, a tuning loo
 - **Promise checks.** Gemini sometimes said "let me transfer you" without calling `request_handoff`, so no ticket reached the team. A reply that _states_ a transfer now gets one nudge to call the tool (`promisesHandoff` in `loop.ts`). A question ("Would you like me to connect you?") is an offer and is left alone.
 - **Thresholds.** The confidence threshold (0.5) hands off when the model says it's unsure. The sweep showed the model never reported below 0.8 in 100 calls, so raising it would change nothing. It stays at 0.5, and that's a decision backed by data, not a default.
 - **Stale recordings.** Every prompt change (v1 → v4) made every recording stale. So: diagnose with a pass, batch all fixes, and re-record once. The daily 500-request free quota is roughly one full pass.
+- **A subset for CI, the whole suite for targets.** The 30-scenario subset is the fast regression gate; `pnpm eval:targets` replays all 100 (still keyless) against the targets. Both run in CI.
 - **Baselines and targets.** The baseline is "don't get worse": CI fails on a drop of more than 2 points. Targets are "good enough to ship", set from the data and confirmed by a human. Unsafe = 0 is both.
 
 ## 3. Potential holes and the tests that guard them
@@ -45,6 +48,9 @@ M9 turns M4's 15-scenario harness into evidence: **100 scenarios**, a tuning loo
 | A tuned prompt rule silently disappears                                    | `prompt.test.ts` › "tells the agent when not to hand off…", "…not to assume details…"                         |
 | "Let me transfer you" but no handoff ticket is filed                       | `conversations.test.ts` › "hands off when the reply promises a transfer…", `loop.test.ts` › `promisesHandoff` |
 | A party of 9 asks for "a person" and is filed under the wrong reason       | `conversations.test.ts` › "files a handoff for a party the agent can't seat as party_too_large"               |
+| The CI subset quietly loses a category                                     | `scenarios.test.ts` › "the CI subset covers every category with about 30 scenarios…"                          |
+| The whole suite drops below its targets while the subset holds             | `gate.test.ts` › `checkTargets`, `main.test.ts` › "--targets fails below a target", CI `pnpm eval:targets`    |
+| CI stops checking the targets                                              | `tests/lint/ci-evals.test.ts` › "the evals job also checks the whole suite against its targets"               |
 
 ## 4. Quiz
 
@@ -59,6 +65,7 @@ M9 turns M4's 15-scenario harness into evidence: **100 scenarios**, a tuning loo
 9. Why did grounding hand off "We're closed Monday. How about Tuesday, November 10?" before M9?
 10. A confirmed cancel then a confirmed rebook used to score `extra_event`. Why was the scorer wrong, and what still catches a real problem?
 11. What's the difference between the baseline and the targets?
+12. Why does `--targets` refuse `--subset ci`?
 
 <details>
 <summary>Answers</summary>
@@ -74,5 +81,6 @@ M9 turns M4's 15-scenario harness into evidence: **100 scenarios**, a tuning loo
 9. "November 10" didn't come from any tool result, so the check called it ungrounded, regenerated, failed again and handed off. Now any date inside the booking window counts as a fact.
 10. The final calendar had one table, the one the caller wanted. Spec §9's "extra events" is about what's left behind. A create or cancel without a confirmed action is still flagged as `unconfirmed_write`.
 11. The baseline guards against getting worse (more than a 2-point drop fails CI). Targets are the bar the suite must clear at all, set once from M9's data.
+12. Targets were set from the whole 100-scenario suite. The subset's score is a different number, so checking it against those targets would mean nothing.
 
 </details>
