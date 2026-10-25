@@ -5,6 +5,7 @@ export {
   type Booking,
   type Calendar,
   type CalendarReader,
+  type MoveTo,
   type NewBooking,
 } from "./calendar.js";
 export type { Clock } from "./clock.js";

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { testConfig } from "../config/test-config.js";
-import { greeting, renderSystemPrompt } from "./prompt.js";
+import { greeting, renderSystemPrompt, TURN_TEMPLATE } from "./prompt.js";
 
 describe("renderSystemPrompt", () => {
   it("fills every placeholder with business facts", () => {
@@ -27,6 +27,13 @@ describe("renderSystemPrompt", () => {
     expect(prompt).toContain("book only the time the caller chose");
     expect(prompt).toContain("call request_handoff in that same turn");
     expect(prompt).toContain("move on to the next one");
+  });
+
+  it("changes a party size with one reschedule, never cancel then book", () => {
+    const prompt = renderSystemPrompt(testConfig(), new Date("2026-11-04T19:00:00Z"));
+    expect(TURN_TEMPLATE.id).toBe("agent-turn-v5");
+    expect(prompt).toContain("check_availability for the new size, then reschedule");
+    expect(prompt).not.toContain("cancel it and then book the new size");
   });
 });
 

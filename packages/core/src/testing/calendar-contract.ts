@@ -78,6 +78,31 @@ export function runCalendarContract(
       expect(await cal.getReservation(created.id)).toEqual(moved);
     });
 
+    it("moveReservation with a partySize changes the party and keeps the rest", async () => {
+      const cal = await make();
+      const created = await cal.createReservation(ana);
+      const to = { start: ana.start, end: ana.end, tableId: "t6-1", partySize: 5 };
+      const moved = await cal.moveReservation(created.id, to);
+      expect(moved).toMatchObject({
+        id: created.id,
+        ...to,
+        name: "Ana Ruiz",
+        contact: ana.contact,
+      });
+      expect(await cal.getReservation(created.id)).toEqual(moved);
+    });
+
+    it("moveReservation without a partySize keeps the party", async () => {
+      const cal = await make();
+      const created = await cal.createReservation(ana);
+      const moved = await cal.moveReservation(created.id, {
+        start: ana.start,
+        end: ana.end,
+        tableId: "t4-2",
+      });
+      expect(moved.partySize).toBe(4);
+    });
+
     it("cancelReservation removes the booking from get and list", async () => {
       const cal = await make();
       const created = await cal.createReservation(ana);

@@ -2,6 +2,7 @@ import {
   type Booking,
   type Calendar,
   CalendarUnavailableError,
+  type MoveTo,
   type NewBooking,
   normalizeContact,
 } from "@frontdesk/core";
@@ -74,17 +75,15 @@ export class GoogleCalendar implements Calendar {
     return this.booking(data, "events.insert");
   }
 
-  async moveReservation(
-    id: string,
-    to: { start: Date; end: Date; tableId: string },
-  ): Promise<Booking> {
+  async moveReservation(id: string, to: MoveTo): Promise<Booking> {
     const existing = await this.getReservation(id);
     if (!existing) throw new Error(`No reservation ${id}`);
+    const { partySize = existing.partySize, ...placement } = to;
     const { data } = await this.call("events.patch", () =>
       this.events.patch({
         calendarId: this.calendarId,
         eventId: id,
-        requestBody: toEvent({ ...existing, ...to }, this.tag),
+        requestBody: toEvent({ ...existing, ...placement, partySize }, this.tag),
       }),
     );
     return this.booking(data, "events.patch");

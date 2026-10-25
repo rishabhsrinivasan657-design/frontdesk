@@ -142,7 +142,7 @@ async function resolve(
         session.knownReservations[duplicate.id] = duplicate;
         return fail(
           "duplicate_booking",
-          `${duplicate.name} already has a table for ${duplicate.partySize} at ${formatWhen(duplicate.start, config.business.timezone)} (reservationId ${duplicate.id}). Don't book a second table. To change its time, use reschedule with that reservationId. For a different party size, first call check_availability for the new size; only if a table is free, cancel this reservation and then book.`,
+          `${duplicate.name} already has a table for ${duplicate.partySize} at ${formatWhen(duplicate.start, config.business.timezone)} (reservationId ${duplicate.id}). Don't book a second table. To change its time, use reschedule with that reservationId. For a different party size, call check_availability for the new size at the same time, then reschedule with that reservationId and the new slotId.`,
         ) as Failure;
       }
       const taken = await stillFree(slot);
@@ -157,12 +157,9 @@ async function resolve(
       if ("error" in reservation) return reservation;
       const slot = offeredSlot(args.slotId);
       if ("error" in slot) return slot;
-      if (slot.partySize !== reservation.partySize) {
-        return fail(
-          "party_mismatch",
-          `The reservation is for ${reservation.partySize}; check availability for that party size.`,
-        ) as Failure;
-      }
+      // A slot for another party size changes the party in the same move, so the caller
+      // never goes without a table between a cancel and a new booking.
+      if (slot.partySize > agentPartyLimit(config)) throw new HandoffSignal("party_too_large");
       const taken = await stillFree(slot, reservation.id);
       if (taken) return taken;
       return { args: { kind: "reschedule", ...args }, slot, reservation };
