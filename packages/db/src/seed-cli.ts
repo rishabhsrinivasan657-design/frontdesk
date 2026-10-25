@@ -18,7 +18,11 @@ try {
     await resetDemo(conn.db);
     console.log("removed the previous demo rows");
   }
-  const { inserted } = await seedDemo(conn.db, { now: new Date() });
+  // Tests pin the api's clock (FRONTDESK_NOW); demo dates follow it so they stay in its window.
+  const fixed = process.env.FRONTDESK_NOW?.trim();
+  const now = fixed ? new Date(fixed) : new Date();
+  if (Number.isNaN(now.getTime())) throw new Error("FRONTDESK_NOW must be an ISO 8601 time");
+  const { inserted } = await seedDemo(conn.db, { now });
   // The database name only: the URL holds a password.
   const name = new URL(url).pathname.slice(1);
   console.log(

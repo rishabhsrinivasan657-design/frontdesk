@@ -45,7 +45,7 @@ export function ChatWindow({ url, businessName }: { url: string; businessName: s
     <Card className="mx-auto flex h-[min(720px,calc(100dvh-2rem))] w-full max-w-xl flex-col">
       <CardHeader className="flex-row items-start justify-between">
         <div className="flex flex-col gap-1">
-          <CardTitle>{businessName}</CardTitle>
+          <CardTitle className="font-heading text-xl tracking-wide">{businessName}</CardTitle>
           <CardDescription>Chat or talk with our receptionist to book a table.</CardDescription>
         </div>
         <Badge data-testid="connection" variant={state.status === "open" ? "outline" : "secondary"}>

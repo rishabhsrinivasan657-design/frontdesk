@@ -7,8 +7,11 @@ const API_WS_URL = process.env.NEXT_PUBLIC_API_WS_URL ?? "ws://localhost:4000/ws
 
 export default function TalkPage() {
   return (
-    <main className="px-4 py-4 sm:py-8">
+    <main className="flex flex-col items-center gap-4 px-4 py-4 sm:gap-6 sm:py-8">
       <ChatWindow url={API_WS_URL} businessName="Casa Fiorella" />
+      <p className="text-xs text-muted-foreground">
+        Front Desk, an AI receptionist. Bookings are confirmed with you before anything is saved.
+      </p>
     </main>
   );
 }

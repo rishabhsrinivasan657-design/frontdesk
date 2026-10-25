@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import { OWNER } from "./helpers";
 
 /**
  * Keyless, deterministic e2e (spec §13): the api runs the scripted LLM on an in-memory calendar
@@ -6,11 +7,14 @@ import { defineConfig, devices } from "@playwright/test";
  * Needs Docker Postgres + Redis (`pnpm infra:up`, `pnpm db:migrate`).
  */
 const API_PORT = 4100;
+const NOW = "2026-11-04T14:00:00-05:00";
 const WEB_PORT = 3100;
 const ci = !!process.env.CI;
 
 export default defineConfig({
   testDir: ".",
+  // Seeds the owner dashboard's demo data, dated relative to the api's fixed clock.
+  globalSetup: "./global-setup.ts",
   fullyParallel: false,
   workers: 1,
   retries: ci ? 1 : 0,
@@ -34,13 +38,15 @@ export default defineConfig({
         API_PORT: String(API_PORT),
         WEB_ORIGINS: `http://localhost:${WEB_PORT}`,
         LLM_PROVIDER: "scripted",
-        FRONTDESK_NOW: "2026-11-04T14:00:00-05:00",
+        FRONTDESK_NOW: NOW,
         QUEUE_PREFIX: "e2e",
         // Blank, so the in-memory calendar is used even where .env has Google credentials.
         GOOGLE_CLIENT_ID: "",
         GOOGLE_CLIENT_SECRET: "",
         GOOGLE_REFRESH_TOKEN: "",
         GOOGLE_CALENDAR_ID: "",
+        OWNER_EMAIL: OWNER.email,
+        OWNER_PASSWORD_HASH: OWNER.hash,
       },
     },
     {
@@ -52,6 +58,8 @@ export default defineConfig({
       env: {
         NEXT_PUBLIC_API_WS_URL: `ws://localhost:${API_PORT}/ws`,
         NEXT_PUBLIC_VOICE_TEST_HOOK: "1",
+        // The dashboard's server side talks to the api directly.
+        API_URL: `http://127.0.0.1:${API_PORT}`,
       },
     },
   ],
