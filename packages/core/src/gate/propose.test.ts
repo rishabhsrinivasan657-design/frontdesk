@@ -93,6 +93,10 @@ describe("propose", () => {
     });
     expect(result).toMatchObject({ ok: false, error: "duplicate_booking" });
     expect((result as { message: string }).message).toContain(ANA.id);
+    // Cancelling first could leave the caller with no table if the new size doesn't fit.
+    expect((result as { message: string }).message).toContain(
+      "first call check_availability for the new size",
+    );
     // The existing booking is now known, so the agent can reschedule or cancel it.
     expect(Object.keys(fx.session.knownReservations)).toContain(ANA.id);
     expect(fx.deps.audit.entries()).toEqual([]);

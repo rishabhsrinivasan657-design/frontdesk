@@ -32,6 +32,7 @@ import type { AgentDeps } from "./deps.js";
 import { alreadyHandedOffMessage, handOff } from "./handoff.js";
 import { TURN_TEMPLATE, renderSystemPrompt } from "./prompt.js";
 import { HandoffSignal, fail, runReadTool, type ToolResult } from "./tools/read-tools.js";
+import { agentPartyLimit } from "../availability/tables.js";
 import { TOOL_SPECS, isWriteTool } from "./tools/schemas.js";
 import { type HandoffReason, type PendingAction, type SessionState, newSession } from "./types.js";
 
@@ -254,13 +255,34 @@ async function handle(turn: Turn): Promise<string> {
     }
     return await modelTurn(turn);
   } catch (error) {
-    if (error instanceof HandoffSignal) return handOffTurn(turn, error.reason, error.summary);
+    if (error instanceof HandoffSignal) {
+      return handOffTurn(turn, refineHandoffReason(turn, error.reason), error.summary);
+    }
     if (error instanceof CalendarUnavailableError) return handOffTurn(turn, "calendar_unavailable");
     if (error instanceof LLMError) {
       return handOffTurn(turn, error.code === "rate_limited" ? "rate_limited" : "llm_unavailable");
     }
     throw error;
   }
+}
+
+/**
+ * A caller who stated a party the agent can't seat is a party_too_large handoff, whatever
+ * generic reason got them there ("yes, connect me", or the private room offered to 9).
+ */
+function refineHandoffReason(turn: Turn, reason: HandoffReason): HandoffReason {
+  const { config } = turn.deps;
+  const party = Math.max(
+    0,
+    ...turn.session.callerValues
+      .map((v) => /^number:(\d+) people$/.exec(v)?.[1])
+      .filter((n): n is string => n !== undefined)
+      .map(Number),
+  );
+  if (party <= agentPartyLimit(config)) return reason;
+  if (reason === "human_requested" || reason === "low_confidence") return "party_too_large";
+  if (reason === "private_event" && party < config.privateRoom.min) return "party_too_large";
+  return reason;
 }
 
 function handOffTurn(turn: Turn, reason: HandoffReason, summary?: string): Promise<string> {
@@ -428,7 +450,7 @@ const HANDOFF_NUDGE =
 /** A statement (not a question) that the caller is being put through to a person. */
 export function promisesHandoff(reply: string): boolean {
   const PROMISE =
-    /\b(?:let me|i'll|i will|i'm going to|i am going to|i'm|i am)\s+(?:now\s+)?(?:connect|connecting|transfer|transferring|hand|handing|put|putting)\b[^.!?]*\b(?:you|this)\b/i;
+    /\b(?:let me|i['’]ll|i will|i['’]m going to|i am going to|i['’]m|i am)\s+(?:now\s+)?(?:(?:connect|connecting|transfer|transferring|hand|handing)\b[^.!?]*\b(?:you|this)\b|put(?:ting)? you through\b)/i;
   return reply
     .split(/(?<=[.!?])\s+/)
     .some((sentence) => !sentence.trim().endsWith("?") && PROMISE.test(sentence));

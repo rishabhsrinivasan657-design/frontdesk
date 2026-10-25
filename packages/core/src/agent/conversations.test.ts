@@ -300,6 +300,30 @@ describe("scripted guardrail conversations", () => {
     expect(result!.flags).toContain("handoff_nudged");
   });
 
+  it("files a handoff for a party the agent can't seat as party_too_large (M9 review)", async () => {
+    const fx = agentFixture(testConfig());
+    const results = await converse(fx, [
+      [
+        "It's for 9 people, Saturday at 7pm.",
+        [text(`${meta(0.9)}For 9, shall I hand you over to someone who can help?`)],
+      ],
+      ["Yes, please connect me with someone."],
+    ]);
+    expect(results[1]!.handoff).toBe("party_too_large");
+  });
+
+  it("keeps the reason for a big party when it isn't about the size", async () => {
+    const fx = agentFixture(testConfig());
+    const results = await converse(fx, [
+      ["We're 9 people.", [text(`${meta(0.9)}How can I help with your group?`)]],
+      [
+        "Is the pappardelle safe for my nut allergy?",
+        [call("request_handoff", { reason: "allergy_safety", summary: "nut allergy" })],
+      ],
+    ]);
+    expect(results[1]!.handoff).toBe("allergy_safety");
+  });
+
   it("does not nudge an offer of a human phrased as a question", async () => {
     const fx = agentFixture(testConfig());
     const [result] = await converse(fx, [

@@ -142,7 +142,7 @@ async function resolve(
         session.knownReservations[duplicate.id] = duplicate;
         return fail(
           "duplicate_booking",
-          `${duplicate.name} already has a table for ${duplicate.partySize} at ${formatWhen(duplicate.start, config.business.timezone)} (reservationId ${duplicate.id}). Don't book a second table: to change it, use reschedule, or cancel it and then book, with that reservationId.`,
+          `${duplicate.name} already has a table for ${duplicate.partySize} at ${formatWhen(duplicate.start, config.business.timezone)} (reservationId ${duplicate.id}). Don't book a second table. To change its time, use reschedule with that reservationId. For a different party size, first call check_availability for the new size; only if a table is free, cancel this reservation and then book.`,
         ) as Failure;
       }
       const taken = await stillFree(slot);

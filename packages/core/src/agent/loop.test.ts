@@ -631,6 +631,8 @@ describe("promisesHandoff", () => {
     "I'll connect you with a team member who can plan your event.",
     "I'm connecting you with someone right away.",
     "I don't have that, let me connect you.",
+    "I’ll connect you with our events team.",
+    "Let me put you through to a manager.",
   ])("treats %j as a promise", (reply) => {
     expect(promisesHandoff(reply)).toBe(true);
   });
@@ -640,6 +642,8 @@ describe("promisesHandoff", () => {
     "Shall I hand you over to someone who can help?",
     "If you'd like, I can connect you with someone from our team.",
     "Let me check availability for you.",
+    "I'll put you down for Friday at 7.",
+    "Let me put a note on this for the kitchen.",
   ])("does not treat %j as a promise", (reply) => {
     expect(promisesHandoff(reply)).toBe(false);
   });
