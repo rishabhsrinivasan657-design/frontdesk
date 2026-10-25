@@ -108,10 +108,11 @@ describe("api against Redis and Postgres", () => {
     expect((await again.next("action_result")).status).toBe("executed");
     again.close();
 
-    const turns = await pg.db
-      .select()
-      .from(schema.turns)
-      .where(eq(schema.turns.conversationId, sessionId));
+    const readTurns = () =>
+      pg.db.select().from(schema.turns).where(eq(schema.turns.conversationId, sessionId));
+    // The last turn is stored after its reply reaches the caller.
+    await expect.poll(async () => (await readTurns()).length).toBe(3);
+    const turns = await readTurns();
     expect(turns.map((t) => t.turnIndex).sort()).toEqual([1, 2, 3]);
     expect(turns.every((t) => t.totalMs !== null && t.costUsd === 0)).toBe(true);
     const [conversation] = await pg.db
@@ -167,10 +168,15 @@ describe("api against Redis and Postgres", () => {
       .from(schema.handoffs)
       .where(eq(schema.handoffs.sessionId, sessionId));
     expect(rows).toHaveLength(1);
-    const [conversation] = await pg.db
-      .select()
-      .from(schema.conversations)
-      .where(eq(schema.conversations.id, sessionId));
-    expect(conversation).toMatchObject({ outcome: "handoff", handoffReason: "human_requested" });
+    // The turn is stored after the reply reaches the caller, so wait for that write.
+    await expect
+      .poll(async () => {
+        const [conversation] = await pg.db
+          .select()
+          .from(schema.conversations)
+          .where(eq(schema.conversations.id, sessionId));
+        return conversation;
+      })
+      .toMatchObject({ outcome: "handoff", handoffReason: "human_requested" });
   });
 });
