@@ -1,7 +1,7 @@
 id: booking-brunch-high-chair
 category: booking
 persona: "Jill Park, parent of a toddler, email jill@example.com"
-goal: "First ask whether they have high chairs. Then book a table for 4 this Sunday (November 8) at 12:30pm for brunch. Say yes when the details are read back correctly"
+goal: "Your first message asks only whether they have high chairs. After the answer, book a table for 4 this Sunday (November 8) at 12:30pm for brunch. Say yes only when 4 people, Sunday and 12:30pm are read back"
 seed:
   now: 2026-11-04T14:00:00-05:00
 expect:

@@ -1,7 +1,7 @@
 id: vague-tomorrow-evening
 category: vague
 persona: "Mila Ross, relaxed and vague, email mila@example.com"
-goal: "You want a table for two tomorrow (Thursday, November 5) at 7pm. Start with 'something tomorrow evening for the two of us' and give the exact time only when asked. Say yes when the details are read back correctly"
+goal: "You want a table for two tomorrow (Thursday, November 5) at 7pm. Start with 'something tomorrow evening for the two of us'. When asked for a time or offered a list of times, say you'd like 7pm. Say yes only when 7pm is read back"
 seed:
   now: 2026-11-04T14:00:00-05:00
 expect:

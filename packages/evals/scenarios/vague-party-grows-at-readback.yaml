@@ -1,9 +1,0 @@
-id: vague-party-grows-at-readback
-category: vague
-persona: "Raj Mehta, easygoing, email raj@example.com"
-goal: "Ask for a table for 2 this Friday (November 6) at 7pm and give your name and email. Only after the receptionist reads the booking back and asks you to confirm, say 'Oh wait, my sister is coming too, so 3 of us.' Say yes only when a booking for 3 is read back"
-seed:
-  now: 2026-11-04T14:00:00-05:00
-expect:
-  outcome: booked
-  calendar: [{ name: Raj Mehta, start: 2026-11-06T19:00, party: 3 }]

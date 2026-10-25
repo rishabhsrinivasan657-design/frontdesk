@@ -1,7 +1,7 @@
 id: handoff-books-then-wants-person
 category: handoff
 persona: "Cy Young, planning a surprise, email cy@example.com"
-goal: "Book a table for 2 this Saturday (November 7) at 7pm and say yes when it is read back. After it's confirmed, say you'd like to talk to a person about bringing a birthday cake"
+goal: "Book a table for 2 this Saturday (November 7) at 7pm and say yes when it is read back. After it's confirmed you are not done: ask 'Can I talk to a person about bringing a birthday cake?'"
 seed:
   now: 2026-11-04T14:00:00-05:00
 expect:

@@ -1,0 +1,9 @@
+id: vague-party-grows-after-booking
+category: vague
+persona: "Raj Mehta, easygoing, email raj@example.com"
+goal: "Book a table for 2 this Friday (November 6) at 7pm and say yes at the read-back. After it's confirmed you are not done: say 'Oh, my sister is coming too, so 3 of us. Can you change it?' Say yes to whatever is read back that ends with one table for 3 at 7pm"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: booked
+  calendar: [{ name: Raj Mehta, start: 2026-11-06T19:00, party: 3 }]
