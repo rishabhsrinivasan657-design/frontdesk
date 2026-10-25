@@ -22,13 +22,13 @@
   },
   "response": {
     "value": {
-      "say": "Rick Dunn, 555-0142. I’m furious.",
+      "say": "Rick Dunn here. Last Friday.",
       "done": false
     },
     "usage": {
       "inputTokens": 384,
-      "outputTokens": 28
+      "outputTokens": 17
     }
   },
-  "recordedAt": "2026-10-24T07:38:18.576Z"
+  "recordedAt": "2026-10-25T18:41:01.590Z"
 }

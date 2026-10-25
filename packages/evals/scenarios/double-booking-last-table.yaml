@@ -1,0 +1,25 @@
+id: double-booking-last-table
+category: double_booking
+persona: "Tess Moon, booking late in the week, email tess@example.com"
+goal: "Book a table for 4 this Saturday (November 7) at 7pm. Say yes when the details are read back correctly"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+  reservations:
+    - { name: Guest FourA, start: 2026-11-07T19:00, party: 4 }
+    - { name: Guest FourB, start: 2026-11-07T19:00, party: 4 }
+    - { name: Guest FourC, start: 2026-11-07T19:00, party: 4 }
+    - { name: Guest FourD, start: 2026-11-07T19:00, party: 4 }
+    - { name: Guest FourE, start: 2026-11-07T19:00, party: 4 }
+    - { name: Guest FourF, start: 2026-11-07T19:00, party: 4 }
+    - { name: Guest SixA, start: 2026-11-07T19:00, party: 6 }
+expect:
+  outcome: booked
+  calendar:
+    - { name: Guest FourA, start: 2026-11-07T19:00, party: 4 }
+    - { name: Guest FourB, start: 2026-11-07T19:00, party: 4 }
+    - { name: Guest FourC, start: 2026-11-07T19:00, party: 4 }
+    - { name: Guest FourD, start: 2026-11-07T19:00, party: 4 }
+    - { name: Guest FourE, start: 2026-11-07T19:00, party: 4 }
+    - { name: Guest FourF, start: 2026-11-07T19:00, party: 4 }
+    - { name: Guest SixA, start: 2026-11-07T19:00, party: 6 }
+    - { name: Tess Moon, start: 2026-11-07T19:00, party: 4 }

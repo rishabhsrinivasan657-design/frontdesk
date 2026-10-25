@@ -1,0 +1,9 @@
+id: cancel-changes-mind
+category: cancel
+persona: "Gus Novak, second-guessing himself. Has a booking under 'Gus Novak' this Saturday at 7pm for 2, email gus@example.com"
+goal: "Ask to cancel the Saturday booking and give your email when asked. Only after the receptionist reads the cancellation back and asks you to confirm, say 'No, wait, keep it. I'll come after all.' Never say yes to the cancellation. Then say thanks and end the call"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+  reservations: [{ name: Gus Novak, start: 2026-11-07T19:00, party: 2 }]
+expect:
+  outcome: info_only

@@ -84,6 +84,44 @@ describe("propose", () => {
     expect((await fx.deps.sessions.getPending("s1"))?.id).toBe(second.action.id);
   });
 
+  it("refuses a second booking for the same caller at an overlapping time", async () => {
+    const fx = agentFixture(testConfig());
+    const slotId = await fx.offer("2026-11-06", "19:30", 4);
+    const result = await propose(fx.deps, fx.session, "turn_1", "book", {
+      ...book(slotId),
+      contact: "ANA@example.com ",
+    });
+    expect(result).toMatchObject({ ok: false, error: "duplicate_booking" });
+    expect((result as { message: string }).message).toContain(ANA.id);
+    // Cancelling first could leave the caller with no table if the new size doesn't fit.
+    expect((result as { message: string }).message).toContain(
+      "first call check_availability for the new size",
+    );
+    // The existing booking is now known, so the agent can reschedule or cancel it.
+    expect(Object.keys(fx.session.knownReservations)).toContain(ANA.id);
+    expect(fx.deps.audit.entries()).toEqual([]);
+  });
+
+  it.each([
+    ["the same name with a different contact", { contact: "ana.other@example.com" }],
+    ["a different name with the same contact", { name: "Mia Torres" }],
+  ])("allows a booking at an overlapping time for %s", async (_label, over) => {
+    const fx = agentFixture(testConfig());
+    const slotId = await fx.offer("2026-11-06", "19:30", 4);
+    const result = await propose(fx.deps, fx.session, "turn_1", "book", {
+      ...book(slotId),
+      ...over,
+    });
+    expect(result).toMatchObject({ ok: true });
+  });
+
+  it("hands off a booking for a party larger than every table", async () => {
+    const fx = agentFixture(testConfig());
+    await expect(
+      propose(fx.deps, fx.session, "turn_1", "book", book("2026-11-06T19:00@t6-1#7", 7)),
+    ).rejects.toMatchObject({ name: "HandoffSignal", reason: "party_too_large" });
+  });
+
   it("hands off a cancel inside the free-change window", async () => {
     const fx = agentFixture(testConfig());
     await fx.find("Ana Ruiz", "ana@example.com");

@@ -107,6 +107,43 @@ describe("scripted conversations", () => {
     ]);
   });
 
+  it("cancels a booking made earlier in the same call", async () => {
+    const fx = agentFixture(testConfig(), []);
+    await converse(fx, [
+      [
+        "A table for 2 Friday at 7, Raj Mehta, raj@example.com",
+        [call("check_availability", { date: "2026-11-06", time: "19:00", partySize: 2 })],
+        [
+          call("book", {
+            slotId: "2026-11-06T19:00@t2-1#2",
+            name: "Raj Mehta",
+            contact: "raj@example.com",
+            partySize: 2,
+          }),
+        ],
+      ],
+      ["yes"],
+    ]);
+    const [made] = await fx.deps.calendar.listReservations({
+      from: new Date("2026-11-01T00:00:00Z"),
+      to: new Date("2026-12-01T00:00:00Z"),
+    });
+    const results = await converse(fx, [
+      ["Actually, cancel that one", [call("cancel", { reservationId: made!.id })]],
+      ["yes"],
+    ]);
+    expect(types(results[0]!)[0]).toBe("pending_action");
+    expect(await calendarState(fx)).toEqual([]);
+    expect(stagesOf(fx)).toEqual([
+      "book:proposed",
+      "book:confirmed",
+      "book:executed",
+      "cancel:proposed",
+      "cancel:confirmed",
+      "cancel:executed",
+    ]);
+  });
+
   it("cancels a reservation", async () => {
     const fx = agentFixture(testConfig());
     const results = await converse(fx, [
@@ -248,6 +285,56 @@ describe("scripted guardrail conversations", () => {
     expect(results[2]!.reply).toContain("connect you with someone");
     expect(results[3]!.handoff).toBe("human_requested");
     expect(fx.deps.calendar.writes).toEqual([]);
+  });
+
+  it("hands off when the reply promises a transfer but skipped request_handoff (M9 pass 3)", async () => {
+    const fx = agentFixture(testConfig());
+    const [result] = await converse(fx, [
+      [
+        "Just book La Cantina for 20 people on December 5.",
+        [text(`${meta(0.9)}For La Cantina, let me transfer you now.`)],
+        [call("request_handoff", { reason: "private_event", summary: "La Cantina for 20, Dec 5" })],
+      ],
+    ]);
+    expect(result!.handoff).toBe("private_event");
+    expect(result!.flags).toContain("handoff_nudged");
+  });
+
+  it("files a handoff for a party the agent can't seat as party_too_large (M9 review)", async () => {
+    const fx = agentFixture(testConfig());
+    const results = await converse(fx, [
+      [
+        "It's for 9 people, Saturday at 7pm.",
+        [text(`${meta(0.9)}For 9, shall I hand you over to someone who can help?`)],
+      ],
+      ["Yes, please connect me with someone."],
+    ]);
+    expect(results[1]!.handoff).toBe("party_too_large");
+  });
+
+  it("keeps the reason for a big party when it isn't about the size", async () => {
+    const fx = agentFixture(testConfig());
+    const results = await converse(fx, [
+      ["We're 9 people.", [text(`${meta(0.9)}How can I help with your group?`)]],
+      [
+        "Is the pappardelle safe for my nut allergy?",
+        [call("request_handoff", { reason: "allergy_safety", summary: "nut allergy" })],
+      ],
+    ]);
+    expect(results[1]!.handoff).toBe("allergy_safety");
+  });
+
+  it("does not nudge an offer of a human phrased as a question", async () => {
+    const fx = agentFixture(testConfig());
+    const [result] = await converse(fx, [
+      [
+        "We're a group of 9.",
+        [text(`${meta(0.9)}Would you like me to connect you with someone from our team?`)],
+        [call("request_handoff", { reason: "party_too_large", summary: "should not be reached" })],
+      ],
+    ]);
+    expect(result!.handoff).toBeUndefined();
+    expect(result!.reply).toContain("Would you like me to connect you");
   });
 
   it("hands off when the reply is ungrounded twice", async () => {

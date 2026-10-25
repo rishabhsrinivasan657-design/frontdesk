@@ -30,6 +30,7 @@ describe("parseArgs", () => {
       verbose: false,
     });
     expect(parseArgs(["--verbose"]).verbose).toBe(true);
+    expect(parseArgs(["--only", "a,b"]).only).toEqual(["a", "b"]);
   });
   it.each([
     [["--live", "--record"], /choose one/],
@@ -37,6 +38,7 @@ describe("parseArgs", () => {
     [["--filter"], /--filter needs/],
     [["--subset", "all"], /--subset supports/],
     [["--fast"], /unknown argument/],
+    [["--only"], /--only needs/],
   ])("rejects %j", (argv, message) => {
     expect(() => parseArgs(argv)).toThrow(message);
   });
@@ -145,6 +147,25 @@ describe("main", () => {
     await writeFile(io.baselineFile!, JSON.stringify(baseline));
     expect(await main(["--subset", "ci", "--check"], io)).toBe(1);
     expect(out.join("\n")).toContain("success dropped 3 points");
+  });
+
+  it("--only runs just the named scenarios", async () => {
+    const other = scenario({ id: "never-recorded", category: "faq", persona: "Someone else" });
+    const { io, out } = await workspace([scenario(), other], [scenario()]);
+    expect(await main(["--only", "book-saturday"], io)).toBe(0);
+    expect(out.join("\n")).not.toContain("never-recorded");
+  });
+
+  it("--only rejects an unknown id", async () => {
+    const { io, err } = await workspace([scenario()]);
+    expect(await main(["--only", "nope"], io)).toBe(1);
+    expect(err.join("\n")).toContain('unknown scenario id "nope"');
+  });
+
+  it("--save refuses with --only", async () => {
+    const { io, err } = await workspace([scenario()]);
+    expect(await main(["--save", "--only", "book-saturday"], io)).toBe(2);
+    expect(err.join("\n")).toContain("--save needs the whole subset, not --only");
   });
 
   it("fails when no scenario matches", async () => {

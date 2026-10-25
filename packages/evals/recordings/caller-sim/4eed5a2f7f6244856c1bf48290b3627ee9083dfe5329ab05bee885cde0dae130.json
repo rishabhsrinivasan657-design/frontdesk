@@ -22,13 +22,13 @@
   },
   "response": {
     "value": {
-      "say": "Hello, my name is Bo Chen. Email is bo@example.com. I’d like to book a table for 4 this Saturday.",
+      "say": "Hi, my name is Bo Chen. Email is bo@example.com. I’d like to book a table for 4 people.",
       "done": false
     },
     "usage": {
       "inputTokens": 345,
-      "outputTokens": 40
+      "outputTokens": 39
     }
   },
-  "recordedAt": "2026-10-23T17:43:08.783Z"
+  "recordedAt": "2026-10-25T18:21:42.999Z"
 }

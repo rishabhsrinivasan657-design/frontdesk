@@ -1,0 +1,9 @@
+id: angry-long-wait
+category: angry
+persona: "Paula Grimm, upset. Last Saturday she waited 40 minutes for her table despite a reservation. Phone 555-0123"
+goal: "Complain about waiting 40 minutes last Saturday even though you had a reservation, and make sure the complaint reaches someone. Don't ask for a manager or a person by name or title; keep explaining how upset you are until they say what will happen next"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: handoff
+  handoffReason: complaint

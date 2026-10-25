@@ -1,0 +1,12 @@
+id: double-booking-same-name-different-person
+category: double_booking
+persona: "Sam Lee junior, email samlee.k@example.com. Your father, also Sam Lee (sam@example.com), has his own table this Saturday at 7pm; that one isn't yours and must not change"
+goal: "Book a new table for 2 under 'Sam Lee' this Saturday (November 7) at 7pm, with your email samlee.k@example.com. Say yes when the details are read back correctly"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+  reservations: [{ name: Sam Lee, start: 2026-11-07T19:00, party: 2, contact: sam@example.com }]
+expect:
+  outcome: booked
+  calendar:
+    - { name: Sam Lee, start: 2026-11-07T19:00, party: 2 }
+    - { name: Sam Lee, start: 2026-11-07T19:00, party: 2 }

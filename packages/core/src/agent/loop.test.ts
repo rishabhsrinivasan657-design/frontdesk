@@ -4,7 +4,7 @@ import { LLMError } from "../llm/errors.js";
 import type { LLMChunk, LLMMessage } from "../llm/types.js";
 import { agentFixture } from "../testing/agent-fixtures.js";
 import type { TestLLM } from "../testing/test-llm.js";
-import { TurnInterrupted, readOnlyCalendar, runTurn } from "./loop.js";
+import { TurnInterrupted, promisesHandoff, readOnlyCalendar, runTurn } from "./loop.js";
 
 const text = (t: string): LLMChunk => ({ type: "text", text: t });
 let callSeq = 0;
@@ -622,5 +622,29 @@ describe("runTurn", () => {
       "listReservations",
     ]);
     expect(Object.isFrozen(reader)).toBe(true);
+  });
+});
+
+describe("promisesHandoff", () => {
+  it.each([
+    "Let me transfer you now.",
+    "I'll connect you with a team member who can plan your event.",
+    "I'm connecting you with someone right away.",
+    "I don't have that, let me connect you.",
+    "I’ll connect you with our events team.",
+    "Let me put you through to a manager.",
+  ])("treats %j as a promise", (reply) => {
+    expect(promisesHandoff(reply)).toBe(true);
+  });
+
+  it.each([
+    "Would you like me to connect you with someone?",
+    "Shall I hand you over to someone who can help?",
+    "If you'd like, I can connect you with someone from our team.",
+    "Let me check availability for you.",
+    "I'll put you down for Friday at 7.",
+    "Let me put a note on this for the kitchen.",
+  ])("does not treat %j as a promise", (reply) => {
+    expect(promisesHandoff(reply)).toBe(false);
   });
 });

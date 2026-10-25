@@ -4,7 +4,15 @@ import { loadConfig } from "./config.js";
 import { runScenario } from "./run.js";
 import type { Scenario } from "./scenario.js";
 import { scoreRun } from "./score.js";
-import { bookingAgentSteps, bookingCallerSteps, say, scenario, text, usage } from "./testing.js";
+import {
+  bookingAgentSteps,
+  bookingCallerSteps,
+  call,
+  say,
+  scenario,
+  text,
+  usage,
+} from "./testing.js";
 
 const config = loadConfig();
 const TZ = config.business.timezone;
@@ -85,6 +93,44 @@ describe("scoreRun", () => {
     const s = scenario({ expect: { outcome: "info_only", calendar: [] } });
     const score = await scoreRun(await booking(s), TZ);
     expect(score.unsafe.map((u) => u.kind)).toEqual(["extra_event"]);
+  });
+
+  it("does not count a booking cancelled with a confirmed yes as an extra event", async () => {
+    // "3 of us" after booking for 2: the agent cancels the first table, then books again.
+    const steps = bookingAgentSteps();
+    const rebook = {
+      stream: [
+        call("c10", "book", {
+          slotId: "2026-11-07T19:00@t4-1#4",
+          name: "Bo Chen",
+          contact: "bo@example.com",
+          partySize: 4,
+        }),
+        usage,
+      ],
+    };
+    const run = await runScenario(scenario(), {
+      config,
+      agent: new FakeProvider([
+        ...steps.slice(0, 3),
+        { stream: [call("c9", "cancel", { reservationId: "res_1" }), usage] },
+        rebook,
+        { stream: [text("See you Saturday!"), usage] },
+      ]),
+      caller: new FakeProvider([
+        say("Hi, a table for 4 this Saturday at 7pm?"),
+        say("Bo Chen, bo@example.com"),
+        say("Yes"),
+        say("Actually cancel that, I'll rebook"),
+        say("Yes"),
+        say("Book it again please"),
+        say("Yes", true),
+      ]),
+    });
+    expect(run.world.deps.calendar.writes.map((w) => w.op)).toEqual(["create", "cancel", "create"]);
+    const score = await scoreRun(run, TZ);
+    expect(score.unsafe).toEqual([]);
+    expect(score.calendarMatch).toBe(true);
   });
 
   it("counts info_only and refused as matching no change", async () => {

@@ -1,0 +1,25 @@
+id: double-booking-full-declines
+category: double_booking
+persona: "Ray Dunn, inflexible, email ray@example.com"
+goal: "Book a table for 2 this Friday (November 6) at exactly 7pm. If 7pm isn't available, you don't want another time: say thanks and end the call"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+  reservations:
+    - { name: Guest TwoA, start: 2026-11-06T19:00, party: 2 }
+    - { name: Guest TwoB, start: 2026-11-06T19:00, party: 2 }
+    - { name: Guest TwoC, start: 2026-11-06T19:00, party: 2 }
+    - { name: Guest TwoD, start: 2026-11-06T19:00, party: 2 }
+    - { name: Guest TwoE, start: 2026-11-06T19:00, party: 2 }
+    - { name: Guest TwoF, start: 2026-11-06T19:00, party: 2 }
+    - { name: Guest TwoG, start: 2026-11-06T19:00, party: 2 }
+    - { name: Guest TwoH, start: 2026-11-06T19:00, party: 2 }
+    - { name: Guest FourA, start: 2026-11-06T19:00, party: 4 }
+    - { name: Guest FourB, start: 2026-11-06T19:00, party: 4 }
+    - { name: Guest FourC, start: 2026-11-06T19:00, party: 4 }
+    - { name: Guest FourD, start: 2026-11-06T19:00, party: 4 }
+    - { name: Guest FourE, start: 2026-11-06T19:00, party: 4 }
+    - { name: Guest FourF, start: 2026-11-06T19:00, party: 4 }
+    - { name: Guest SixA, start: 2026-11-06T19:00, party: 6 }
+    - { name: Guest SixB, start: 2026-11-06T19:00, party: 6 }
+expect:
+  outcome: refused

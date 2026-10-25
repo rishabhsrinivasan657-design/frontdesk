@@ -1,0 +1,9 @@
+id: vague-day-after-tomorrow
+category: vague
+persona: "Abe Lowe, speaks in relative dates, email abe@example.com"
+goal: "You want a table for 2 the day after tomorrow (Friday, November 6) at 6pm. Say 'the day after tomorrow, around 6' first; if asked, confirm it's Friday at 6pm. Say yes when the details are read back correctly"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: booked
+  calendar: [{ name: Abe Lowe, start: 2026-11-06T18:00, party: 2 }]

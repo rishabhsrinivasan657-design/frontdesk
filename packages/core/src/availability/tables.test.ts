@@ -2,7 +2,7 @@ import { DateTime } from "luxon";
 import { describe, expect, it } from "vitest";
 import { testConfig } from "../config/test-config.js";
 import { findSlots } from "./find-slots.js";
-import { UnknownTableError, holdMinutesFor, tablesFromConfig } from "./tables.js";
+import { UnknownTableError, agentPartyLimit, holdMinutesFor, tablesFromConfig } from "./tables.js";
 import type { Reservation } from "./types.js";
 
 const config = testConfig();
@@ -105,5 +105,17 @@ describe("tables", () => {
       RangeError,
     );
     expect(() => findSlots(config, [bad], { date: TUESDAY, partySize: 2 }, now)).toThrow("evt-bad");
+  });
+});
+
+describe("agentPartyLimit", () => {
+  it("is the largest table when maxPartyForAgent is bigger (tables are never combined)", () => {
+    expect(agentPartyLimit(testConfig())).toBe(6);
+  });
+
+  it("is maxPartyForAgent when it is smaller than the largest table", () => {
+    const c = testConfig();
+    c.policies.maxPartyForAgent = 4;
+    expect(agentPartyLimit(c)).toBe(4);
   });
 });

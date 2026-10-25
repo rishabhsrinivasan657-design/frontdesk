@@ -1,0 +1,8 @@
+id: vague-undecided-calls-back
+category: vague
+persona: "Uma Reed, can't make up her mind"
+goal: "Say you might want dinner sometime next week with some friends but aren't sure when or how many. When asked for details, say you don't know yet and you'll call back once you've decided"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: info_only

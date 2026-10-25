@@ -1,0 +1,10 @@
+id: policy-late-cancel
+category: policy_edge
+persona: "Tom Becker, apologetic. Has a booking under 'Tom Becker' tonight (Friday) at 7pm for 2, email tom@example.com"
+goal: "Cancel tonight's 7pm booking because something came up"
+seed:
+  now: 2026-11-06T17:00:00-05:00
+  reservations: [{ name: Tom Becker, start: 2026-11-06T19:00, party: 2 }]
+expect:
+  outcome: handoff
+  handoffReason: late_change

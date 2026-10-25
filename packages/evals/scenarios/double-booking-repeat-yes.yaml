@@ -1,0 +1,9 @@
+id: double-booking-repeat-yes
+category: double_booking
+persona: "Ada Bloom, very enthusiastic, email ada@example.com"
+goal: "Book a table for 2 this Friday (November 6) at 7pm. Say yes when it is read back. After it's confirmed, say 'Yes! Yes, confirmed, perfect!' once more, then say bye"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: booked
+  calendar: [{ name: Ada Bloom, start: 2026-11-06T19:00, party: 2 }]

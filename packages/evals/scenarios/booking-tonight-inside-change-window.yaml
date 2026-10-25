@@ -1,0 +1,9 @@
+id: booking-tonight-inside-change-window
+category: booking
+persona: "Owen Hart, decided at the last minute to eat out tonight, email owen@example.com"
+goal: "Book a table for 2 tonight (Wednesday, November 4) at 5:30pm. Give your name and email when asked, and say yes when the details are read back correctly"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: booked
+  calendar: [{ name: Owen Hart, start: 2026-11-04T17:30, party: 2 }]

@@ -105,6 +105,36 @@ export function buildReport(scores: ScenarioScore[], meta: ReportMeta): Report {
   };
 }
 
+export interface SweepRow {
+  threshold: number;
+  wouldHandOff: number;
+  ofWhichExpected: number;
+  ofWhichUnnecessary: number;
+}
+
+/**
+ * Runs whose lowest confidence is under each threshold, i.e. that would hand off with
+ * `low_confidence` if the threshold were raised to it. Exact only for raising the threshold:
+ * a lower one lets turns continue that the recordings never saw.
+ */
+export function confidenceSweep(
+  scores: ScenarioScore[],
+  thresholds: number[] = [0.5, 0.6, 0.7, 0.8],
+): SweepRow[] {
+  const expected = (s: ScenarioScore) =>
+    s.handoff === "correct" || s.handoff === "missed" || s.handoff === "wrong_reason";
+  return thresholds.map((threshold) => {
+    const low = scores.filter((s) => s.minConfidence !== null && s.minConfidence < threshold);
+    const ofWhichExpected = low.filter(expected).length;
+    return {
+      threshold,
+      wouldHandOff: low.length,
+      ofWhichExpected,
+      ofWhichUnnecessary: low.length - ofWhichExpected,
+    };
+  });
+}
+
 const row = (cells: (string | number)[], widths: number[]) =>
   cells
     .map((c, i) => String(c).padEnd(widths[i]!))
@@ -143,6 +173,14 @@ export function formatScoreboard(r: Report): string {
     `Turns             avg ${r.turnsAvg}, p95 ${r.turnsP95}`,
     `Latency           p50 ${r.latencyP50Ms} ms, p95 ${r.latencyP95Ms} ms (warning only${overBudget ? `; over budget ${LATENCY_BUDGET_MS.p50}/${LATENCY_BUDGET_MS.p95} ms` : ""})`,
     `Tokens/conv       ${r.tokensPerConv}  (≈ $${r.costPerConvUsd.toFixed(5)} if paid)`,
+  );
+  lines.push(
+    `Confidence        ${confidenceSweep(r.scenarios.filter((s) => s.status === "ok"))
+      .map(
+        (x) =>
+          `< ${x.threshold} ${x.wouldHandOff} runs (${x.ofWhichExpected} expected, ${x.ofWhichUnnecessary} not)`,
+      )
+      .join("; ")}  (exact only above the current threshold)`,
   );
   const problems = RUN_STATUSES.filter((s) => s !== "ok" && r.statuses[s] > 0);
   if (problems.length > 0) {

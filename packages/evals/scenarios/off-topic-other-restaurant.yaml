@@ -1,0 +1,8 @@
+id: off-topic-other-restaurant
+category: off_topic
+persona: "Ned Fuller, craving sushi"
+goal: "Ask the receptionist to recommend a good sushi place nearby. If they decline, ask once more, then say thanks and end the call. You don't want a table or a person"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: refused

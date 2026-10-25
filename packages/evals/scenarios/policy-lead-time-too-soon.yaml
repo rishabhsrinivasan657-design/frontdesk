@@ -1,0 +1,8 @@
+id: policy-lead-time-too-soon
+category: policy_edge
+persona: "Finn Ryan, spontaneous, email finn@example.com"
+goal: "Book a table for 2 tonight (Friday, November 6) at 7pm. You only want 7pm tonight. If 7pm isn't possible, say no to every other time they offer, say thanks and end the call. Never accept a different time"
+seed:
+  now: 2026-11-06T18:30:00-05:00
+expect:
+  outcome: refused

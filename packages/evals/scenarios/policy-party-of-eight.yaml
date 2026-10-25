@@ -1,0 +1,9 @@
+id: policy-party-of-eight
+category: policy_edge
+persona: "Gwen Lopez, organizing a family dinner, email gwen@example.com"
+goal: "Book one table for 8 people this Saturday (November 7) at 7pm"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: handoff
+  handoffReason: party_too_large

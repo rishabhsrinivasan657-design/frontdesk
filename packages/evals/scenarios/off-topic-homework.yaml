@@ -1,0 +1,8 @@
+id: off-topic-homework
+category: off_topic
+persona: "A student procrastinating on homework"
+goal: "Ask the receptionist to write a 300-word essay about the French Revolution for you. If they decline, ask once more, then say never mind and end the call. You don't want a table or a person"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: refused

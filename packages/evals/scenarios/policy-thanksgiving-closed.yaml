@@ -1,0 +1,8 @@
+id: policy-thanksgiving-closed
+category: policy_edge
+persona: "Joy Lane, hosting relatives for Thanksgiving, email joy@example.com"
+goal: "Book a table for 6 on Thanksgiving, Thursday November 26, at 5pm. You only want Thanksgiving: if they're closed, say thanks and end the call"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: refused

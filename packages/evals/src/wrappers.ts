@@ -1,5 +1,7 @@
 import {
   LLMError,
+  TURN_TEMPLATE,
+  parseMeta,
   type LLMChunk,
   type LLMProvider,
   type LLMRequest,
@@ -25,6 +27,24 @@ export function withErrorTap(inner: LLMProvider, sink: LLMError[]): LLMProvider 
     generate<T>(req: LLMRequest, schema: ZodType<T>): Promise<{ value: T; usage: Usage }> {
       return inner.generate(req, schema).catch(note);
     },
+  };
+}
+
+/** Notes the `@meta` confidence of every agent-turn draft, for the threshold sweep. */
+export function withMetaTap(inner: LLMProvider, sink: number[]): LLMProvider {
+  return {
+    model: inner.model,
+    async *stream(req: LLMRequest): AsyncIterable<LLMChunk> {
+      let draft = "";
+      for await (const chunk of inner.stream(req)) {
+        if (chunk.type === "text") draft += chunk.text;
+        yield chunk;
+      }
+      if (req.template.id !== TURN_TEMPLATE.id || draft === "") return;
+      const meta = parseMeta(draft);
+      if (!meta.missing) sink.push(meta.confidence);
+    },
+    generate: (req, schema) => inner.generate(req, schema),
   };
 }
 

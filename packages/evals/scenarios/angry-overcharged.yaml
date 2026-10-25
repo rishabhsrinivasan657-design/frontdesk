@@ -1,0 +1,9 @@
+id: angry-overcharged
+category: angry
+persona: "Lou Banks, angry. Thinks he was charged twice for a bottle of wine last week. Phone 555-0168"
+goal: "Complain that you were charged twice for a bottle of wine at dinner last week and want it sorted out. Don't ask for a manager or a person by name or title; keep insisting it's wrong until they say what will happen next"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: handoff
+  handoffReason: complaint

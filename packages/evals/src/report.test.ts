@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildReport, formatScoreboard, percentile } from "./report.js";
+import { buildReport, confidenceSweep, formatScoreboard, percentile } from "./report.js";
 import type { ScenarioScore } from "./score.js";
 
 function score(over: Partial<ScenarioScore> = {}): ScenarioScore {
@@ -16,6 +16,7 @@ function score(over: Partial<ScenarioScore> = {}): ScenarioScore {
     latencyMs: [1000],
     tokensIn: 1000,
     tokensOut: 100,
+    minConfidence: null,
     ...over,
   };
 }
@@ -107,5 +108,24 @@ describe("formatScoreboard", () => {
       expect(out).toContain(s);
     }
     expect(out).not.toContain("angry");
+  });
+});
+
+describe("confidenceSweep", () => {
+  it("counts the runs a higher threshold would hand off, split by whether a handoff was expected", () => {
+    const scores = [
+      score({ id: "a", minConfidence: 0.3, handoff: "missed" }),
+      score({ id: "b", minConfidence: 0.55 }),
+      score({ id: "c", minConfidence: null }),
+    ];
+    expect(confidenceSweep(scores, [0.6])).toEqual([
+      { threshold: 0.6, wouldHandOff: 2, ofWhichExpected: 1, ofWhichUnnecessary: 1 },
+    ]);
+  });
+
+  it("is printed on the scoreboard", () => {
+    const text = formatScoreboard(buildReport([score({ minConfidence: 0.55 })], META));
+    expect(text).toMatch(/Confidence/);
+    expect(text).toMatch(/< 0\.6\s+1 runs/);
   });
 });

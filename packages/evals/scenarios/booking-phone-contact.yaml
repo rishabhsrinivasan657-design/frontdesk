@@ -1,0 +1,9 @@
+id: booking-phone-contact
+category: booking
+persona: "Carla Diaz, prefers phone over email, phone 555-0177"
+goal: "Book a table for 3 tomorrow, Thursday (November 5), at 7:30pm. When asked for contact details give your phone number 555-0177, not an email. Say yes when the details are read back correctly"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: booked
+  calendar: [{ name: Carla Diaz, start: 2026-11-05T19:30, party: 3 }]

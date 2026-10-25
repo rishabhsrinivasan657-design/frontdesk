@@ -1,0 +1,9 @@
+id: policy-nine-split-two-tables
+category: policy_edge
+persona: "Dan Silva, resourceful, email dan@example.com"
+goal: "You have 9 people for this Saturday (November 7) at 7pm. Ask for two tables side by side, one for 5 and one for 4, so the group fits"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: handoff
+  handoffReason: party_too_large

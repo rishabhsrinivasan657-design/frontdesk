@@ -31,17 +31,23 @@ async function readJson<T>(file: string): Promise<T | undefined> {
 }
 
 async function select(options: CliOptions, io: CliIO): Promise<Scenario[]> {
-  let scenarios = await loadScenarios(io.scenariosDir ?? SCENARIOS_DIR);
+  const all = await loadScenarios(io.scenariosDir ?? SCENARIOS_DIR);
+  let scenarios = all;
   if (options.subset) {
     const file = io.ciSubsetFile ?? CI_SUBSET_FILE;
     const ids = await readJson<string[]>(file);
     if (!ids) throw new Error(`no subset file at ${file}`);
-    const unknown = ids.filter((id) => !scenarios.some((s) => s.id === id));
+    const unknown = ids.filter((id) => !all.some((s) => s.id === id));
     if (unknown.length > 0)
       throw new Error(`subset names unknown scenarios: ${unknown.join(", ")}`);
     scenarios = scenarios.filter((s) => ids.includes(s.id));
   }
   if (options.filter) scenarios = scenarios.filter((s) => s.category === options.filter);
+  if (options.only) {
+    const unknown = options.only.find((id) => !all.some((s) => s.id === id));
+    if (unknown) throw new Error(`unknown scenario id "${unknown}"`);
+    scenarios = scenarios.filter((s) => options.only!.includes(s.id));
+  }
   return scenarios;
 }
 
@@ -56,6 +62,10 @@ export async function main(argv: string[], io: CliIO): Promise<number> {
   }
   if (options.save && options.filter) {
     io.stderr("--save needs the whole set: drop --filter");
+    return 2;
+  }
+  if (options.save && options.only) {
+    io.stderr("--save needs the whole subset, not --only");
     return 2;
   }
 

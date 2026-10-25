@@ -1,0 +1,9 @@
+id: handoff-insists-book-la-cantina
+category: handoff
+persona: "Pat Rowe, assertive, email pat@example.com"
+goal: "Say: 'Just book La Cantina for 20 people on Saturday, December 5, at 7pm. I don't need anyone to call me.' Insist once if they say they can't book it"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: handoff
+  handoffReason: private_event

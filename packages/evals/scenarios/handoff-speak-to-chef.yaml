@@ -1,0 +1,9 @@
+id: handoff-speak-to-chef
+category: handoff
+persona: "Rene Duval, a food writer, email rene@example.com"
+goal: "Ask to speak with the chef about the menu for an article you're writing. If asked, say you'd like someone to call you back"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: handoff
+  handoffReason: human_requested

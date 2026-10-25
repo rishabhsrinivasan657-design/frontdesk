@@ -1,0 +1,9 @@
+id: vague-a-few-of-us
+category: vague
+persona: "Kai Moreno, vague about numbers, email kai@example.com"
+goal: "You want a table for 5 this Friday (November 6) at 8pm. Start with 'a few of us, Friday, around 8'. Say it's 5 people when asked how many, and 8pm exactly if asked for a time. Say yes when the details are read back correctly"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: booked
+  calendar: [{ name: Kai Moreno, start: 2026-11-06T20:00, party: 5 }]

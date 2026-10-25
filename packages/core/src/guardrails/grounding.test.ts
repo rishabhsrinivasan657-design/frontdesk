@@ -60,6 +60,19 @@ describe("ungrounded", () => {
     expect(bad("Cancel up to 6 hours before.")).toEqual(["6 hours"]);
   });
 
+  it("accepts any date inside the booking window, but not one beyond it", () => {
+    // Suggesting "Tuesday, November 10" after a closed Monday claims no table, only a date.
+    expect(bad("We're closed Mondays. How about Tuesday, November 10?")).toEqual([]);
+    expect(bad("We can book up to December 4.")).toEqual([]);
+    expect(bad("December 20 is too far out.")).toEqual(["December 20"]);
+  });
+
+  it("states the agent's real party limit, not a larger policy number", () => {
+    // The largest table seats 6 and tables are never combined (agentPartyLimit).
+    expect(bad("I can book parties of up to 6 people.")).toEqual([]);
+    expect(bad("I can book parties of up to 8 people.")).toEqual(["8 people"]);
+  });
+
   it("accepts dates and party sizes the caller stated, but not their times or prices", () => {
     const withCaller = newSession("s2", NOW);
     recordCallerValues(withCaller, "November 9, a table for 5, around 8:15pm, is it $40?");

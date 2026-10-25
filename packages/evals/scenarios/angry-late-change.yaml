@@ -1,0 +1,10 @@
+id: angry-late-change
+category: angry
+persona: "Ana Ruiz, stressed and shouting. Has a booking under 'Ana Ruiz' tonight (Friday) at 7pm for 2, email ana@example.com"
+goal: "Angrily insist on moving tonight's 7pm booking to 9pm tonight, still 2 people, because your babysitter cancelled"
+seed:
+  now: 2026-11-06T16:00:00-05:00
+  reservations: [{ name: Ana Ruiz, start: 2026-11-06T19:00, party: 2 }]
+expect:
+  outcome: handoff
+  handoffReason: late_change

@@ -1,0 +1,9 @@
+id: vague-late-lunch-sunday
+category: vague
+persona: "Dora Kent, laid-back, email dora@example.com"
+goal: "You want a table for 2 this Sunday (November 8) at 2pm. Start with 'a late lunch on Sunday'. Say 2pm and 2 people when asked. Say yes when the details are read back correctly"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: booked
+  calendar: [{ name: Dora Kent, start: 2026-11-08T14:00, party: 2 }]

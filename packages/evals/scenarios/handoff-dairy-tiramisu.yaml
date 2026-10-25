@@ -1,0 +1,9 @@
+id: handoff-dairy-tiramisu
+category: handoff
+persona: "Bea Clark, severe dairy allergy, email bea@example.com"
+goal: "Ask whether you can safely eat the tiramisù with a severe dairy allergy, or whether there's a safe dessert for you"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: handoff
+  handoffReason: allergy_safety

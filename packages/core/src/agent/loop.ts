@@ -32,6 +32,7 @@ import type { AgentDeps } from "./deps.js";
 import { alreadyHandedOffMessage, handOff } from "./handoff.js";
 import { TURN_TEMPLATE, renderSystemPrompt } from "./prompt.js";
 import { HandoffSignal, fail, runReadTool, type ToolResult } from "./tools/read-tools.js";
+import { agentPartyLimit } from "../availability/tables.js";
 import { TOOL_SPECS, isWriteTool } from "./tools/schemas.js";
 import { type HandoffReason, type PendingAction, type SessionState, newSession } from "./types.js";
 
@@ -44,7 +45,8 @@ export type TurnFlag =
   | "audit_failed"
   | "injection_pattern"
   | "meta_missing"
-  | "grounding_regenerated";
+  | "grounding_regenerated"
+  | "handoff_nudged";
 
 export interface TurnInput {
   sessionId: string;
@@ -253,13 +255,34 @@ async function handle(turn: Turn): Promise<string> {
     }
     return await modelTurn(turn);
   } catch (error) {
-    if (error instanceof HandoffSignal) return handOffTurn(turn, error.reason, error.summary);
+    if (error instanceof HandoffSignal) {
+      return handOffTurn(turn, refineHandoffReason(turn, error.reason), error.summary);
+    }
     if (error instanceof CalendarUnavailableError) return handOffTurn(turn, "calendar_unavailable");
     if (error instanceof LLMError) {
       return handOffTurn(turn, error.code === "rate_limited" ? "rate_limited" : "llm_unavailable");
     }
     throw error;
   }
+}
+
+/**
+ * A caller who stated a party the agent can't seat is a party_too_large handoff, whatever
+ * generic reason got them there ("yes, connect me", or the private room offered to 9).
+ */
+function refineHandoffReason(turn: Turn, reason: HandoffReason): HandoffReason {
+  const { config } = turn.deps;
+  const party = Math.max(
+    0,
+    ...turn.session.callerValues
+      .map((v) => /^number:(\d+) people$/.exec(v)?.[1])
+      .filter((n): n is string => n !== undefined)
+      .map(Number),
+  );
+  if (party <= agentPartyLimit(config)) return reason;
+  if (reason === "human_requested" || reason === "low_confidence") return "party_too_large";
+  if (reason === "private_event" && party < config.privateRoom.min) return "party_too_large";
+  return reason;
 }
 
 function handOffTurn(turn: Turn, reason: HandoffReason, summary?: string): Promise<string> {
@@ -302,6 +325,9 @@ async function resolvePending(turn: Turn, pending: PendingAction): Promise<strin
         ...(outcome.status === "failed" ? { reason: outcome.reason } : {}),
       });
       if (outcome.status === "executed") {
+        // A booking made or moved in this call can be changed later in the same call.
+        if (pending.args.kind === "cancel") delete session.knownReservations[outcome.booking.id];
+        else session.knownReservations[outcome.booking.id] = outcome.booking;
         if (outcome.emailFailed) turn.flags.push("email_failed");
         if (outcome.auditFailed) turn.flags.push("audit_failed");
         return outcome.reply;
@@ -348,6 +374,13 @@ async function modelTurn(turn: Turn): Promise<string> {
           throw new HandoffSignal("grounding_failed");
         turn.flags.push("grounding_regenerated");
         system = `${system}\n${groundingNote(checked.regenerate)}`;
+        rounds += 1;
+        continue;
+      }
+      if (promisesHandoff(checked.meta.body) && !turn.flags.includes("handoff_nudged")) {
+        // Telling the caller "let me transfer you" without request_handoff leaves no ticket.
+        turn.flags.push("handoff_nudged");
+        system = `${system}\n${HANDOFF_NUDGE}`;
         rounds += 1;
         continue;
       }
@@ -409,6 +442,18 @@ async function modelTurn(turn: Turn): Promise<string> {
   }
   countToolResult(turn, false);
   return FALLBACK_REPLY;
+}
+
+const HANDOFF_NUDGE =
+  "Your previous draft told the caller you would connect or transfer them to a person, but you did not call request_handoff. Call request_handoff now with the right reason, or reply without promising a transfer.";
+
+/** A statement (not a question) that the caller is being put through to a person. */
+export function promisesHandoff(reply: string): boolean {
+  const PROMISE =
+    /\b(?:let me|i['’]ll|i will|i['’]m going to|i am going to|i['’]m|i am)\s+(?:now\s+)?(?:(?:connect|connecting|transfer|transferring|hand|handing)\b[^.!?]*\b(?:you|this)\b|put(?:ting)? you through\b)/i;
+  return reply
+    .split(/(?<=[.!?])\s+/)
+    .some((sentence) => !sentence.trim().endsWith("?") && PROMISE.test(sentence));
 }
 
 /** Spec §6: 2 failed tool attempts in a row hand off; any success resets the count. */

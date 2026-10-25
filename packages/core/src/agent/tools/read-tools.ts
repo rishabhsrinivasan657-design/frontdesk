@@ -1,5 +1,6 @@
 import { DateTime } from "luxon";
 import { findSlots } from "../../availability/find-slots.js";
+import { agentPartyLimit } from "../../availability/tables.js";
 import type { BusinessConfig } from "../../config/schema.js";
 import { type CalendarReader, CalendarUnavailableError } from "../../ports/calendar.js";
 import type { Clock } from "../../ports/clock.js";
@@ -55,7 +56,7 @@ async function checkAvailability(
   ctx: ReadToolContext,
 ): Promise<ToolResult> {
   const { config, session } = ctx;
-  if (args.partySize > config.policies.maxPartyForAgent) throw new HandoffSignal("party_too_large");
+  if (args.partySize > agentPartyLimit(config)) throw new HandoffSignal("party_too_large");
   const zone = config.business.timezone;
   const reservations = await reservationsAround(ctx.calendar, args.date, zone);
   let slots;
@@ -112,9 +113,33 @@ function lookupFaq(args: { query: string }, ctx: ReadToolContext): ToolResult {
   return { ok: true, data: { answers } };
 }
 
+/** Spoken words for the config's dietary tags. */
+const TAG_WORDS: Record<string, string> = {
+  vegan: "vegan",
+  vegetarian: "vegetarian",
+  "gluten-free": "gf",
+  "gluten free": "gf",
+  gf: "gf",
+};
+
 function getMenuItem(args: { name: string }, ctx: ReadToolContext): ToolResult {
-  const needle = args.name.toLowerCase();
+  const needle = args.name.toLowerCase().trim();
   const item = ctx.config.menu.find((m) => m.item.toLowerCase().includes(needle));
+  const tag = item ? undefined : TAG_WORDS[needle];
+  if (tag) {
+    // "How much is the vegan main?" names a tag, not a dish.
+    const items = ctx.config.menu.filter((m) => m.tags.includes(tag));
+    return {
+      ok: true,
+      data:
+        items.length > 0
+          ? {
+              found: true,
+              items: items.map((m) => ({ item: m.item, price: m.price, tags: m.tags })),
+            }
+          : { found: false },
+    };
+  }
   return {
     ok: true,
     data: item

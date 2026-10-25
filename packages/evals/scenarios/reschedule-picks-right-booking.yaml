@@ -1,0 +1,14 @@
+id: reschedule-picks-right-booking
+category: reschedule
+persona: "Lucia Romano. Has two bookings under 'Lucia Romano', this Friday at 7pm for 2 and this Saturday at 7pm for 2, email lucia@example.com"
+goal: "Move only the Saturday booking to this Sunday (November 8) at 1pm. Keep the Friday booking as it is. Say yes when the new details are read back correctly"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+  reservations:
+    - { name: Lucia Romano, start: 2026-11-06T19:00, party: 2 }
+    - { name: Lucia Romano, start: 2026-11-07T19:00, party: 2 }
+expect:
+  outcome: rescheduled
+  calendar:
+    - { name: Lucia Romano, start: 2026-11-06T19:00, party: 2 }
+    - { name: Lucia Romano, start: 2026-11-08T13:00, party: 2 }

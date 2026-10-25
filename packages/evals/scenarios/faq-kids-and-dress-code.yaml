@@ -1,0 +1,8 @@
+id: faq-kids-and-dress-code
+category: faq
+persona: "Mara Holt, bringing two young kids"
+goal: "Ask two questions: first, do they have a kids' menu; then, is there a dress code. You're not booking: if offered a table, say no thanks, then end the call"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: info_only

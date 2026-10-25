@@ -1,0 +1,8 @@
+id: policy-booking-window-too-far
+category: policy_edge
+persona: "Ruth Kane, plans far ahead, email ruth@example.com"
+goal: "Book a table for 4 on Sunday, December 20, at 6pm. If they can't book that date yet, say you'll call back closer to the time and end the call"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: refused

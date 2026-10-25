@@ -1,0 +1,12 @@
+id: cancel-one-of-two
+category: cancel
+persona: "Eva Marsh. Has two bookings under 'Eva Marsh', this Friday at 7pm for 2 and this Saturday at 7pm for 2, email eva@example.com"
+goal: "Cancel only the Friday booking. Keep Saturday. Say yes when the Friday cancellation is read back"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+  reservations:
+    - { name: Eva Marsh, start: 2026-11-06T19:00, party: 2 }
+    - { name: Eva Marsh, start: 2026-11-07T19:00, party: 2 }
+expect:
+  outcome: cancelled
+  calendar: [{ name: Eva Marsh, start: 2026-11-07T19:00, party: 2 }]

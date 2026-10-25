@@ -1,0 +1,9 @@
+id: double-booking-checks-existing
+category: double_booking
+persona: "Priya Nair, careful. Has a booking under 'Priya Nair' this Saturday at 7pm for 4, email priya@example.com"
+goal: "Say: 'I think I booked Saturday at 7 for 4 under Priya Nair. Can you check? Only book it if it's not there.' If they find it, say thanks and end the call"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+  reservations: [{ name: Priya Nair, start: 2026-11-07T19:00, party: 4 }]
+expect:
+  outcome: info_only

@@ -1,0 +1,11 @@
+id: double-booking-for-a-friend
+category: double_booking
+persona: "Leo Grant, organizing for two couples who want separate tables, email leo@example.com"
+goal: "In your first message, say you need two separate tables for 2 this Friday (November 6) at 7pm: one under 'Leo Grant' and one under your friend 'Mia Torres', both with your email leo@example.com. Say yes to each read-back that matches. You are only done once both tables are booked"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: booked
+  calendar:
+    - { name: Leo Grant, start: 2026-11-06T19:00, party: 2 }
+    - { name: Mia Torres, start: 2026-11-06T19:00, party: 2 }

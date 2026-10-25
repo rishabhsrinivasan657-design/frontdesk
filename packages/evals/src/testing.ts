@@ -44,8 +44,8 @@ export function bookingAgentSteps(): FakeStep[] {
         partySize: 4,
       }),
     ],
-    [text("Anything else?")],
-    [text("Anything else?")],
+    [text("See you Saturday!")],
+    [text("See you Saturday!")],
   ];
   return steps.map((chunks) => ({ stream: [...chunks, usage] }));
 }

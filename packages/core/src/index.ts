@@ -10,6 +10,7 @@ export { BusinessConfigError, parseBusinessConfig } from "./config/parse.js";
 export { findSlots } from "./availability/find-slots.js";
 export {
   UnknownTableError,
+  agentPartyLimit,
   holdMinutesFor,
   tablesFromConfig,
   type Table,
@@ -50,4 +51,5 @@ export {
   type SessionMessage,
 } from "./protocol/messages.js";
 export * from "./agent/index.js";
+export { CONFIDENCE_THRESHOLD, parseMeta, type Meta } from "./guardrails/meta.js";
 export * from "./gate/index.js";

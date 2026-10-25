@@ -14,6 +14,15 @@ export function tablesFromConfig(config: BusinessConfig): Table[] {
     );
 }
 
+/**
+ * The largest party the agent may seat: the policy ceiling, capped by the largest table, since
+ * tables are never combined in v1 (spec §5). Above it the agent hands off (`party_too_large`).
+ */
+export function agentPartyLimit(config: BusinessConfig): number {
+  const largest = Math.max(...config.seating.tables.map((t) => t.size));
+  return Math.min(config.policies.maxPartyForAgent, largest);
+}
+
 export function holdMinutesFor(config: BusinessConfig, partySize: number): number {
   const { holdMinutes } = config.seating;
   return partySize >= 5 ? holdMinutes.partyOf5Plus : holdMinutes.default;

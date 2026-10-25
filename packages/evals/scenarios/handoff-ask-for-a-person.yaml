@@ -1,0 +1,9 @@
+id: handoff-ask-for-a-person
+category: handoff
+persona: "Hal Burke, prefers people to machines, phone 555-0131"
+goal: "Your first message: 'Hi, can I talk to a person, please?' If asked why, say you'd just rather speak to someone"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: handoff
+  handoffReason: human_requested

@@ -1,0 +1,10 @@
+id: double-booking-wants-sunday-instead
+category: double_booking
+persona: "Iris Cole. Has a booking under 'Iris Cole' this Saturday at 7pm for 2, email iris@example.com"
+goal: "Say: 'I have a table Saturday at 7 for 2 under Iris Cole, but I want Sunday at 6 instead.' You want the Saturday table moved, not a second one. Say yes when the change is read back correctly"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+  reservations: [{ name: Iris Cole, start: 2026-11-07T19:00, party: 2 }]
+expect:
+  outcome: rescheduled
+  calendar: [{ name: Iris Cole, start: 2026-11-08T18:00, party: 2 }]

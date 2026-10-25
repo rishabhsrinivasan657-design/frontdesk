@@ -65,6 +65,13 @@ describe("check_availability", () => {
     ).rejects.toMatchObject({ name: "HandoffSignal", reason: "party_too_large" });
   });
 
+  it("hands off a party larger than every table, even within maxPartyForAgent", async () => {
+    const { ctx } = setup();
+    await expect(
+      runReadTool("check_availability", { date: "2026-11-06", partySize: 7 }, ctx),
+    ).rejects.toMatchObject({ name: "HandoffSignal", reason: "party_too_large" });
+  });
+
   it("turns an impossible date into invalid_request", async () => {
     const { ctx, session } = setup();
     const result = await runReadTool(
@@ -143,6 +150,29 @@ describe("lookup_faq and get_menu_item", () => {
     expect(await runReadTool("get_menu_item", { name: "pizza" }, ctx)).toEqual({
       ok: true,
       data: { found: false },
+    });
+  });
+});
+
+describe("get_menu_item by dietary tag", () => {
+  it('lists every dish with a tag when the query names one ("vegan", "gluten-free")', async () => {
+    const { ctx } = setup();
+    ctx.config.menu.push(
+      { item: "Farro bowl", price: 21, tags: ["vegan"] },
+      { item: "Lemon sorbetto", price: 9, tags: ["vegan", "gf"] },
+    );
+    expect(await runReadTool("get_menu_item", { name: "Vegan" }, ctx)).toEqual({
+      ok: true,
+      data: {
+        found: true,
+        items: [
+          { item: "Farro bowl", price: 21, tags: ["vegan"] },
+          { item: "Lemon sorbetto", price: 9, tags: ["vegan", "gf"] },
+        ],
+      },
+    });
+    expect(await runReadTool("get_menu_item", { name: "gluten-free" }, ctx)).toMatchObject({
+      data: { found: true, items: [{ item: "Lemon sorbetto" }] },
     });
   });
 });

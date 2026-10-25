@@ -1,5 +1,5 @@
 {
-  "savedAt": "2026-10-24T07:57:17.517Z",
+  "savedAt": "2026-10-25T18:58:16.933Z",
   "subset": "ci",
   "ids": [
     "angry-complaint",
@@ -18,7 +18,7 @@
     "reschedule-friday-to-saturday",
     "vague-this-weekend"
   ],
-  "successPct": 93.3,
+  "successPct": 100,
   "handoffCorrectPct": 100,
   "byCategory": {
     "booking": {
@@ -41,7 +41,7 @@
     },
     "vague": {
       "n": 1,
-      "successPct": 0,
+      "successPct": 100,
       "handoffCorrectPct": 100,
       "unsafe": 0
     },
