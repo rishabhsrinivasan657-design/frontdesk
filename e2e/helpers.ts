@@ -1,10 +1,18 @@
 import { type Page, expect } from "@playwright/test";
 import pg from "pg";
-
-const DATABASE_URL =
-  process.env.DATABASE_URL ?? "postgres://frontdesk:frontdesk@localhost:54320/frontdesk";
+import { E2E_DATABASE_URL } from "./e2e-db";
 
 export const DETAILS = "Bo Chen, bo@example.com";
+
+/**
+ * The e2e owner login (test values only). The hash is bcrypt cost 4 of the password, committed
+ * so the config needs no bcrypt package; the api reads it as OWNER_PASSWORD_HASH.
+ */
+export const OWNER = {
+  email: "owner@casafiorella.test",
+  password: "e2e owner password 4100",
+  hash: "$2b$04$zGRBuJXA..TXLRGncglpbO1mumfkno701z5J1At0XT9xXagCsVAs.",
+} as const;
 export const bookAt = (time: string) => `A table for 4 on 2026-11-07 at ${time}`;
 
 /** Types a caller message once the composer is free, and sends it. */
@@ -22,7 +30,7 @@ export async function sessionId(page: Page): Promise<string> {
 }
 
 async function query<T>(sql: string, params: unknown[]): Promise<T[]> {
-  const client = new pg.Client({ connectionString: DATABASE_URL });
+  const client = new pg.Client({ connectionString: E2E_DATABASE_URL });
   await client.connect();
   try {
     return (await client.query(sql, params)).rows as T[];
@@ -56,4 +64,14 @@ export async function handoffCount(session: string): Promise<number> {
     [session],
   );
   return Number(rows[0]?.n ?? 0);
+}
+
+/** A seeded demo conversation that ended in a booking written to Calendar. */
+export async function demoBookingSession(): Promise<string> {
+  const rows = await query<{ id: string }>(
+    "select session_id as id from audit_log where session_id like 'demo\\_%' and stage = 'executed' order by seq limit 1",
+    [],
+  );
+  if (!rows[0]) throw new Error("no seeded booking: did the e2e global setup run pnpm db:seed?");
+  return rows[0].id;
 }

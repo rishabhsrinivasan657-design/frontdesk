@@ -1,22 +1,45 @@
 @import "tailwindcss";
 
-/* shadcn/ui neutral tokens. M8 replaces these with the ui-ux-pro-max design system. */
+/*
+ * Front Desk design system (design-system/front-desk/MASTER.md, "Trattoria warm").
+ * Brand: appetizing red + warm gold on cream. shadcn/ui token names, design-system values.
+ * Ruling: the master's "vibrant block" style is toned down to flat cards with 1px borders,
+ * so dense data stays readable; its colors, fonts and spacing are used as generated.
+ */
 :root {
-  --background: oklch(0.985 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --radius: 0.625rem;
+  --background: #fef2f2;
+  --foreground: #450a0a;
+  --card: #ffffff;
+  --card-foreground: #450a0a;
+  --primary: #dc2626;
+  --primary-foreground: #ffffff;
+  /* The master's secondary (#F87171) is a fill color; shadcn's secondary is a quiet surface. */
+  --secondary: #fee2e2;
+  --secondary-foreground: #7f1d1d;
+  --accent: #a16207;
+  --accent-foreground: #ffffff;
+  --muted: #f0edf1;
+  --muted-foreground: #475569;
+  --destructive: #dc2626;
+  --border: #fecaca;
+  --input: #fecaca;
+  --ring: #dc2626;
+  --radius: 0.5rem;
+
+  /* Status (never reused as chart series; always shown with an icon and a label). */
+  --success: #15803d;
+  --success-soft: #dcfce7;
+  --warning: #b45309;
+  --warning-soft: #fef3c7;
+  --critical: #b91c1c;
+  --critical-soft: #fee2e2;
+
+  /* Chart series, fixed order (validated with the dataviz palette checks: light surface). */
+  --chart-1: #b91c1c;
+  --chart-2: #0d9488;
+  --chart-3: #a16207;
+  --chart-grid: #f3e3e3;
+  --chart-budget: #64748b;
 }
 
 @theme inline {
@@ -28,18 +51,51 @@
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-destructive: var(--destructive);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-critical: var(--critical);
+  --color-critical-soft: var(--critical-soft);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --font-sans: var(--font-karla), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-playfair), ui-serif, Georgia, serif;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+/* Clickable things look clickable (design-system checklist). */
+button:not(:disabled),
+[role="button"],
+a[href],
+summary,
+select {
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

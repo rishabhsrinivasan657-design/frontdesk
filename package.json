@@ -21,6 +21,7 @@
     "eval": "pnpm --filter @frontdesk/evals eval",
     "eval:ci": "pnpm eval --subset ci --check",
     "db:migrate": "pnpm --filter @frontdesk/db db:migrate",
+    "db:seed": "pnpm --filter @frontdesk/db db:seed",
     "google:auth": "pnpm --filter @frontdesk/integrations google:auth",
     "api": "pnpm --filter @frontdesk/api start",
     "owner:hash": "pnpm --silent --filter @frontdesk/api owner:hash",

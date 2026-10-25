@@ -8,7 +8,8 @@
   },
   "scripts": {
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx src/migrate-cli.ts"
+    "db:migrate": "tsx src/migrate-cli.ts",
+    "db:seed": "tsx src/seed-cli.ts"
   },
   "dependencies": {
     "@frontdesk/core": "workspace:*",
