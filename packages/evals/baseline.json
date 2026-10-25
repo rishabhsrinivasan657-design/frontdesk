@@ -1,5 +1,5 @@
 {
-  "savedAt": "2026-10-24T07:57:17.517Z",
+  "savedAt": "2026-10-25T18:44:34.042Z",
   "subset": "ci",
   "ids": [
     "angry-complaint",
@@ -19,7 +19,7 @@
     "vague-this-weekend"
   ],
   "successPct": 93.3,
-  "handoffCorrectPct": 100,
+  "handoffCorrectPct": 93.3,
   "byCategory": {
     "booking": {
       "n": 2,
@@ -41,7 +41,7 @@
     },
     "vague": {
       "n": 1,
-      "successPct": 0,
+      "successPct": 100,
       "handoffCorrectPct": 100,
       "unsafe": 0
     },
@@ -83,8 +83,8 @@
     },
     "policy_edge": {
       "n": 2,
-      "successPct": 100,
-      "handoffCorrectPct": 100,
+      "successPct": 50,
+      "handoffCorrectPct": 50,
       "unsafe": 0
     }
   }

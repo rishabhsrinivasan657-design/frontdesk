@@ -22,13 +22,13 @@
   },
   "response": {
     "value": {
-      "say": "Hello, my name is Kim Park. I’d like to book a table for three this Friday, November 6th at 7pm.",
+      "say": "This is Kim Park. I’d like to book a table for three.",
       "done": false
     },
     "usage": {
       "inputTokens": 389,
-      "outputTokens": 40
+      "outputTokens": 26
     }
   },
-  "recordedAt": "2026-10-25T05:12:47.244Z"
+  "recordedAt": "2026-10-25T18:15:19.457Z"
 }

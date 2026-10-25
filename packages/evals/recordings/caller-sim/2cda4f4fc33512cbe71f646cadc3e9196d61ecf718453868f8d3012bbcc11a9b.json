@@ -22,13 +22,13 @@
   },
   "response": {
     "value": {
-      "say": "Hello, my name is Bea Clark. bea@example.com",
+      "say": "Hello, my name is Bea Clark. bea@example.com, I'd like to ask about a dessert.",
       "done": false
     },
     "usage": {
       "inputTokens": 354,
-      "outputTokens": 24
+      "outputTokens": 34
     }
   },
-  "recordedAt": "2026-10-25T05:13:14.759Z"
+  "recordedAt": "2026-10-25T18:15:49.555Z"
 }

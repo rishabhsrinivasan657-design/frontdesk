@@ -22,13 +22,13 @@
   },
   "response": {
     "value": {
-      "say": "Hi, my name is Nora Vance. I’d like to book a table for two.",
+      "say": "Hi, my name is Nora Vance, nora@example.com. I’d like to book a table for two this Saturday, November 7th at 7pm.",
       "done": false
     },
     "usage": {
       "inputTokens": 391,
-      "outputTokens": 33
+      "outputTokens": 51
     }
   },
-  "recordedAt": "2026-10-25T05:10:27.712Z"
+  "recordedAt": "2026-10-25T18:12:45.362Z"
 }

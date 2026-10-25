@@ -22,7 +22,7 @@
   },
   "response": {
     "value": {
-      "say": "Hi, my name is Joy Lane. Email is joy@example.com. I’d like to book a table for 6 on Thanksgiving.",
+      "say": "Hi, my name is Joy Lane, email is joy@example.com. I’d like to book a table for 6 on Thanksgiving.",
       "done": false
     },
     "usage": {
@@ -30,5 +30,5 @@
       "outputTokens": 40
     }
   },
-  "recordedAt": "2026-10-25T05:04:04.051Z"
+  "recordedAt": "2026-10-25T18:06:22.485Z"
 }

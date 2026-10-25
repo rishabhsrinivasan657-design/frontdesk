@@ -22,7 +22,7 @@
   },
   "response": {
     "value": {
-      "say": "Hello, my name is Sam Lee. samlee.k@example.com, I need to book a table for two.",
+      "say": "Hello, my name is Sam Lee. samlee.k@example.com. I need to book a table for two.",
       "done": false
     },
     "usage": {
@@ -30,5 +30,5 @@
       "outputTokens": 36
     }
   },
-  "recordedAt": "2026-10-25T05:08:31.755Z"
+  "recordedAt": "2026-10-25T18:10:10.605Z"
 }

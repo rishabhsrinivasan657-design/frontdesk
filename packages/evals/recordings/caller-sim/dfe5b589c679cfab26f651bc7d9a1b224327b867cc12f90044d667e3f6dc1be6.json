@@ -22,7 +22,7 @@
   },
   "response": {
     "value": {
-      "say": "Hi, my name is Moe Dale. I'd like to book a table.",
+      "say": "Hi, my name is Moe Dale. I’d like to book a table.",
       "done": false
     },
     "usage": {
@@ -30,5 +30,5 @@
       "outputTokens": 27
     }
   },
-  "recordedAt": "2026-10-25T05:00:39.673Z"
+  "recordedAt": "2026-10-25T18:02:10.884Z"
 }

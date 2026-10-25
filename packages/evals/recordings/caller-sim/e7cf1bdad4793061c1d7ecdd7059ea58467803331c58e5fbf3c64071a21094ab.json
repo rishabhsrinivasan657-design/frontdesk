@@ -22,13 +22,13 @@
   },
   "response": {
     "value": {
-      "say": "Hello, my name is Gloria Mendes. I’m calling to inquire about booking a private room for my mother’s 70th birthday.",
+      "say": "Hello, my name is Gloria Mendes. I’m calling to inquire about booking a private room for a birthday dinner.",
       "done": false
     },
     "usage": {
       "inputTokens": 369,
-      "outputTokens": 40
+      "outputTokens": 34
     }
   },
-  "recordedAt": "2026-10-25T05:14:27.133Z"
+  "recordedAt": "2026-10-25T18:42:04.742Z"
 }

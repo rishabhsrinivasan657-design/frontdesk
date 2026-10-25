@@ -22,13 +22,13 @@
   },
   "response": {
     "value": {
-      "say": "Ray Dunn, email ray@example.com. I’d like to book a table for two this Friday.",
+      "say": "Ray Dunn, email ray@example.com. I'd like to book a table for two this Friday, November 6th at 7pm.",
       "done": false
     },
     "usage": {
       "inputTokens": 368,
-      "outputTokens": 33
+      "outputTokens": 42
     }
   },
-  "recordedAt": "2026-10-25T05:05:19.651Z"
+  "recordedAt": "2026-10-25T18:07:56.025Z"
 }

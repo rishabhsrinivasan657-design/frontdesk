@@ -22,13 +22,13 @@
   },
   "response": {
     "value": {
-      "say": "Hello, my name is Lars Berg. I'm calling about potentially renting out the restaurant for a company party.",
+      "say": "Hi, my name is Lars Berg. I’m calling about renting the restaurant for a company party.",
       "done": false
     },
     "usage": {
       "inputTokens": 360,
-      "outputTokens": 33
+      "outputTokens": 31
     }
   },
-  "recordedAt": "2026-10-25T05:13:06.472Z"
+  "recordedAt": "2026-10-25T18:41:47.296Z"
 }

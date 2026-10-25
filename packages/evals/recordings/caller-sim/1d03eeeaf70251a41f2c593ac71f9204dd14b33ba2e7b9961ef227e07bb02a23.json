@@ -22,13 +22,13 @@
   },
   "response": {
     "value": {
-      "say": "Hi, my name is Finn Ryan, finn@example.com. I’d like to book a table for two tonight.",
+      "say": "Hi, my name is Finn Ryan. Email is finn@example.com. I’d like to book a table for two tonight.",
       "done": false
     },
     "usage": {
       "inputTokens": 367,
-      "outputTokens": 37
+      "outputTokens": 39
     }
   },
-  "recordedAt": "2026-10-25T05:02:21.476Z"
+  "recordedAt": "2026-10-25T18:03:52.438Z"
 }

@@ -22,13 +22,13 @@
   },
   "response": {
     "value": {
-      "say": "Hi, my name is Lena Fox, email is lena@example.com. I’d like to book a table for 4 this Saturday at 7pm.",
+      "say": "Hi, my name is Lena Fox, email is lena@example.com. I’d like to book a table for 4 this Saturday at 7pm, please.",
       "done": false
     },
     "usage": {
       "inputTokens": 383,
-      "outputTokens": 44
+      "outputTokens": 46
     }
   },
-  "recordedAt": "2026-10-25T05:18:09.440Z"
+  "recordedAt": "2026-10-25T18:19:29.945Z"
 }

@@ -22,13 +22,13 @@
   },
   "response": {
     "value": {
-      "say": "Hello, my name is Nell Ford. I have celiac disease and was wondering about the cacio e pepe.",
+      "say": "Hello, my name is Nell Ford. I have celiac disease.",
       "done": false
     },
     "usage": {
       "inputTokens": 348,
-      "outputTokens": 33
+      "outputTokens": 24
     }
   },
-  "recordedAt": "2026-10-25T05:13:11.239Z"
+  "recordedAt": "2026-10-25T18:41:52.826Z"
 }
