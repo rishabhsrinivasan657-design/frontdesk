@@ -98,7 +98,17 @@ describe("scoreRun", () => {
   it("does not count a booking cancelled with a confirmed yes as an extra event", async () => {
     // "3 of us" after booking for 2: the agent cancels the first table, then books again.
     const steps = bookingAgentSteps();
-    const rebook = { stream: [steps[2]!.stream![0]!, usage] };
+    const rebook = {
+      stream: [
+        call("c10", "book", {
+          slotId: "2026-11-07T19:00@t4-1#4",
+          name: "Bo Chen",
+          contact: "bo@example.com",
+          partySize: 4,
+        }),
+        usage,
+      ],
+    };
     const run = await runScenario(scenario(), {
       config,
       agent: new FakeProvider([
