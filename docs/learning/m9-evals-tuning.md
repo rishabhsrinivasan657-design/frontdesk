@@ -24,24 +24,26 @@ M9 turns M4's 15-scenario harness into evidence: **100 scenarios**, a tuning loo
 - **Overfitting to evals.** Making the score go up without making the agent better. The two easy ways are editing `expect` to match what the agent did, and writing prompt rules that name one scenario's details. M9 forbids both. An `expect` changes only when the scenario was wrong, with a ruling; prompt rules must read as general policy.
 - **Prompt tuning vs code fixes.** If the agent _can't_ do the right thing, fix the code (no known booking to change, a grounding false alarm, no menu lookup by diet). If it _can_ but chooses badly, tune the prompt (handing off pranks, assuming a party size). Safety lives in code: the duplicate-table guard is code, not a prompt sentence.
 - **Caller drift.** The simulator (`gemma3:4b`) sometimes ignores its goal: it books when told to only ask, or hangs up mid-question. Most pass-1 failures were this. The fix belongs in the scenario's wording ("only after the read-back…", "you are not done until…") or the harness, never in the agent.
+- **Promise checks.** Gemini sometimes said "let me transfer you" without calling `request_handoff`, so no ticket reached the team. A reply that _states_ a transfer now gets one nudge to call the tool (`promisesHandoff` in `loop.ts`). A question ("Would you like me to connect you?") is an offer and is left alone.
 - **Thresholds.** The confidence threshold (0.5) hands off when the model says it's unsure. The sweep showed the model never reported below 0.8 in 100 calls, so raising it would change nothing. It stays at 0.5, and that's a decision backed by data, not a default.
 - **Stale recordings.** Every prompt change (v1 → v4) made every recording stale. So: diagnose with a pass, batch all fixes, and re-record once. The daily 500-request free quota is roughly one full pass.
 - **Baselines and targets.** The baseline is "don't get worse": CI fails on a drop of more than 2 points. Targets are "good enough to ship", set from the data and confirmed by a human. Unsafe = 0 is both.
 
 ## 3. Potential holes and the tests that guard them
 
-| What could go wrong                                                        | Guarded by                                                                                    |
-| -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| An "expiry" scenario never actually lets the read-back expire              | `run.test.ts` › "advances the clock once after the first read-back"                           |
-| A "full slot" scenario isn't full, so it passes for the wrong reason       | `scenarios.test.ts` › "… really has no table for 6 at 8pm Saturday" and the other seed checks |
-| A caller saying "3 of us" gets a second table                              | `propose.test.ts` › "refuses a second booking for the same caller at an overlapping time"     |
-| The guard blocks a friend's table or a different person with the same name | `propose.test.ts` › "allows a booking at an overlapping time for …"                           |
-| The agent can't change a booking it made earlier in the call               | `conversations.test.ts` › "cancels a booking made earlier in the same call"                   |
-| A party of 7 is offered a table that can't exist                           | `read-tools.test.ts` › "hands off a party larger than every table…", `tables.test.ts`         |
-| Suggesting another day fails grounding and hands off                       | `grounding.test.ts` › "accepts any date inside the booking window…"                           |
-| A confirmed cancel + rebook is scored unsafe                               | `score.test.ts` › "does not count a booking cancelled with a confirmed yes as an extra event" |
-| A small caller hangs up on "Shall I book it?"                              | `run.test.ts` › "keeps the call going when the agent answers a goodbye with a question"       |
-| A tuned prompt rule silently disappears                                    | `prompt.test.ts` › "tells the agent when not to hand off…", "…not to assume details…"         |
+| What could go wrong                                                        | Guarded by                                                                                                    |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| An "expiry" scenario never actually lets the read-back expire              | `run.test.ts` › "advances the clock once after the first read-back"                                           |
+| A "full slot" scenario isn't full, so it passes for the wrong reason       | `scenarios.test.ts` › "… really has no table for 6 at 8pm Saturday" and the other seed checks                 |
+| A caller saying "3 of us" gets a second table                              | `propose.test.ts` › "refuses a second booking for the same caller at an overlapping time"                     |
+| The guard blocks a friend's table or a different person with the same name | `propose.test.ts` › "allows a booking at an overlapping time for …"                                           |
+| The agent can't change a booking it made earlier in the call               | `conversations.test.ts` › "cancels a booking made earlier in the same call"                                   |
+| A party of 7 is offered a table that can't exist                           | `read-tools.test.ts` › "hands off a party larger than every table…", `tables.test.ts`                         |
+| Suggesting another day fails grounding and hands off                       | `grounding.test.ts` › "accepts any date inside the booking window…"                                           |
+| A confirmed cancel + rebook is scored unsafe                               | `score.test.ts` › "does not count a booking cancelled with a confirmed yes as an extra event"                 |
+| A small caller hangs up on "Shall I book it?"                              | `run.test.ts` › "keeps the call going when the agent answers a goodbye with a question"                       |
+| A tuned prompt rule silently disappears                                    | `prompt.test.ts` › "tells the agent when not to hand off…", "…not to assume details…"                         |
+| "Let me transfer you" but no handoff ticket is filed                       | `conversations.test.ts` › "hands off when the reply promises a transfer…", `loop.test.ts` › `promisesHandoff` |
 
 ## 4. Quiz
 
