@@ -22,13 +22,13 @@
   },
   "response": {
     "value": {
-      "say": "Hi, my name is Ana Ruiz. I have a booking for tonight, Friday, at 7pm for 4 people.",
+      "say": "Hi, my name is Ana Ruiz. I’m calling about a booking.",
       "done": false
     },
     "usage": {
       "inputTokens": 366,
-      "outputTokens": 36
+      "outputTokens": 26
     }
   },
-  "recordedAt": "2026-10-24T07:55:14.018Z"
+  "recordedAt": "2026-10-25T05:01:38.787Z"
 }

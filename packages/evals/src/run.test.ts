@@ -97,6 +97,22 @@ describe("runScenario", () => {
     expect(run.world.deps.calendar.writes.map((w) => w.op)).toEqual(["create"]);
   });
 
+  it("keeps the call going when the agent answers a goodbye with a question", async () => {
+    // gemma gives its email with done:true; a real caller would still hear "Shall I book it?".
+    const run = await runScenario(scenario(), {
+      config,
+      agent: new FakeProvider(bookingAgentSteps()),
+      caller: new FakeProvider([
+        say("Hi, a table for 4 this Saturday at 7pm?"),
+        say("Bo Chen, bo@example.com", true),
+        say("Yes", true),
+      ]),
+    });
+    expect(run.endedBy).toBe("caller_done");
+    expect(run.turns).toBe(3);
+    expect(run.world.deps.calendar.writes.map((w) => w.op)).toEqual(["create"]);
+  });
+
   it("doesn't send a bare 'done' as the caller's words", async () => {
     const run = await runScenario(scenario(), {
       config,

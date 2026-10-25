@@ -22,7 +22,7 @@
   },
   "response": {
     "value": {
-      "say": "Hi, my name is Dan Silva. I'm calling to book a table.",
+      "say": "Hi, my name is Dan Silva. I’m calling to book a table.",
       "done": false
     },
     "usage": {
@@ -30,5 +30,5 @@
       "outputTokens": 27
     }
   },
-  "recordedAt": "2026-10-24T07:56:05.834Z"
+  "recordedAt": "2026-10-25T05:03:08.765Z"
 }

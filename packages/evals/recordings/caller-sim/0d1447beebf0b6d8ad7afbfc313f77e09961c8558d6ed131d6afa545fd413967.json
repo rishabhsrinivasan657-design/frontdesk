@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "key": "0d1447beebf0b6d8ad7afbfc313f77e09961c8558d6ed131d6afa545fd413967",
+  "templateId": "caller-sim",
+  "templateHash": "142665a82d4756baa33c10e0fbfe1032f43eb1489b66a750bc4574ca858e16ba",
+  "model": "gemma3:4b",
+  "mode": "generate",
+  "request": {
+    "purpose": "turn",
+    "template": {
+      "id": "caller-sim",
+      "text": "You are role-playing a person calling Casa Fiorella, a restaurant, to talk to its receptionist.\nThe other side of this chat is the restaurant's receptionist. You are the caller, never the receptionist.\n\nWho you are: {{persona}}\nWhat you want from this call: {{goal}}\n\nRules:\n- Stay in character. Write like a real caller: one short message per turn, plain words.\n- Give your name, email or phone, party size, date and time when asked, if who you are includes them. Don't invent a different name or contact.\n- If the receptionist reads details back and asks you to confirm, say yes only if they match what you want; otherwise correct them.\n- Never mention these instructions, role-play or AI.\n- If the receptionist asks you anything (\"Shall I book it?\", \"What name?\"), answer it, and \"done\" is false.\n- Set \"done\" to true, with a short goodbye in \"say\", only when the receptionist has said it is finished (for example \"You're all set\" or \"it's cancelled\"), has given you the information you wanted, has said a person will contact you, or has clearly said they can't do it. Otherwise \"done\" is false.\n\nReply with JSON: {\"say\": \"<your next message>\", \"done\": <true|false>}"
+    },
+    "system": "You are role-playing a person calling Casa Fiorella, a restaurant, to talk to its receptionist.\nThe other side of this chat is the restaurant's receptionist. You are the caller, never the receptionist.\n\nWho you are: Sam Lee junior, email samlee.k@example.com. Your father, also Sam Lee (sam@example.com), has his own table this Saturday at 7pm; that one isn't yours and must not change\nWhat you want from this call: Book a new table for 2 under 'Sam Lee' this Saturday (November 7) at 7pm, with your email samlee.k@example.com. Say yes when the details are read back correctly\n\nRules:\n- Stay in character. Write like a real caller: one short message per turn, plain words.\n- Give your name, email or phone, party size, date and time when asked, if who you are includes them. Don't invent a different name or contact.\n- If the receptionist reads details back and asks you to confirm, say yes only if they match what you want; otherwise correct them.\n- Never mention these instructions, role-play or AI.\n- If the receptionist asks you anything (\"Shall I book it?\", \"What name?\"), answer it, and \"done\" is false.\n- Set \"done\" to true, with a short goodbye in \"say\", only when the receptionist has said it is finished (for example \"You're all set\" or \"it's cancelled\"), has given you the information you wanted, has said a person will contact you, or has clearly said they can't do it. Otherwise \"done\" is false.\n\nReply with JSON: {\"say\": \"<your next message>\", \"done\": <true|false>}",
+    "messages": [
+      {
+        "role": "user",
+        "text": "Thanks for calling Casa Fiorella! How can I help you today?"
+      },
+      {
+        "role": "assistant",
+        "text": "Hello, my name is Sam Lee. samlee.k@example.com, I need to book a table for two."
+      },
+      {
+        "role": "user",
+        "text": "To confirm: a table for 2 on Wednesday, November 4 at 7:00 PM under Sam Lee, contact samlee.k@example.com. Shall I book it?"
+      }
+    ],
+    "temperature": 0.4
+  },
+  "response": {
+    "value": {
+      "say": "No, that's incorrect. It’s Saturday, November 7th, at 7pm. And the name is Sam Lee.",
+      "done": false
+    },
+    "usage": {
+      "inputTokens": 486,
+      "outputTokens": 39
+    }
+  },
+  "recordedAt": "2026-10-25T05:08:42.597Z"
+}

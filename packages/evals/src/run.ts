@@ -100,8 +100,9 @@ export async function runScenario(scenario: Scenario, options: RunOptions): Prom
         run.endedBy = "handoff";
         break;
       }
-      // The caller's last words ("yes, book it, bye") still reach the agent before hanging up.
-      if (value.done) {
+      // The caller's last words ("yes, book it, bye") still reach the agent before hanging up,
+      // but a real caller who hears a question ("Shall I book it?") answers it first.
+      if (value.done && !/\?\s*$/.test(result.reply)) {
         run.endedBy = "caller_done";
         break;
       }

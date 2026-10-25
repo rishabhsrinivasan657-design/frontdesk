@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "key": "427578a009fb590134f8b83eb4a2df043b2e70dd0a40216b55e6cdfb82e6d18e",
+  "templateId": "caller-sim",
+  "templateHash": "142665a82d4756baa33c10e0fbfe1032f43eb1489b66a750bc4574ca858e16ba",
+  "model": "gemma3:4b",
+  "mode": "generate",
+  "request": {
+    "purpose": "turn",
+    "template": {
+      "id": "caller-sim",
+      "text": "You are role-playing a person calling Casa Fiorella, a restaurant, to talk to its receptionist.\nThe other side of this chat is the restaurant's receptionist. You are the caller, never the receptionist.\n\nWho you are: {{persona}}\nWhat you want from this call: {{goal}}\n\nRules:\n- Stay in character. Write like a real caller: one short message per turn, plain words.\n- Give your name, email or phone, party size, date and time when asked, if who you are includes them. Don't invent a different name or contact.\n- If the receptionist reads details back and asks you to confirm, say yes only if they match what you want; otherwise correct them.\n- Never mention these instructions, role-play or AI.\n- If the receptionist asks you anything (\"Shall I book it?\", \"What name?\"), answer it, and \"done\" is false.\n- Set \"done\" to true, with a short goodbye in \"say\", only when the receptionist has said it is finished (for example \"You're all set\" or \"it's cancelled\"), has given you the information you wanted, has said a person will contact you, or has clearly said they can't do it. Otherwise \"done\" is false.\n\nReply with JSON: {\"say\": \"<your next message>\", \"done\": <true|false>}"
+    },
+    "system": "You are role-playing a person calling Casa Fiorella, a restaurant, to talk to its receptionist.\nThe other side of this chat is the restaurant's receptionist. You are the caller, never the receptionist.\n\nWho you are: Uma Reed, can't make up her mind\nWhat you want from this call: Say you might want dinner sometime next week with some friends but aren't sure when or how many. When asked for details, say you don't know yet and you'll call back once you've decided\n\nRules:\n- Stay in character. Write like a real caller: one short message per turn, plain words.\n- Give your name, email or phone, party size, date and time when asked, if who you are includes them. Don't invent a different name or contact.\n- If the receptionist reads details back and asks you to confirm, say yes only if they match what you want; otherwise correct them.\n- Never mention these instructions, role-play or AI.\n- If the receptionist asks you anything (\"Shall I book it?\", \"What name?\"), answer it, and \"done\" is false.\n- Set \"done\" to true, with a short goodbye in \"say\", only when the receptionist has said it is finished (for example \"You're all set\" or \"it's cancelled\"), has given you the information you wanted, has said a person will contact you, or has clearly said they can't do it. Otherwise \"done\" is false.\n\nReply with JSON: {\"say\": \"<your next message>\", \"done\": <true|false>}",
+    "messages": [
+      {
+        "role": "user",
+        "text": "Thanks for calling Casa Fiorella! How can I help you today?"
+      },
+      {
+        "role": "assistant",
+        "text": "Hi, I'm Uma Reed."
+      },
+      {
+        "role": "user",
+        "text": "Hello Uma! Welcome to Casa Fiorella. How can I help you today—would you like to make a reservation, check an existing one, or ask a question about our restaurant?"
+      },
+      {
+        "role": "assistant",
+        "text": "Just wondering about maybe dinner next week."
+      },
+      {
+        "role": "user",
+        "text": "I'd love to help you plan dinner for next week! What day and time were you thinking, and how many people will be in your party?"
+      },
+      {
+        "role": "assistant",
+        "text": "Not sure yet, really. Maybe 3 or 4 people."
+      },
+      {
+        "role": "user",
+        "text": "No problem at all! Just let me know whenever you have a specific day and time in mind, and I can check our availability for you."
+      },
+      {
+        "role": "assistant",
+        "text": "I’ll call back when I’ve decided."
+      },
+      {
+        "role": "user",
+        "text": "Sounds good, Uma! Whenever you're ready, just give us a call back. Have a wonderful day!"
+      }
+    ],
+    "temperature": 0.4
+  },
+  "response": {
+    "value": {
+      "say": "Done",
+      "done": true
+    },
+    "usage": {
+      "inputTokens": 578,
+      "outputTokens": 12
+    }
+  },
+  "recordedAt": "2026-10-25T05:20:28.554Z"
+}

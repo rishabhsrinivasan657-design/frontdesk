@@ -22,7 +22,7 @@
   },
   "response": {
     "value": {
-      "say": "Hello, my name is Kim Park. I’m calling about a dish.",
+      "say": "Hello, my name is Kim Park. I'm calling about a dish.",
       "done": false
     },
     "usage": {
@@ -30,5 +30,5 @@
       "outputTokens": 26
     }
   },
-  "recordedAt": "2026-10-24T07:54:51.172Z"
+  "recordedAt": "2026-10-25T05:14:01.945Z"
 }
