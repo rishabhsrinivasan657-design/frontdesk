@@ -1,8 +1,16 @@
+import { randomUUID } from "node:crypto";
 import { type Page, expect } from "@playwright/test";
 import pg from "pg";
 import { E2E_DATABASE_URL } from "./e2e-db";
 
-export const DETAILS = "Bo Chen, bo@example.com";
+/**
+ * A fresh caller per booking: specs share one api (and its calendar), and the agent rightly
+ * refuses a second overlapping table for the same name and contact.
+ */
+export function details(): string {
+  const n = randomUUID().slice(0, 8);
+  return `Guest ${n}, guest-${n}@example.com`;
+}
 
 /**
  * The e2e owner login (test values only). The hash is bcrypt cost 4 of the password, committed

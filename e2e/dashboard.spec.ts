@@ -1,5 +1,5 @@
 import { type Page, expect, test } from "@playwright/test";
-import { DETAILS, OWNER, bookAt, demoBookingSession, say } from "./helpers";
+import { details, OWNER, bookAt, demoBookingSession, say } from "./helpers";
 
 /** The owner dashboard (spec §10) on seeded demo data (global-setup.ts runs pnpm db:seed). */
 
@@ -71,7 +71,7 @@ test("live shows a caller's session and its pending read-back", async ({ page, b
   await guest.goto("/talk");
   await expect(guest.getByTestId("connection")).toHaveText("Connected");
   await say(guest, bookAt("18:30"));
-  await say(guest, DETAILS);
+  await say(guest, details());
   const readBack = guest.getByTestId("confirmation-card");
   await expect(readBack).toBeVisible();
 
