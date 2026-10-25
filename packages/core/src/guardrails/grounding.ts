@@ -1,4 +1,5 @@
 import { DateTime } from "luxon";
+import { agentPartyLimit } from "../availability/tables.js";
 import type { SessionState } from "../agent/types.js";
 import { DAY_KEYS, type BusinessConfig, minutesOfDay } from "../config/schema.js";
 
@@ -128,7 +129,7 @@ export function buildFacts(config: BusinessConfig, session: SessionState, now: D
     addNumber(n, "min");
   }
   for (const n of [
-    policies.maxPartyForAgent,
+    agentPartyLimit(config),
     privateRoom.min,
     privateRoom.max,
     ...seating.tables.map((t) => t.size),
@@ -140,7 +141,12 @@ export function buildFacts(config: BusinessConfig, session: SessionState, now: D
     for (const c of extractClaims(text)) add(c.kind, c.value);
   }
 
-  add("date", DateTime.fromJSDate(now, { zone }).toFormat("MM-dd"));
+  // A date alone claims no table, so every date callers can book is fair to name; times and
+  // prices still need a tool result.
+  const today = DateTime.fromJSDate(now, { zone }).startOf("day");
+  for (let d = 0; d <= policies.bookingWindowDays; d++) {
+    add("date", today.plus({ days: d }).toFormat("MM-dd"));
+  }
   for (const slot of Object.values(session.offeredSlots)) {
     addWhen(DateTime.fromISO(slot.start, { zone }));
     addNumber(slot.partySize, "people");
