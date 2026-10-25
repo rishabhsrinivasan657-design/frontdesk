@@ -1,5 +1,6 @@
 import type { Slot } from "../availability/types.js";
 import { agentPartyLimit } from "../availability/tables.js";
+import { formatWhen } from "../agent/tools/format.js";
 import { HandoffSignal, fail, type ToolResult } from "../agent/tools/read-tools.js";
 import { TOOL_ARGS, type WriteToolName } from "../agent/tools/schemas.js";
 import type { ActionArgs, PendingAction, SessionState } from "../agent/types.js";
@@ -97,6 +98,18 @@ async function resolve(
     if (insideChangeWindow(config, fresh.start, now)) throw new HandoffSignal("late_change");
     return fresh;
   };
+  /** The caller's own reservation (same name and contact) overlapping the slot, if any. */
+  const sameCallerOverlapping = async (
+    name: string,
+    contact: string,
+    slot: Slot,
+  ): Promise<Booking | undefined> => {
+    const overlapping = await deps.calendar.listReservations({
+      from: new Date(slot.start),
+      to: new Date(slot.end),
+    });
+    return overlapping.find((b) => sameName(b.name, name) && sameContact(b.contact, contact));
+  };
   const offeredSlot = (id: string): Slot | Failure =>
     Object.hasOwn(session.offeredSlots, id)
       ? session.offeredSlots[id]!
@@ -121,6 +134,15 @@ async function resolve(
         return fail(
           "party_mismatch",
           `That slot is for ${slot.partySize}; check availability for ${args.partySize}.`,
+        ) as Failure;
+      }
+      const duplicate = await sameCallerOverlapping(args.name, args.contact, slot);
+      if (duplicate) {
+        // Known now, so the agent can change it instead of adding a second table.
+        session.knownReservations[duplicate.id] = duplicate;
+        return fail(
+          "duplicate_booking",
+          `${duplicate.name} already has a table for ${duplicate.partySize} at ${formatWhen(duplicate.start, config.business.timezone)} (reservationId ${duplicate.id}). Don't book a second table: to change it, use reschedule, or cancel it and then book, with that reservationId.`,
         ) as Failure;
       }
       const taken = await stillFree(slot);
@@ -153,4 +175,13 @@ async function resolve(
       return { args: { kind: "cancel", ...parsed.data }, reservation };
     }
   }
+}
+
+const sameName = (a: string, b: string): boolean =>
+  a.trim().toLowerCase().replace(/\s+/g, " ") === b.trim().toLowerCase().replace(/\s+/g, " ");
+
+/** Emails compare case-insensitively; phone numbers by their digits. */
+function sameContact(a: string, b: string): boolean {
+  const norm = (c: string) => (c.includes("@") ? c.trim().toLowerCase() : c.replace(/\D/g, ""));
+  return norm(a) !== "" && norm(a) === norm(b);
 }

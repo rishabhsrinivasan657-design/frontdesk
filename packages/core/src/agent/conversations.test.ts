@@ -107,6 +107,43 @@ describe("scripted conversations", () => {
     ]);
   });
 
+  it("cancels a booking made earlier in the same call", async () => {
+    const fx = agentFixture(testConfig(), []);
+    await converse(fx, [
+      [
+        "A table for 2 Friday at 7, Raj Mehta, raj@example.com",
+        [call("check_availability", { date: "2026-11-06", time: "19:00", partySize: 2 })],
+        [
+          call("book", {
+            slotId: "2026-11-06T19:00@t2-1#2",
+            name: "Raj Mehta",
+            contact: "raj@example.com",
+            partySize: 2,
+          }),
+        ],
+      ],
+      ["yes"],
+    ]);
+    const [made] = await fx.deps.calendar.listReservations({
+      from: new Date("2026-11-01T00:00:00Z"),
+      to: new Date("2026-12-01T00:00:00Z"),
+    });
+    const results = await converse(fx, [
+      ["Actually, cancel that one", [call("cancel", { reservationId: made!.id })]],
+      ["yes"],
+    ]);
+    expect(types(results[0]!)[0]).toBe("pending_action");
+    expect(await calendarState(fx)).toEqual([]);
+    expect(stagesOf(fx)).toEqual([
+      "book:proposed",
+      "book:confirmed",
+      "book:executed",
+      "cancel:proposed",
+      "cancel:confirmed",
+      "cancel:executed",
+    ]);
+  });
+
   it("cancels a reservation", async () => {
     const fx = agentFixture(testConfig());
     const results = await converse(fx, [

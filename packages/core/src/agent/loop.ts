@@ -302,6 +302,9 @@ async function resolvePending(turn: Turn, pending: PendingAction): Promise<strin
         ...(outcome.status === "failed" ? { reason: outcome.reason } : {}),
       });
       if (outcome.status === "executed") {
+        // A booking made or moved in this call can be changed later in the same call.
+        if (pending.args.kind === "cancel") delete session.knownReservations[outcome.booking.id];
+        else session.knownReservations[outcome.booking.id] = outcome.booking;
         if (outcome.emailFailed) turn.flags.push("email_failed");
         if (outcome.auditFailed) turn.flags.push("audit_failed");
         return outcome.reply;
