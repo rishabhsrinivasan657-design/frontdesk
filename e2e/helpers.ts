@@ -1,8 +1,6 @@
 import { type Page, expect } from "@playwright/test";
 import pg from "pg";
-
-const DATABASE_URL =
-  process.env.DATABASE_URL ?? "postgres://frontdesk:frontdesk@localhost:54320/frontdesk";
+import { E2E_DATABASE_URL } from "./e2e-db";
 
 export const DETAILS = "Bo Chen, bo@example.com";
 
@@ -32,7 +30,7 @@ export async function sessionId(page: Page): Promise<string> {
 }
 
 async function query<T>(sql: string, params: unknown[]): Promise<T[]> {
-  const client = new pg.Client({ connectionString: DATABASE_URL });
+  const client = new pg.Client({ connectionString: E2E_DATABASE_URL });
   await client.connect();
   try {
     return (await client.query(sql, params)).rows as T[];

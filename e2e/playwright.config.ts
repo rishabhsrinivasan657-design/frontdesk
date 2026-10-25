@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import { E2E_DATABASE_URL, E2E_NOW } from "./e2e-db";
 import { OWNER } from "./helpers";
 
 /**
@@ -7,13 +8,12 @@ import { OWNER } from "./helpers";
  * Needs Docker Postgres + Redis (`pnpm infra:up`, `pnpm db:migrate`).
  */
 const API_PORT = 4100;
-const NOW = "2026-11-04T14:00:00-05:00";
 const WEB_PORT = 3100;
 const ci = !!process.env.CI;
 
 export default defineConfig({
   testDir: ".",
-  // Seeds the owner dashboard's demo data, dated relative to the api's fixed clock.
+  // Its own database (frontdesk_e2e), migrated and re-seeded with demo data every run.
   globalSetup: "./global-setup.ts",
   fullyParallel: false,
   workers: 1,
@@ -38,7 +38,8 @@ export default defineConfig({
         API_PORT: String(API_PORT),
         WEB_ORIGINS: `http://localhost:${WEB_PORT}`,
         LLM_PROVIDER: "scripted",
-        FRONTDESK_NOW: NOW,
+        FRONTDESK_NOW: E2E_NOW,
+        DATABASE_URL: E2E_DATABASE_URL,
         QUEUE_PREFIX: "e2e",
         // Blank, so the in-memory calendar is used even where .env has Google credentials.
         GOOGLE_CLIENT_ID: "",

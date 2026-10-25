@@ -6,18 +6,10 @@ import { Chip } from "@/components/dashboard/chips";
 import { EmptyState } from "@/components/dashboard/page";
 import { Icon } from "@/components/icons";
 import { formatMs, relativeTime } from "@/dashboard/format";
+import { connectLive } from "@/dashboard/live-connection";
 import { type LiveCard, applyLiveEvent } from "@/dashboard/live-state";
-import type { LiveEvent, LiveSession } from "@/dashboard/types";
+import type { LiveSession } from "@/dashboard/types";
 import { cn } from "@/lib/utils";
-
-const EVENT_TYPES: LiveEvent["type"][] = [
-  "session_open",
-  "session_closed",
-  "turn",
-  "pending",
-  "pending_cleared",
-  "handoff",
-];
 
 type Connection = "connecting" | "live" | "reconnecting";
 
@@ -28,23 +20,22 @@ export function LiveBoard({ initial }: { initial: LiveSession[] }) {
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
-    const source = new EventSource("/api/owner/live/stream");
     const resync = () =>
       fetch("/api/owner/live", { cache: "no-store" })
         .then((r) => (r.ok ? (r.json() as Promise<LiveSession[]>) : null))
         .then((fresh) => fresh && setCards(fresh))
         .catch(() => undefined);
-    source.onopen = () => {
-      setConnection("live");
-      void resync();
-    };
-    source.onerror = () => setConnection("reconnecting");
-    const onEvent = (msg: MessageEvent<string>) => {
-      const event = JSON.parse(msg.data) as LiveEvent;
-      setCards((current) => applyLiveEvent(current, event));
-    };
-    for (const type of EVENT_TYPES) source.addEventListener(type, onEvent);
-    return () => source.close();
+    return connectLive({
+      open: () => new EventSource("/api/owner/live/stream"),
+      checkSession: () =>
+        fetch("/api/owner/me", { cache: "no-store" })
+          .then((r) => (r.ok ? "ok" : r.status === 401 ? "unauthorized" : "unreachable"))
+          .catch(() => "unreachable" as const),
+      onEvent: (event) => setCards((current) => applyLiveEvent(current, event)),
+      onOpen: () => void resync(),
+      onStatus: (s) => setConnection(s),
+      onUnauthorized: () => window.location.assign("/login?next=%2Fdashboard"),
+    });
   }, []);
 
   // Countdowns and "3 min ago" stay fresh.
