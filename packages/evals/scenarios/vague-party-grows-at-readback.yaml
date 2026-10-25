@@ -1,7 +1,7 @@
 id: vague-party-grows-at-readback
 category: vague
 persona: "Raj Mehta, easygoing, email raj@example.com"
-goal: "Ask for a table for 2 this Friday (November 6) at 7pm. When the booking is read back the first time, say 'Oh, my sister is coming too, so 3 of us.' Say yes when the booking for 3 is read back"
+goal: "Ask for a table for 2 this Friday (November 6) at 7pm and give your name and email. Only after the receptionist reads the booking back and asks you to confirm, say 'Oh wait, my sister is coming too, so 3 of us.' Say yes only when a booking for 3 is read back"
 seed:
   now: 2026-11-04T14:00:00-05:00
 expect:

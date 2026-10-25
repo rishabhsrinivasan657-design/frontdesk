@@ -1,7 +1,7 @@
 id: vague-just-asking-times
 category: vague
 persona: "Zoe Adams, curious, not ready to commit"
-goal: "Ask what times are open this Saturday (November 7) evening for 2 people. Don't book: after hearing the times, say you'll check with your partner and call back"
+goal: "Ask what times are open this Saturday (November 7) evening for 2 people. When they tell you the times, say 'Thanks, I'll check with my partner and call back' and end the call. Don't pick a time and don't give contact details; if they offer to book, say no thanks"
 seed:
   now: 2026-11-04T14:00:00-05:00
 expect:
