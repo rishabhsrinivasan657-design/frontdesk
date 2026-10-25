@@ -26,6 +26,7 @@ describe("renderSystemPrompt", () => {
     expect(prompt).toContain("Never assume a party size, date or time");
     expect(prompt).toContain("book only the time the caller chose");
     expect(prompt).toContain("call request_handoff in that same turn");
+    expect(prompt).toContain("move on to the next one");
   });
 });
 
