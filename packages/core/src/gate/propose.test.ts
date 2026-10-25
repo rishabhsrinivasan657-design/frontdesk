@@ -94,8 +94,9 @@ describe("propose", () => {
     expect(result).toMatchObject({ ok: false, error: "duplicate_booking" });
     expect((result as { message: string }).message).toContain(ANA.id);
     // Cancelling first could leave the caller with no table if the new size doesn't fit.
+    // A party-size change is one reschedule, so the caller never goes without a table.
     expect((result as { message: string }).message).toContain(
-      "first call check_availability for the new size",
+      "For a different party size, call check_availability for the new size at the same time, then reschedule",
     );
     // The existing booking is now known, so the agent can reschedule or cancel it.
     expect(Object.keys(fx.session.knownReservations)).toContain(ANA.id);
@@ -153,13 +154,54 @@ describe("propose", () => {
     });
   });
 
-  it("rejects a reschedule to a slot for a different party size", async () => {
+  it("reschedules to a slot for a new party size at the same time, read back with the new size", async () => {
+    const fx = agentFixture(testConfig());
+    await fx.find("Ana Ruiz", "ana@example.com");
+    // Ana's own 7:00 PM hold doesn't block her new table.
+    const slotId = await fx.offer("2026-11-06", "19:00", 6);
+    const result = await propose(fx.deps, fx.session, "turn_1", "reschedule", {
+      reservationId: ANA.id,
+      slotId,
+    });
+    if (!result.ok) throw new Error(result.message);
+    expect(result.action.summary).toBe(
+      "To confirm: change your reservation on Friday, November 6 at 7:00 PM from a party of 4 to a party of 6. Shall I make the change?",
+    );
+  });
+
+  it("reads back a new party size and a new time together", async () => {
     const fx = agentFixture(testConfig());
     await fx.find("Ana Ruiz", "ana@example.com");
     const slotId = await fx.offer("2026-11-07", "19:00", 2);
-    expect(
-      await propose(fx.deps, fx.session, "turn_1", "reschedule", { reservationId: ANA.id, slotId }),
-    ).toMatchObject({ ok: false, error: "party_mismatch" });
+    const result = await propose(fx.deps, fx.session, "turn_1", "reschedule", {
+      reservationId: ANA.id,
+      slotId,
+    });
+    if (!result.ok) throw new Error(result.message);
+    expect(result.action.summary).toBe(
+      "To confirm: change your reservation for 4 on Friday, November 6 at 7:00 PM to a party of 2 on Saturday, November 7 at 7:00 PM. Shall I make the change?",
+    );
+  });
+
+  it("hands off a reschedule to a party larger than every table", async () => {
+    const fx = agentFixture(testConfig());
+    await fx.find("Ana Ruiz", "ana@example.com");
+    const slotId = await fx.offer("2026-11-06", "19:00", 6);
+    // A slot can only be offered within the limit; guard the gate on its own anyway.
+    fx.session.offeredSlots[slotId] = { ...fx.session.offeredSlots[slotId]!, partySize: 7 };
+    await expect(
+      propose(fx.deps, fx.session, "turn_1", "reschedule", { reservationId: ANA.id, slotId }),
+    ).rejects.toMatchObject({ name: "HandoffSignal", reason: "party_too_large" });
+  });
+
+  it("hands off a party-size change inside the free-change window", async () => {
+    const fx = agentFixture(testConfig());
+    await fx.find("Ana Ruiz", "ana@example.com");
+    const slotId = await fx.offer("2026-11-06", "19:00", 6);
+    fx.deps.clock.advance(ANA.start.getTime() - fx.deps.clock.now().getTime() - 3600_000);
+    await expect(
+      propose(fx.deps, fx.session, "turn_1", "reschedule", { reservationId: ANA.id, slotId }),
+    ).rejects.toMatchObject({ name: "HandoffSignal", reason: "late_change" });
   });
 
   it("rejects an offered slot that has since been taken", async () => {

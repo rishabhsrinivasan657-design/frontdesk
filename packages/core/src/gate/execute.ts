@@ -209,7 +209,10 @@ async function write(
         notes: args.notes,
       });
     }
-    return await deps.calendar.moveReservation(current!.id, placement);
+    return await deps.calendar.moveReservation(current!.id, {
+      ...placement,
+      partySize: slot.partySize,
+    });
   } finally {
     // The write (if any) already happened; the lease's TTL frees the slot if release fails.
     await lease.release().catch(() => undefined);

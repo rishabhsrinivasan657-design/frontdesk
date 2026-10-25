@@ -16,8 +16,19 @@ export function readBack(action: PendingAction, config: BusinessConfig): string 
       const notes = args.notes.trim() ? ` Notes: ${args.notes.trim()}.` : "";
       return `To confirm: a table for ${args.partySize} on ${when(config, action.slot!.start)} under ${args.name}, contact ${args.contact}.${notes} Shall I book it?`;
     }
-    case "reschedule":
-      return `To confirm: move your reservation for ${action.reservation!.partySize} from ${when(config, action.reservation!.start)} to ${when(config, action.slot!.start)}. Shall I make the change?`;
+    case "reschedule": {
+      const from = action.reservation!;
+      const to = action.slot!;
+      const fromWhen = when(config, from.start);
+      const toWhen = when(config, to.start);
+      if (to.partySize === from.partySize) {
+        return `To confirm: move your reservation for ${from.partySize} from ${fromWhen} to ${toWhen}. Shall I make the change?`;
+      }
+      if (fromWhen === toWhen) {
+        return `To confirm: change your reservation on ${fromWhen} from a party of ${from.partySize} to a party of ${to.partySize}. Shall I make the change?`;
+      }
+      return `To confirm: change your reservation for ${from.partySize} on ${fromWhen} to a party of ${to.partySize} on ${toWhen}. Shall I make the change?`;
+    }
     case "cancel":
       return `To confirm: cancel your reservation for ${action.reservation!.partySize} on ${when(config, action.reservation!.start)}. Shall I cancel it?`;
   }
