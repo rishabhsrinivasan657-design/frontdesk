@@ -1,0 +1,9 @@
+id: double-booking-asks-again-after-booking
+category: double_booking
+persona: "Wes Carter, forgetful, email wes@example.com"
+goal: "Book a table for 4 this Saturday (November 7) at 7pm and say yes when it is read back. After it's confirmed, say 'Great. So can you book Saturday at 7 for 4?' as if you forgot. If they say it's already booked, say thanks and end the call"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: booked
+  calendar: [{ name: Wes Carter, start: 2026-11-07T19:00, party: 4 }]

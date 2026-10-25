@@ -1,0 +1,9 @@
+id: vague-switches-day-at-readback
+category: vague
+persona: "Lena Fox, changes plans easily, email lena@example.com"
+goal: "Ask for a table for 4 this Saturday (November 7) at 7pm. When the booking is read back the first time, say 'Actually, make it Sunday at 6pm instead.' Say yes when Sunday 6pm for 4 is read back"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: booked
+  calendar: [{ name: Lena Fox, start: 2026-11-08T18:00, party: 4 }]

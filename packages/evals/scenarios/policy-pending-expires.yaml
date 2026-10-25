@@ -1,0 +1,10 @@
+id: policy-pending-expires
+category: policy_edge
+persona: "Olga Penn, keeps getting interrupted at work, email olga@example.com"
+goal: "Book a table for 2 this Friday (November 6) at 7pm. When the booking is read back the first time, reply 'Sorry, I got pulled away for a few minutes. I'm back. Yes, book it.' If you're told the hold lapsed or nothing was booked, ask them to book the same table again and say yes when it is read back"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+  readbackPauseMinutes: 6
+expect:
+  outcome: booked
+  calendar: [{ name: Olga Penn, start: 2026-11-06T19:00, party: 2 }]

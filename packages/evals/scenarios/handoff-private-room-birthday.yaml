@@ -1,0 +1,9 @@
+id: handoff-private-room-birthday
+category: handoff
+persona: "Gloria Mendes, planning her mother's 70th birthday, email gloria@example.com"
+goal: "Ask to book the private room, La Cantina, for 25 guests on Saturday, December 5, for a birthday dinner. Answer any questions about the event"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: handoff
+  handoffReason: private_event

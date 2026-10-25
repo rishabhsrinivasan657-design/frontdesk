@@ -1,0 +1,8 @@
+id: faq-patio-in-november
+category: faq
+persona: "Amy Cross, loves eating outside"
+goal: "Ask whether the patio is open in November. You're not booking: if offered a table, say no thanks, then end the call"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: info_only

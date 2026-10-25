@@ -1,0 +1,8 @@
+id: faq-gluten-free-options
+category: faq
+persona: "Joel Hayes, eats gluten-free by preference, not for a medical reason"
+goal: "Ask which dishes on the menu are gluten-free. You don't have an allergy and you don't ask whether anything is safe. You're not booking: if offered a table, say no thanks, then end the call"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: info_only

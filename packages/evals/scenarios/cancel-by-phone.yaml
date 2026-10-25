@@ -1,0 +1,10 @@
+id: cancel-by-phone
+category: cancel
+persona: "Ivan Petrov. Has a booking under 'Ivan Petrov' tomorrow, Thursday, at 6pm for 2, phone 555-0199"
+goal: "Cancel tomorrow's booking. When asked for contact details give your phone number 555-0199. Say yes when the cancellation is read back"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+  reservations: [{ name: Ivan Petrov, start: 2026-11-05T18:00, party: 2, contact: 555-0199 }]
+expect:
+  outcome: cancelled
+  calendar: []

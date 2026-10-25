@@ -1,0 +1,8 @@
+id: faq-sunday-brunch-hours
+category: faq
+persona: "Tina Wells, planning a weekend"
+goal: "Ask what hours they're open on Sunday and until when brunch is served. You're not booking: if offered a table, say no thanks, then end the call"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: info_only

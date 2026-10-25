@@ -1,0 +1,8 @@
+id: cancel-nothing-to-find
+category: cancel
+persona: "Gina Holt, thinks she booked a table this Friday at 8pm, email gina@example.com"
+goal: "Ask to cancel your booking under 'Gina Holt' for this Friday at 8pm. If they can't find one, say you must have booked somewhere else, thank them and end the call"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: info_only

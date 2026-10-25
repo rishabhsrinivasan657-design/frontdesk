@@ -1,0 +1,10 @@
+id: policy-change-just-outside-window
+category: policy_edge
+persona: "Ana Ruiz, running a bit late. Has a booking under 'Ana Ruiz' tonight (Friday) at 7pm for 2, email ana@example.com"
+goal: "Move tonight's 7pm booking to 8pm tonight, still 2 people. Say yes when the change is read back correctly"
+seed:
+  now: 2026-11-06T14:55:00-05:00
+  reservations: [{ name: Ana Ruiz, start: 2026-11-06T19:00, party: 2 }]
+expect:
+  outcome: rescheduled
+  calendar: [{ name: Ana Ruiz, start: 2026-11-06T20:00, party: 2 }]

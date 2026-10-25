@@ -1,0 +1,8 @@
+id: faq-vegan-dish-price
+category: faq
+persona: "Noah Burns, vegan"
+goal: "Ask what vegan dishes they have and how much the vegan main costs. You're not booking: if offered a table, say no thanks, then end the call"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: info_only

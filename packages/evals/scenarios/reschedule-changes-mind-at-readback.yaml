@@ -1,0 +1,10 @@
+id: reschedule-changes-mind-at-readback
+category: reschedule
+persona: "Ben Ortiz, a bit indecisive. Has a booking under 'Ben Ortiz' this Friday at 7pm for 2, email ben@example.com"
+goal: "Ask to move the Friday booking to this Saturday (November 7) at 7pm. When the receptionist reads that change back the first time, say 'Actually, can we make it 7:30 instead?'. Say yes when 7:30pm Saturday is read back"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+  reservations: [{ name: Ben Ortiz, start: 2026-11-06T19:00, party: 2 }]
+expect:
+  outcome: rescheduled
+  calendar: [{ name: Ben Ortiz, start: 2026-11-07T19:30, party: 2 }]

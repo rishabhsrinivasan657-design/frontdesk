@@ -1,0 +1,8 @@
+id: policy-closed-monday
+category: policy_edge
+persona: "Moe Dale, only free on Mondays, email moe@example.com"
+goal: "Book a table for 2 on Monday (November 9) at 7pm. You can only do Monday: if they're closed, say thanks and end the call"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: refused

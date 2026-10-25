@@ -1,0 +1,9 @@
+id: booking-party-of-six
+category: booking
+persona: "Victor Hale, planning dinner with family, email victor@example.com"
+goal: "Book a table for 6 this Saturday (November 7) at 6pm. Say yes when the details are read back correctly"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: booked
+  calendar: [{ name: Victor Hale, start: 2026-11-07T18:00, party: 6 }]

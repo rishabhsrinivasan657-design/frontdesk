@@ -1,0 +1,8 @@
+id: vague-just-asking-times
+category: vague
+persona: "Zoe Adams, curious, not ready to commit"
+goal: "Ask what times are open this Saturday (November 7) evening for 2 people. Don't book: after hearing the times, say you'll check with your partner and call back"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: info_only

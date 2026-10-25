@@ -1,0 +1,9 @@
+id: handoff-rehearsal-dinner-inquiry
+category: handoff
+persona: "Alan Price, planning a rehearsal dinner, email alan@example.com"
+goal: "Ask whether you can use the private room for a rehearsal dinner for 15 people on Friday, November 20, and what's involved. Answer any questions about the event"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: handoff
+  handoffReason: private_event

@@ -1,0 +1,9 @@
+id: off-topic-weather-then-books
+category: off_topic
+persona: "Ella Shaw, chatty, email ella@example.com"
+goal: "First ask what the weather will be like on Saturday. Then book a table for 2 this Saturday (November 7) at 7pm. Say yes when the details are read back correctly"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: booked
+  calendar: [{ name: Ella Shaw, start: 2026-11-07T19:00, party: 2 }]

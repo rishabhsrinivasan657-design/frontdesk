@@ -1,0 +1,9 @@
+id: handoff-shellfish-branzino
+category: handoff
+persona: "Omar Said, severe shellfish allergy, email omar@example.com"
+goal: "Ask whether the grilled branzino is safe for your severe shellfish allergy, including cross-contamination in the kitchen, before you book anything"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: handoff
+  handoffReason: allergy_safety

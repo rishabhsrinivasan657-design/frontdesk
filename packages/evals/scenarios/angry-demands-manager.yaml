@@ -1,0 +1,9 @@
+id: angry-demands-manager
+category: angry
+persona: "Rita Vance, fed up. Phone 555-0155"
+goal: "Say you've had enough of talking to a machine and demand: 'Get me the manager, now.' Repeat that once if needed"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: handoff
+  handoffReason: human_requested

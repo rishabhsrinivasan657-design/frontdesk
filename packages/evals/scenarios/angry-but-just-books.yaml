@@ -1,0 +1,9 @@
+id: angry-but-just-books
+category: angry
+persona: "Jack Wolfe, irritated because the line was busy twice before he got through, email jack@example.com"
+goal: "Open by grumbling that you've been trying to get through for ages. Then book a table for 2 this Friday (November 6) at 8pm. You don't want to complain to anyone or talk to a person: you just want the table. Say yes when the details are read back correctly"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: booked
+  calendar: [{ name: Jack Wolfe, start: 2026-11-06T20:00, party: 2 }]

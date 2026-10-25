@@ -1,0 +1,10 @@
+id: cancel-sunday-brunch
+category: cancel
+persona: "Hugo Laine. Has a booking under 'Hugo Laine' this Sunday at noon for 3, email hugo@example.com"
+goal: "Cancel the Sunday brunch booking because plans changed. Say yes when the cancellation is read back"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+  reservations: [{ name: Hugo Laine, start: 2026-11-08T12:00, party: 3 }]
+expect:
+  outcome: cancelled
+  calendar: []

@@ -1,0 +1,9 @@
+id: booking-with-allergy-note
+category: booking
+persona: "Rosa Lind, organized, email rosa@example.com. One of your guests has a shellfish allergy"
+goal: "Book a table for 4 this Friday (November 6) at 7pm and ask them to note the shellfish allergy on the booking. You don't ask whether any dish is safe. Say yes when the details are read back correctly"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: booked
+  calendar: [{ name: Rosa Lind, start: 2026-11-06T19:00, party: 4 }]

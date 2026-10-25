@@ -1,0 +1,9 @@
+id: off-topic-three-strikes
+category: off_topic
+persona: "Ollie Ward, bored and chatty"
+goal: "Ask three unrelated questions, one per message: who will win the World Cup, how to fix a leaky faucet, and what the capital of Australia is. If you're offered a person, say no thanks, then end the call"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: refused
+  maxTurns: 6

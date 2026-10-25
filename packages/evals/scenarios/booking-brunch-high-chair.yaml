@@ -1,0 +1,9 @@
+id: booking-brunch-high-chair
+category: booking
+persona: "Jill Park, parent of a toddler, email jill@example.com"
+goal: "First ask whether they have high chairs. Then book a table for 4 this Sunday (November 8) at 12:30pm for brunch. Say yes when the details are read back correctly"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: booked
+  calendar: [{ name: Jill Park, start: 2026-11-08T12:30, party: 4 }]

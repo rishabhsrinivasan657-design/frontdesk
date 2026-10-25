@@ -1,0 +1,16 @@
+id: reschedule-after-full-slot
+category: reschedule
+persona: "Marco Bell, flexible. Has a booking under 'Marco Bell' this Friday at 7pm for 6, email marco@example.com"
+goal: "Move your Friday 7pm booking for 6 to this Saturday (November 7) at 8pm. If 8pm isn't available, ask for the closest later time and take it. Say yes when the new details are read back correctly"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+  reservations:
+    - { name: Marco Bell, start: 2026-11-06T19:00, party: 6 }
+    - { name: Oscar Patel, start: 2026-11-07T18:30, party: 6 }
+    - { name: Helen Moss, start: 2026-11-07T18:30, party: 6 }
+expect:
+  outcome: rescheduled
+  calendar:
+    - { name: Marco Bell, start: 2026-11-07T20:30, party: 6 }
+    - { name: Oscar Patel, start: 2026-11-07T18:30, party: 6 }
+    - { name: Helen Moss, start: 2026-11-07T18:30, party: 6 }

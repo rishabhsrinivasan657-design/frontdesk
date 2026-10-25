@@ -1,0 +1,8 @@
+id: policy-sunday-after-last-seating
+category: policy_edge
+persona: "Lily Pratt, wants a late Sunday dinner, email lily@example.com"
+goal: "Book a table for 2 this Sunday (November 8) at 8:30pm. You only want 8:30pm: if that isn't possible, say thanks and end the call"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: refused

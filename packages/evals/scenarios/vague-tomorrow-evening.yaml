@@ -1,0 +1,9 @@
+id: vague-tomorrow-evening
+category: vague
+persona: "Mila Ross, relaxed and vague, email mila@example.com"
+goal: "You want a table for two tomorrow (Thursday, November 5) at 7pm. Start with 'something tomorrow evening for the two of us' and give the exact time only when asked. Say yes when the details are read back correctly"
+seed:
+  now: 2026-11-04T14:00:00-05:00
+expect:
+  outcome: booked
+  calendar: [{ name: Mila Ross, start: 2026-11-05T19:00, party: 2 }]
