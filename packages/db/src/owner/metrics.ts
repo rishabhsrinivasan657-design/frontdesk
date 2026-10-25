@@ -58,6 +58,10 @@ export function calendarDays(now: Date, days: number, timezone: string): string[
   );
 }
 
+/** Percentiles to 0.1 ms: float math differs across Postgres builds (954.9999… vs 955). */
+const ms = (v: number | null | undefined): number | null =>
+  v === null || v === undefined ? null : Math.round(v * 10) / 10;
+
 const rate = (n: number, of: number): number | null => (of === 0 ? null : n / of);
 
 /**
@@ -140,8 +144,8 @@ export async function metrics(
       conversations: n,
       taskSuccessRate: rate(d?.successes ?? 0, n),
       handoffRate: rate(d?.handoffs ?? 0, n),
-      p50FirstOutputMs: l?.p50 ?? null,
-      p95FirstOutputMs: l?.p95 ?? null,
+      p50FirstOutputMs: ms(l?.p50),
+      p95FirstOutputMs: ms(l?.p95),
       avgTokens: n ? d!.tokens / n : null,
       avgCostUsd: n ? d!.cost / n : null,
     });
@@ -151,8 +155,8 @@ export async function metrics(
     perDay.reduce((acc, d) => acc + d[k], 0);
   const conversations = sum("conversations");
   const p = (name: string): Percentiles => ({
-    p50: stages?.[`${name}_p50`] ?? null,
-    p95: stages?.[`${name}_p95`] ?? null,
+    p50: ms(stages?.[`${name}_p50`]),
+    p95: ms(stages?.[`${name}_p95`]),
   });
   return {
     summary: {
@@ -164,7 +168,7 @@ export async function metrics(
       latency: {
         stt: p("stt"),
         llmTtft: p("llmTtft"),
-        tool: { p50: tools?.p50 ?? null, p95: tools?.p95 ?? null },
+        tool: { p50: ms(tools?.p50), p95: ms(tools?.p95) },
         ttsStart: p("ttsStart"),
         firstOutput: p("firstOutput"),
       },
