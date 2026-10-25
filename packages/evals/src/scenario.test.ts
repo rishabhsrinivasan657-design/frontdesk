@@ -33,6 +33,18 @@ describe("ScenarioSchema", () => {
     expect(s.expect).toMatchObject({ outcome: "rescheduled", maxTurns: 8, handoffReason: null });
   });
 
+  it.each([0, 61, 2.5])("rejects readbackPauseMinutes %s", (minutes) => {
+    const doc = parse(SPEC_EXAMPLE) as { seed: Record<string, unknown> };
+    doc.seed.readbackPauseMinutes = minutes;
+    expect(ScenarioSchema.safeParse(doc).success).toBe(false);
+  });
+
+  it("accepts readbackPauseMinutes 6", () => {
+    const doc = parse(SPEC_EXAMPLE) as { seed: Record<string, unknown> };
+    doc.seed.readbackPauseMinutes = 6;
+    expect(ScenarioSchema.parse(doc).seed.readbackPauseMinutes).toBe(6);
+  });
+
   it("rejects an unknown key", () => {
     const doc = parse(SPEC_EXAMPLE) as { expect: Record<string, unknown> };
     doc.expect.outcom = "booked";

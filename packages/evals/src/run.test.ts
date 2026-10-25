@@ -1,9 +1,17 @@
-import { LLMError, TURN_TEMPLATE } from "@frontdesk/core";
+import { EXPIRED_REPLY, LLMError, TURN_TEMPLATE } from "@frontdesk/core";
 import { FakeProvider, MemoryRecordingStore, ReplayProvider } from "@frontdesk/llm";
 import { describe, expect, it } from "vitest";
 import { loadConfig } from "./config.js";
 import { runScenario } from "./run.js";
-import { bookingAgentSteps, bookingCallerSteps, say, scenario, text } from "./testing.js";
+import {
+  bookingAgentSteps,
+  bookingCallerSteps,
+  call,
+  say,
+  scenario,
+  text,
+  usage,
+} from "./testing.js";
 
 const config = loadConfig();
 
@@ -24,6 +32,53 @@ describe("runScenario", () => {
     expect(run.tokensIn).toBeGreaterThan(0);
     expect(run.transcript[0]).toEqual({ role: "agent", text: config.agent.greeting });
     expect(run.transcript.filter((l) => l.role === "caller")).toHaveLength(4);
+  });
+
+  it("a confirm after the read-back pause hears the expired reply and nothing is written", async () => {
+    const paused = scenario({
+      seed: { now: "2026-11-04T14:00:00-05:00", reservations: [], readbackPauseMinutes: 6 },
+    });
+    const run = await runScenario(paused, {
+      config,
+      agent: new FakeProvider(bookingAgentSteps()),
+      caller: new FakeProvider(bookingCallerSteps()),
+    });
+    expect(run.transcript[6]).toEqual({ role: "agent", text: EXPIRED_REPLY });
+    expect(run.world.deps.calendar.writes).toEqual([]);
+  });
+
+  it("advances the clock once after the first read-back", async () => {
+    const paused = scenario({
+      seed: { now: "2026-11-04T14:00:00-05:00", reservations: [], readbackPauseMinutes: 6 },
+    });
+    const rebook = {
+      stream: [
+        call("c3", "book", {
+          slotId: "2026-11-07T19:00@t4-1#4",
+          name: "Bo Chen",
+          contact: "bo@example.com",
+          partySize: 4,
+        }),
+        usage,
+      ],
+    };
+    const run = await runScenario(paused, {
+      config,
+      agent: new FakeProvider([
+        ...bookingAgentSteps().slice(0, 3),
+        rebook,
+        ...bookingAgentSteps().slice(3),
+      ]),
+      caller: new FakeProvider([
+        say("Hi, a table for 4 this Saturday at 7pm?"),
+        say("Bo Chen, bo@example.com"),
+        say("Yes"),
+        say("Oh, please book it again"),
+        say("Yes", true),
+      ]),
+    });
+    expect(run.world.deps.calendar.writes.map((w) => w.op)).toEqual(["create"]);
+    expect(run.world.deps.clock.now().toISOString()).toBe("2026-11-04T19:06:00.000Z");
   });
 
   it("sends the caller's last message before ending", async () => {

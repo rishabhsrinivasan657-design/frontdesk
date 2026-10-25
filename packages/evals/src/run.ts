@@ -59,6 +59,8 @@ export async function runScenario(scenario: Scenario, options: RunOptions): Prom
     world,
   };
 
+  const pause = scenario.seed.readbackPauseMinutes;
+  let paused = false;
   try {
     while (run.turns < scenario.expect.maxTurns) {
       const { value } = await caller.generate(
@@ -77,6 +79,11 @@ export async function runScenario(scenario: Scenario, options: RunOptions): Prom
       const result = await runTurn(world.deps, { sessionId: world.sessionId, text: value.say });
       run.latencyMs.push(now() - started);
       run.transcript.push({ role: "agent", text: result.reply });
+      // The caller "steps away" once, right after the first read-back.
+      if (pause && !paused && result.messages.some((m) => m.type === "pending_action")) {
+        world.deps.clock.advance(pause * 60_000);
+        paused = true;
+      }
       for (const m of result.messages) {
         if (m.type === "turn_metrics") {
           run.tokensIn += m.tokensIn;

@@ -59,6 +59,8 @@ export const ScenarioSchema = z.strictObject({
   seed: z.strictObject({
     now: z.iso.datetime({ offset: true }),
     reservations: z.array(SeedReservationSchema).default([]),
+    /** Minutes the clock jumps after the agent's first read-back (to let a pending action expire). */
+    readbackPauseMinutes: z.number().int().min(1).max(60).optional(),
   }),
   expect: z.strictObject({
     outcome: z.enum(OUTCOMES),
