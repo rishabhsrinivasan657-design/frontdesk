@@ -53,18 +53,19 @@ afterAll(async () => {
   await pg.close();
 });
 
-async function readBack() {
+/** Each test books as its own caller: a second overlapping table for one caller is refused. */
+async function readBack(details = DETAILS) {
   const client = await TestClient.connect(url);
   const { sessionId } = await client.next("session");
   await client.turn(BOOK);
-  await client.turn(DETAILS);
+  await client.turn(details);
   const pending = await client.next("pending_action");
   return { client, sessionId, pending };
 }
 
 describe("api against Redis and Postgres", () => {
   it("the owner api shows a booked conversation, its booking and metrics", async () => {
-    const { client, sessionId } = await readBack();
+    const { client, sessionId } = await readBack("Ada Lim, ada@example.com");
     await client.turn("Yes, please");
     expect((await client.next("action_result")).status).toBe("executed");
     client.close();

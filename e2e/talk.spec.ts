@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { DETAILS, auditTrail, bookAt, handoffCount, say, sessionId, storedTurns } from "./helpers";
+import { details, auditTrail, bookAt, handoffCount, say, sessionId, storedTurns } from "./helpers";
 
 const OPEN = "That time is open. What name and email should I use?";
 
@@ -11,7 +11,7 @@ test.beforeEach(async ({ page }) => {
 test("books a table end to end", async ({ page }) => {
   await say(page, bookAt("19:00"));
   await expect(page.getByTestId("agent-message").last()).toHaveText(OPEN);
-  await say(page, DETAILS);
+  await say(page, details());
   const card = page.getByTestId("confirmation-card");
   await expect(card).toContainText("a table for 4 on Saturday, November 7 at 7:00 PM");
   await card.getByRole("button", { name: "Confirm" }).click();
@@ -34,7 +34,7 @@ test("books a table end to end", async ({ page }) => {
 test("change before confirm voids the pending action", async ({ page }) => {
   await say(page, bookAt("20:00"));
   await expect(page.getByTestId("agent-message").last()).toHaveText(OPEN);
-  await say(page, DETAILS);
+  await say(page, details());
   const card = page.getByTestId("confirmation-card");
   await expect(card).toContainText("8:00 PM");
   await card.getByRole("button", { name: "Change" }).click();
@@ -42,7 +42,7 @@ test("change before confirm voids the pending action", async ({ page }) => {
 
   await say(page, "Make it 20:30");
   await expect(page.getByTestId("agent-message").last()).toHaveText(OPEN);
-  await say(page, DETAILS);
+  await say(page, details());
   await expect(card).toContainText("8:30 PM");
   await card.getByRole("button", { name: "Confirm" }).click();
   await expect(page.getByTestId("action-status")).toHaveText("Booked");
@@ -71,7 +71,7 @@ test("hands off to a person", async ({ page }) => {
 test("reconnects mid-conversation and confirms", async ({ page }) => {
   await say(page, bookAt("21:00"));
   await expect(page.getByTestId("agent-message").last()).toHaveText(OPEN);
-  await say(page, DETAILS);
+  await say(page, details());
   await expect(page.getByTestId("confirmation-card")).toContainText("9:00 PM");
   const before = await sessionId(page);
 
@@ -96,7 +96,7 @@ test("keeps the latest reply and the card in view, and the cursor in the box", a
   }
   await say(page, bookAt("18:00"));
   await expect(page.getByTestId("agent-message").last()).toHaveText(OPEN);
-  await say(page, DETAILS);
+  await say(page, details());
   const confirm = page.getByTestId("confirmation-card").getByRole("button", { name: "Confirm" });
   await expect(confirm).toBeInViewport();
   await confirm.click();

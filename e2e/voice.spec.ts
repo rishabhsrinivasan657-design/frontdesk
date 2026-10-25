@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { DETAILS, auditTrail, bookAt, say, sessionId, storedTurns } from "./helpers";
+import { details, auditTrail, bookAt, say, sessionId, storedTurns } from "./helpers";
 import {
   cancels,
   finishSpeaking,
@@ -30,7 +30,7 @@ test("books a table by voice", async ({ page }) => {
     .poll(() => spoken(page))
     .toEqual(["That time is open.", "What name and email should I use?"]);
 
-  await speak(page, DETAILS);
+  await speak(page, details());
   await expect(page.getByTestId("confirmation-card")).toContainText("7:00 PM");
   await speak(page, "Yes, please");
   await expect(page.getByTestId("action-status")).toHaveText("Booked");
