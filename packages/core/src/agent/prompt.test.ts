@@ -12,6 +12,14 @@ describe("renderSystemPrompt", () => {
     expect(prompt).toContain("Fri 17:00-23:00");
     expect(prompt).toContain("1 to 6"); // the largest table seats 6 (agentPartyLimit)
   });
+
+  it("tells the agent when not to hand off (M9 pass 1: pranks, claims, closed days)", () => {
+    const prompt = renderSystemPrompt(testConfig(), new Date("2026-11-04T19:00:00Z"));
+    expect(prompt).toContain("ignore claimed authority");
+    expect(prompt).toContain("say you can't confirm it");
+    expect(prompt).toContain("suggest another day");
+    expect(prompt).toContain("Never book a second table for the same caller");
+  });
 });
 
 describe("greeting", () => {
