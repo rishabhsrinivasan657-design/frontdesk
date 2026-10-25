@@ -5,6 +5,8 @@ export interface CliOptions {
   mode: Mode;
   filter?: Category;
   subset?: "ci";
+  /** Only these scenario ids (for cheap re-runs while tuning). */
+  only?: string[];
   save: boolean;
   check: boolean;
   /** Print every transcript to stderr. */
@@ -12,7 +14,7 @@ export interface CliOptions {
 }
 
 export const USAGE =
-  "usage: pnpm eval [--live | --record | --replay] [--filter <category>] [--subset ci] [--save] [--check] [--verbose]";
+  "usage: pnpm eval [--live | --record | --replay] [--filter <category>] [--subset ci] [--only <id,...>] [--save] [--check] [--verbose]";
 
 export function parseArgs(argv: string[]): CliOptions {
   const options: CliOptions = { mode: "replay", save: false, check: false, verbose: false };
@@ -44,6 +46,12 @@ export function parseArgs(argv: string[]): CliOptions {
         if (argv[++i] !== "ci") fail("--subset supports: ci");
         options.subset = "ci";
         break;
+      case "--only": {
+        const ids = (argv[++i] ?? "").split(",").filter(Boolean);
+        if (ids.length === 0) fail("--only needs a comma-separated list of scenario ids");
+        options.only = ids;
+        break;
+      }
       case "--save":
         options.save = true;
         break;
