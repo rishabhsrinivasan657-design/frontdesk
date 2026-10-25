@@ -113,9 +113,33 @@ function lookupFaq(args: { query: string }, ctx: ReadToolContext): ToolResult {
   return { ok: true, data: { answers } };
 }
 
+/** Spoken words for the config's dietary tags. */
+const TAG_WORDS: Record<string, string> = {
+  vegan: "vegan",
+  vegetarian: "vegetarian",
+  "gluten-free": "gf",
+  "gluten free": "gf",
+  gf: "gf",
+};
+
 function getMenuItem(args: { name: string }, ctx: ReadToolContext): ToolResult {
-  const needle = args.name.toLowerCase();
+  const needle = args.name.toLowerCase().trim();
   const item = ctx.config.menu.find((m) => m.item.toLowerCase().includes(needle));
+  const tag = item ? undefined : TAG_WORDS[needle];
+  if (tag) {
+    // "How much is the vegan main?" names a tag, not a dish.
+    const items = ctx.config.menu.filter((m) => m.tags.includes(tag));
+    return {
+      ok: true,
+      data:
+        items.length > 0
+          ? {
+              found: true,
+              items: items.map((m) => ({ item: m.item, price: m.price, tags: m.tags })),
+            }
+          : { found: false },
+    };
+  }
   return {
     ok: true,
     data: item

@@ -154,6 +154,29 @@ describe("lookup_faq and get_menu_item", () => {
   });
 });
 
+describe("get_menu_item by dietary tag", () => {
+  it('lists every dish with a tag when the query names one ("vegan", "gluten-free")', async () => {
+    const { ctx } = setup();
+    ctx.config.menu.push(
+      { item: "Farro bowl", price: 21, tags: ["vegan"] },
+      { item: "Lemon sorbetto", price: 9, tags: ["vegan", "gf"] },
+    );
+    expect(await runReadTool("get_menu_item", { name: "Vegan" }, ctx)).toEqual({
+      ok: true,
+      data: {
+        found: true,
+        items: [
+          { item: "Farro bowl", price: 21, tags: ["vegan"] },
+          { item: "Lemon sorbetto", price: 9, tags: ["vegan", "gf"] },
+        ],
+      },
+    });
+    expect(await runReadTool("get_menu_item", { name: "gluten-free" }, ctx)).toMatchObject({
+      data: { found: true, items: [{ item: "Lemon sorbetto" }] },
+    });
+  });
+});
+
 describe("dispatch", () => {
   it.each(["book", "reschedule", "cancel", "send_email"])(
     "refuses %s as unknown_tool",
