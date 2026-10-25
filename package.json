@@ -20,6 +20,7 @@
     "verify": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test",
     "eval": "pnpm --filter @frontdesk/evals eval",
     "eval:ci": "pnpm eval --subset ci --check",
+    "eval:targets": "pnpm eval --targets",
     "db:migrate": "pnpm --filter @frontdesk/db db:migrate",
     "db:seed": "pnpm --filter @frontdesk/db db:seed",
     "google:auth": "pnpm --filter @frontdesk/integrations google:auth",

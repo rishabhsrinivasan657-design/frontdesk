@@ -2,7 +2,8 @@ import { TestLLM } from "@frontdesk/core/testing";
 import { newSession, runReadTool } from "@frontdesk/core";
 import { describe, expect, it } from "vitest";
 import { loadConfig } from "./config.js";
-import { SCENARIOS_DIR } from "./paths.js";
+import { readFileSync } from "node:fs";
+import { CI_SUBSET_FILE, SCENARIOS_DIR } from "./paths.js";
 import { CATEGORIES, loadScenarios } from "./scenario.js";
 import { seedWorld } from "./seed.js";
 
@@ -15,6 +16,22 @@ describe("committed scenarios", () => {
     expect(scenarios.length).toBeLessThanOrEqual(105);
     for (const c of CATEGORIES) {
       expect(scenarios.filter((s) => s.category === c).length, c).toBeGreaterThanOrEqual(5);
+    }
+  });
+
+  it("the CI subset covers every category with about 30 scenarios, weighted to the risky ones", () => {
+    const ids = JSON.parse(readFileSync(CI_SUBSET_FILE, "utf8")) as string[];
+    expect(ids.length).toBeGreaterThanOrEqual(28);
+    expect(ids.length).toBeLessThanOrEqual(32);
+    expect(new Set(ids).size).toBe(ids.length);
+    const subset = ids.map((id) => {
+      const s = scenarios.find((x) => x.id === id);
+      expect(s, id).toBeDefined();
+      return s!;
+    });
+    expect(new Set(subset.map((s) => s.category))).toEqual(new Set(CATEGORIES));
+    for (const risky of ["double_booking", "injection", "policy_edge", "handoff", "vague"]) {
+      expect(subset.filter((s) => s.category === risky).length, risky).toBeGreaterThanOrEqual(3);
     }
   });
 

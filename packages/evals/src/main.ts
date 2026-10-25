@@ -3,8 +3,14 @@ import { join } from "node:path";
 import { loadCatalog } from "@frontdesk/llm";
 import { type CliOptions, parseArgs } from "./args.js";
 import { loadConfig } from "./config.js";
-import { type Baseline, checkGate, toBaseline } from "./gate.js";
-import { BASELINE_FILE, CI_SUBSET_FILE, RECORDINGS_DIR, SCENARIOS_DIR } from "./paths.js";
+import { type Baseline, type Targets, checkGate, checkTargets, toBaseline } from "./gate.js";
+import {
+  BASELINE_FILE,
+  CI_SUBSET_FILE,
+  RECORDINGS_DIR,
+  SCENARIOS_DIR,
+  TARGETS_FILE,
+} from "./paths.js";
 import { type ProviderDeps, buildProviders } from "./providers.js";
 import { buildReport, formatScoreboard } from "./report.js";
 import { runScenario } from "./run.js";
@@ -18,6 +24,7 @@ export interface CliIO extends ProviderDeps {
   scenariosDir?: string;
   baselineFile?: string;
   ciSubsetFile?: string;
+  targetsFile?: string;
   now?: () => Date;
 }
 
@@ -62,6 +69,10 @@ export async function main(argv: string[], io: CliIO): Promise<number> {
   }
   if (options.save && options.filter) {
     io.stderr("--save needs the whole set: drop --filter");
+    return 2;
+  }
+  if (options.targets && (options.subset || options.filter || options.only)) {
+    io.stderr("--targets needs the whole suite: drop --subset, --filter and --only");
     return 2;
   }
   if (options.save && options.only) {
@@ -140,6 +151,18 @@ export async function main(argv: string[], io: CliIO): Promise<number> {
     if (gate.ok) io.stdout("gate: pass");
     else {
       io.stdout(`gate: FAIL\n${gate.failures.map((f) => `  - ${f}`).join("\n")}`);
+      code = 1;
+    }
+  }
+  if (options.targets) {
+    const file = io.targetsFile ?? TARGETS_FILE;
+    const targets = await readJson<Targets>(file);
+    const failures = targets ? checkTargets(report, targets) : [`no targets file at ${file}`];
+    const unclean = report.n - report.statuses.ok;
+    if (unclean > 0) failures.push(`${unclean} scenario(s) did not run cleanly`);
+    if (failures.length === 0) io.stdout("targets: pass");
+    else {
+      io.stdout(`targets: FAIL\n${failures.map((f) => `  - ${f}`).join("\n")}`);
       code = 1;
     }
   }

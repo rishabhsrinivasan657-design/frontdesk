@@ -16,7 +16,13 @@ const config = loadConfig();
 
 describe("parseArgs", () => {
   it("defaults to replay", () => {
-    expect(parseArgs([])).toEqual({ mode: "replay", save: false, check: false, verbose: false });
+    expect(parseArgs([])).toEqual({
+      mode: "replay",
+      save: false,
+      check: false,
+      targets: false,
+      verbose: false,
+    });
   });
   it("reads every flag", () => {
     expect(
@@ -27,9 +33,11 @@ describe("parseArgs", () => {
       subset: "ci",
       save: true,
       check: true,
+      targets: false,
       verbose: false,
     });
     expect(parseArgs(["--verbose"]).verbose).toBe(true);
+    expect(parseArgs(["--targets"]).targets).toBe(true);
     expect(parseArgs(["--only", "a,b"]).only).toEqual(["a", "b"]);
   });
   it.each([
@@ -71,6 +79,7 @@ async function workspace(scenarios: Scenario[], record: Scenario[] = scenarios) 
     recordingsDir,
     baselineFile: join(root, "baseline.json"),
     ciSubsetFile: join(root, "ci-subset.json"),
+    targetsFile: join(root, "targets.json"),
     now: () => new Date("2026-10-22T12:00:00Z"),
   };
   return { root, io, out, err };
@@ -166,6 +175,31 @@ describe("main", () => {
     const { io, err } = await workspace([scenario()]);
     expect(await main(["--save", "--only", "book-saturday"], io)).toBe(2);
     expect(err.join("\n")).toContain("--save needs the whole subset, not --only");
+  });
+
+  it("--targets passes when the whole suite meets targets.json", async () => {
+    const { io, out } = await workspace([scenario()]);
+    await writeFile(io.targetsFile!, JSON.stringify({ successPct: 90, handoffCorrectPct: 90 }));
+    expect(await main(["--targets"], io)).toBe(0);
+    expect(out.join("\n")).toContain("targets: pass");
+  });
+
+  it("--targets fails below a target", async () => {
+    const other = scenario({ id: "never-recorded", category: "faq", persona: "Someone else" });
+    const { io, out } = await workspace([scenario(), other], [scenario()]);
+    await writeFile(io.targetsFile!, JSON.stringify({ successPct: 90, handoffCorrectPct: 90 }));
+    expect(await main(["--targets"], io)).toBe(1);
+    expect(out.join("\n")).toContain("success 50% is below the target 90%");
+  });
+
+  it.each([
+    ["--subset", "ci"],
+    ["--filter", "booking"],
+    ["--only", "book-saturday"],
+  ])("--targets refuses %s (targets are for the whole suite)", async (...flag) => {
+    const { io, err } = await workspace([scenario()]);
+    expect(await main(["--targets", ...flag], io)).toBe(2);
+    expect(err.join("\n")).toContain("--targets needs the whole suite");
   });
 
   it("fails when no scenario matches", async () => {
