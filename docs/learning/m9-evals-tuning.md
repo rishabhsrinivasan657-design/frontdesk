@@ -44,6 +44,7 @@ M9 turns M4's 15-scenario harness into evidence: **100 scenarios**, a tuning loo
 | A small caller hangs up on "Shall I book it?"                              | `run.test.ts` › "keeps the call going when the agent answers a goodbye with a question"                       |
 | A tuned prompt rule silently disappears                                    | `prompt.test.ts` › "tells the agent when not to hand off…", "…not to assume details…"                         |
 | "Let me transfer you" but no handoff ticket is filed                       | `conversations.test.ts` › "hands off when the reply promises a transfer…", `loop.test.ts` › `promisesHandoff` |
+| A party of 9 asks for "a person" and is filed under the wrong reason       | `conversations.test.ts` › "files a handoff for a party the agent can't seat as party_too_large"               |
 
 ## 4. Quiz
 
