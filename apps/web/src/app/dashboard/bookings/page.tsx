@@ -36,7 +36,12 @@ export default async function BookingsPage({
   const upcoming = rows.filter((b) => b.status !== "cancelled" && Date.parse(b.start) > now);
   const covers = upcoming.reduce((n, b) => n + b.partySize, 0);
   const cancelled = rows.filter((b) => b.status === "cancelled").length;
-  const sorted = [...rows].sort((a, b) => b.start.localeCompare(a.start));
+  // Upcoming first, soonest at the top; then past and cancelled ones, most recent first.
+  const isUpcoming = (b: BookingRow) => b.status !== "cancelled" && Date.parse(b.start) > now;
+  const sorted = [
+    ...upcoming.sort((a, b) => a.start.localeCompare(b.start)),
+    ...rows.filter((b) => !isUpcoming(b)).sort((a, b) => b.start.localeCompare(a.start)),
+  ];
   const q = source === "pilot" ? "?source=pilot" : "";
 
   return (

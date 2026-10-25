@@ -2,9 +2,8 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createDb } from "../client.js";
 import { PgHandoffQueue } from "../handoff-queue.js";
-import { migrate } from "../migrate.js";
 import { auditLog, conversations, handoffs, turns } from "../schema.js";
-import { TEST_DATABASES } from "../test-db.js";
+import { scratchDatabase } from "../test-db.js";
 import {
   getConversation,
   listBookings,
@@ -13,10 +12,19 @@ import {
   metrics,
 } from "./index.js";
 
-const conn = createDb(TEST_DATABASES.live);
-const db = conn.db;
-beforeAll(() => migrate(TEST_DATABASES.live));
-afterAll(() => conn.close());
+// Its own database: fixtures use far-future dates that would clutter the shared one.
+let scratch: Awaited<ReturnType<typeof scratchDatabase>>;
+let conn: ReturnType<typeof createDb>;
+let db: ReturnType<typeof createDb>["db"];
+beforeAll(async () => {
+  scratch = await scratchDatabase("frontdesk_ownertest");
+  conn = createDb(scratch.url);
+  db = conn.db;
+});
+afterAll(async () => {
+  await conn.close();
+  await scratch.drop();
+});
 
 const TZ = "America/New_York";
 const uid = () => randomUUID().slice(0, 8);

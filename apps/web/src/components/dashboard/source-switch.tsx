@@ -10,20 +10,23 @@ const OPTIONS = [
 ] as const;
 
 /** Live vs pilot data (spec §10). Eval runs live in their own database and never show here. */
-export function SourceSwitch() {
+export function SourceSwitch({ compact = false }: { compact?: boolean }) {
   const pathname = usePathname();
   const current = useSearchParams().get("source") === "pilot" ? "pilot" : "live";
   return (
     <div className="flex flex-col gap-1.5">
       <span
-        id="source-label"
-        className="text-xs font-medium tracking-wide text-muted-foreground uppercase"
+        id={compact ? "source-label-compact" : "source-label"}
+        className={cn(
+          "text-xs font-medium tracking-wide text-muted-foreground uppercase",
+          compact && "sr-only",
+        )}
       >
         Data source
       </span>
       <div
         role="group"
-        aria-labelledby="source-label"
+        aria-labelledby={compact ? "source-label-compact" : "source-label"}
         className="grid grid-cols-2 rounded-lg border border-border bg-background p-0.5"
       >
         {OPTIONS.map((o) => (

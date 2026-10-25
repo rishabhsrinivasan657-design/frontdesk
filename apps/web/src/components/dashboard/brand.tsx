@@ -15,7 +15,12 @@ export function Brand({ size = "md", className }: { size?: "md" | "lg"; classNam
         <Icon name="utensils" className={lg ? "size-6" : "size-4"} />
       </span>
       <span className="flex flex-col leading-tight">
-        <span className={cn("font-heading font-bold tracking-wide", lg ? "text-2xl" : "text-lg")}>
+        <span
+          className={cn(
+            "font-heading font-bold tracking-wide whitespace-nowrap",
+            lg ? "text-2xl" : "text-lg",
+          )}
+        >
           Casa Fiorella
         </span>
         <span className="text-xs font-medium tracking-[0.2em] text-accent uppercase">

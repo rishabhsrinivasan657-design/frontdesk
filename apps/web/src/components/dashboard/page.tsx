@@ -91,7 +91,7 @@ export function KpiTile({
       <p className="text-sm font-medium text-muted-foreground">{label}</p>
       <p
         className={cn(
-          "mt-1 text-3xl font-semibold tabular-nums tracking-tight",
+          "mt-1 text-2xl font-semibold tabular-nums tracking-tight sm:text-3xl",
           tone === "good" && "text-success",
           tone === "warn" && "text-warning",
         )}

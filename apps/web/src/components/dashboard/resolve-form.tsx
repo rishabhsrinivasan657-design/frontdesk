@@ -44,8 +44,9 @@ export function ResolveForm({ id }: { id: string }) {
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
         maxLength={2000}
-        placeholder="Called the guest back and booked the private room for Friday."
+        placeholder="e.g. Called back and booked the private room for Friday."
         rows={2}
+        className="placeholder:text-muted-foreground/60"
       />
       {error && (
         <p role="alert" className="text-sm text-critical">

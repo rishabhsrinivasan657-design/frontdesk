@@ -123,17 +123,13 @@ export default async function ConversationPage({
                       <span className="text-[11px] text-muted-foreground tabular-nums">
                         {formatClock(t.createdAt)}
                       </span>
-                      {t.toolCalls.map((c, i) => (
-                        <Chip
-                          key={i}
-                          tone={c.ok ? "info" : "bad"}
-                          icon="tool"
-                          className="text-[11px]"
-                        >
-                          {c.name}
-                          {!c.ok && " failed"}
-                        </Chip>
-                      ))}
+                      {t.toolCalls
+                        .filter((c) => !c.ok)
+                        .map((c, i) => (
+                          <Chip key={i} tone="bad" icon="tool" className="text-[11px]">
+                            {c.name} failed
+                          </Chip>
+                        ))}
                       {t.flags
                         .filter((f) => FLAG_LABELS[f])
                         .map((f) => (

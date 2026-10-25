@@ -35,7 +35,12 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         <header className="sticky top-0 z-20 border-b border-border bg-card/95 backdrop-blur lg:hidden">
           <div className="flex items-center justify-between px-4 py-3">
             <Brand />
-            <LogoutButton compact />
+            <div className="flex items-center gap-2">
+              <Suspense>
+                <SourceSwitch compact />
+              </Suspense>
+              <LogoutButton compact />
+            </div>
           </div>
           <div className="flex items-center gap-3 px-4 pb-3">
             <Suspense>
@@ -44,11 +49,6 @@ export default async function DashboardLayout({ children }: { children: ReactNod
           </div>
         </header>
         <main className="mx-auto w-full max-w-[1400px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-          <div className="mb-4 lg:hidden">
-            <Suspense>
-              <SourceSwitch />
-            </Suspense>
-          </div>
           {children}
         </main>
       </div>
