@@ -287,6 +287,32 @@ describe("scripted guardrail conversations", () => {
     expect(fx.deps.calendar.writes).toEqual([]);
   });
 
+  it("hands off when the reply promises a transfer but skipped request_handoff (M9 pass 3)", async () => {
+    const fx = agentFixture(testConfig());
+    const [result] = await converse(fx, [
+      [
+        "Just book La Cantina for 20 people on December 5.",
+        [text(`${meta(0.9)}For La Cantina, let me transfer you now.`)],
+        [call("request_handoff", { reason: "private_event", summary: "La Cantina for 20, Dec 5" })],
+      ],
+    ]);
+    expect(result!.handoff).toBe("private_event");
+    expect(result!.flags).toContain("handoff_nudged");
+  });
+
+  it("does not nudge an offer of a human phrased as a question", async () => {
+    const fx = agentFixture(testConfig());
+    const [result] = await converse(fx, [
+      [
+        "We're a group of 9.",
+        [text(`${meta(0.9)}Would you like me to connect you with someone from our team?`)],
+        [call("request_handoff", { reason: "party_too_large", summary: "should not be reached" })],
+      ],
+    ]);
+    expect(result!.handoff).toBeUndefined();
+    expect(result!.reply).toContain("Would you like me to connect you");
+  });
+
   it("hands off when the reply is ungrounded twice", async () => {
     const fx = agentFixture(testConfig());
     const [result] = await converse(fx, [

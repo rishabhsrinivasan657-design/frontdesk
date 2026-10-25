@@ -44,7 +44,8 @@ export type TurnFlag =
   | "audit_failed"
   | "injection_pattern"
   | "meta_missing"
-  | "grounding_regenerated";
+  | "grounding_regenerated"
+  | "handoff_nudged";
 
 export interface TurnInput {
   sessionId: string;
@@ -354,6 +355,13 @@ async function modelTurn(turn: Turn): Promise<string> {
         rounds += 1;
         continue;
       }
+      if (promisesHandoff(checked.meta.body) && !turn.flags.includes("handoff_nudged")) {
+        // Telling the caller "let me transfer you" without request_handoff leaves no ticket.
+        turn.flags.push("handoff_nudged");
+        system = `${system}\n${HANDOFF_NUDGE}`;
+        rounds += 1;
+        continue;
+      }
       session.history.push({ role: "assistant", text });
       turn.replyInHistory = true;
       return finalReply(turn, checked.meta);
@@ -412,6 +420,18 @@ async function modelTurn(turn: Turn): Promise<string> {
   }
   countToolResult(turn, false);
   return FALLBACK_REPLY;
+}
+
+const HANDOFF_NUDGE =
+  "Your previous draft told the caller you would connect or transfer them to a person, but you did not call request_handoff. Call request_handoff now with the right reason, or reply without promising a transfer.";
+
+/** A statement (not a question) that the caller is being put through to a person. */
+export function promisesHandoff(reply: string): boolean {
+  const PROMISE =
+    /\b(?:let me|i'll|i will|i'm going to|i am going to|i'm|i am)\s+(?:now\s+)?(?:connect|connecting|transfer|transferring|hand|handing|put|putting)\b[^.!?]*\b(?:you|this)\b/i;
+  return reply
+    .split(/(?<=[.!?])\s+/)
+    .some((sentence) => !sentence.trim().endsWith("?") && PROMISE.test(sentence));
 }
 
 /** Spec §6: 2 failed tool attempts in a row hand off; any success resets the count. */
