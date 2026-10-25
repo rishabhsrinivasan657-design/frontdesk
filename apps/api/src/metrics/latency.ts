@@ -10,6 +10,15 @@ export const LATENCY_P95_MS = {
   ttsStart: 300,
 } as const;
 
+/** Spec §8 p50 budget: the typical turn the dashboard charts against. */
+export const LATENCY_P50_MS = {
+  llmTtft: 700,
+  tool: 300,
+  chatFirstToken: 800,
+  stt: 400,
+  ttsStart: 150,
+} as const;
+
 export type LatencyFlag =
   | "over_p95_llm_ttft"
   | "over_p95_tool"

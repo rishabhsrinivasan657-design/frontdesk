@@ -12,6 +12,8 @@ const env = { ...defaults, ...process.env };
 const built = await buildDeps(env);
 const app = buildServer({
   chat: built.chat,
+  ...(built.owner ? { owner: built.owner } : {}),
+  ownerRoutes: built.ownerRoutes,
   webOrigins: (env.WEB_ORIGINS ?? "")
     .split(",")
     .map((o) => o.trim())

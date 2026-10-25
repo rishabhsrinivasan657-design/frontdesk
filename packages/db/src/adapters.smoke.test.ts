@@ -121,6 +121,11 @@ describe("PgConversations", () => {
     llmTotalMs: 1200,
     toolMs: [12, 40],
     ttsStartMs: 90,
+    firstOutputMs: 700,
+    toolCalls: [
+      { name: "check_availability", ms: 12, ok: true },
+      { name: "lookup_faq", ms: 40, ok: true },
+    ],
     totalMs: 1650,
     tokensIn: 900,
     tokensOut: 60,

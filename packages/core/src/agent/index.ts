@@ -8,6 +8,7 @@ export {
   TurnInterrupted,
   type TurnFlag,
   type TurnInput,
+  type ToolCallRecord,
   type TurnResult,
   type TurnSignal,
 } from "./loop.js";

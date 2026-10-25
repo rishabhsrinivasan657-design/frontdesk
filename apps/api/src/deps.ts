@@ -13,11 +13,30 @@ import { offsetClock } from "./clock.js";
 import { buildLLM } from "./llm/build.js";
 import { RedisSessionStore } from "./redis/session-store.js";
 import { RedisSlotLock } from "./redis/slot-lock.js";
+import type { OwnerContext } from "./owner/context.js";
+import type { OwnerRouteSet } from "./owner/plugin.js";
+import { pgOwnerReads } from "./owner/reads.js";
+import { ownerRestRoutes } from "./owner/routes.js";
+import { OwnerFeed } from "./owner/feed.js";
+import { ownerLiveRoutes } from "./owner/live.js";
+import { RedisOwnerSessionStore } from "./owner/session-store.js";
 
 export const REPO_ROOT = resolve(import.meta.dirname, "../../..");
 const FREE: Price = { input: 0, output: 0 };
 
 export type Env = Record<string, string | undefined>;
+
+/** The api must never read or write the eval database: eval numbers stay apart (spec §10). */
+export function assertNotEvalDatabase(
+  databaseUrl: string,
+  evalDatabaseUrl: string | undefined,
+): void {
+  const name = (url: string) => new URL(url).pathname.replace(/^\//, "");
+  const db = name(databaseUrl);
+  if (db.endsWith("_eval") || (evalDatabaseUrl && name(evalDatabaseUrl) === db)) {
+    throw new Error("DATABASE_URL points at the eval database");
+  }
+}
 
 function required(env: Env, key: string): string {
   const value = env[key]?.trim();
@@ -30,9 +49,13 @@ function required(env: Env, key: string): string {
  * Redis sessions and locks; Postgres audit, handoffs and turns; confirmation emails queued for
  * the worker. Throws on a bad config so the process refuses to start.
  */
-export async function buildDeps(
-  env: Env,
-): Promise<{ chat: ChatContext; summary: string; close(): Promise<void> }> {
+export async function buildDeps(env: Env): Promise<{
+  chat: ChatContext;
+  owner: OwnerContext | undefined;
+  ownerRoutes: OwnerRouteSet[];
+  summary: string;
+  close(): Promise<void>;
+}> {
   const config = loadBusinessConfig(
     resolve(REPO_ROOT, env.BUSINESS_CONFIG || "businesses/casa-fiorella.yaml"),
   );
@@ -45,7 +68,9 @@ export async function buildDeps(
   const redis = new Redis(redisUrl, { maxRetriesPerRequest: 2 });
   // Fail at startup, not on the first caller, when Redis is down.
   await redis.ping();
-  const pg = createDb(required(env, "DATABASE_URL"));
+  const databaseUrl = required(env, "DATABASE_URL");
+  assertNotEvalDatabase(databaseUrl, env.EVAL_DATABASE_URL?.trim() || undefined);
+  const pg = createDb(databaseUrl);
   const queue = createConfirmationQueue(redisUrl, env.QUEUE_PREFIX?.trim() || undefined);
   const ids = (prefix: string) => `${prefix}_${randomUUID()}`;
 
@@ -68,20 +93,60 @@ export async function buildDeps(
     mailer: new QueueMailer(queue),
   };
 
+  const owner = readOwnerEnv(env, redis);
+
+  const now = () => clock.now();
+  const hub = new SessionHub();
+  const feed = new OwnerFeed();
+  const ownerRoutes = [
+    ownerLiveRoutes({ hub, sessions: deps.sessions, clock, feed }),
+    ownerRestRoutes({
+      reads: pgOwnerReads(pg.db, { timezone: config.business.timezone, now }),
+      calendarId: google ? google.calendarId : null,
+      now,
+    }),
+  ];
+
   return {
+    owner,
+    ownerRoutes,
     chat: {
       deps,
       log: new PgConversations(pg.db),
       price,
       newSessionId: () => `sess_${randomUUID()}`,
       logger: { error: (obj, msg) => console.error(msg, obj) },
-      hub: new SessionHub(),
+      hub,
+      feed,
     },
-    summary: `calendar=${google ? "google" : "in-memory"} llm=${llm.model}${fixedNow ? " now=fixed" : ""}`,
+    summary: `calendar=${google ? "google" : "in-memory"} llm=${llm.model} owner=${owner ? "on" : "off"}${fixedNow ? " now=fixed" : ""}`,
     async close() {
       await queue.close();
       redis.disconnect();
       await pg.close();
     },
+  };
+}
+
+/** The dashboard login (spec §10). Both values unset → the owner api is off (503). */
+export function readOwnerEnv(env: Env, redis: Redis): OwnerContext | undefined {
+  const email = env.OWNER_EMAIL?.trim();
+  const passwordHash = env.OWNER_PASSWORD_HASH?.trim();
+  if (!email && !passwordHash) return undefined;
+  if (!email || !passwordHash) {
+    throw new Error("Set both OWNER_EMAIL and OWNER_PASSWORD_HASH, or neither (see .env.example)");
+  }
+  if (!/^\$2[aby]\$\d{2}\$.{53}$/.test(passwordHash)) {
+    throw new Error("OWNER_PASSWORD_HASH must be a bcrypt hash (pnpm owner:hash)");
+  }
+  const hours = Number(env.OWNER_SESSION_TTL_HOURS?.trim() || 12);
+  if (!(hours > 0)) throw new Error("OWNER_SESSION_TTL_HOURS must be a positive number");
+  const sessionTtlMs = hours * 3_600_000;
+  return {
+    email,
+    passwordHash,
+    sessions: new RedisOwnerSessionStore(redis, sessionTtlMs),
+    sessionTtlMs,
+    secureCookie: env.NODE_ENV === "production",
   };
 }

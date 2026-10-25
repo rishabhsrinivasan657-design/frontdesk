@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   bigserial,
+  boolean,
   check,
   index,
   integer,
@@ -24,6 +25,8 @@ export const conversations = pgTable(
     endedAt: at("ended_at"),
     outcome: text("outcome"),
     handoffReason: text("handoff_reason"),
+    /** Demo rows written by `pnpm db:seed`: never counted under `pilot`. */
+    seeded: boolean("seeded").notNull().default(false),
   },
   (t) => [check("conversations_source_check", sql`${t.source} in ('live', 'pilot', 'eval')`)],
 );
@@ -47,6 +50,12 @@ export const turns = pgTable(
       .notNull()
       .default(sql`'{}'::integer[]`),
     ttsStartMs: integer("tts_start_ms"),
+    /** Server time from the caller's text to the first reply message (chat first token, §8). */
+    firstOutputMs: integer("first_output_ms"),
+    toolCalls: jsonb("tool_calls")
+      .$type<{ name: string; ms: number; ok: boolean }[]>()
+      .notNull()
+      .default([]),
     totalMs: integer("total_ms"),
     tokensIn: integer("tokens_in").notNull(),
     tokensOut: integer("tokens_out").notNull(),

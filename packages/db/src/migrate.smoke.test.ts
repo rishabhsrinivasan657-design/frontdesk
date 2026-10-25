@@ -29,6 +29,20 @@ describe.each(Object.entries(TEST_DATABASES))("migrations on the %s database", (
     );
   });
 
+  it("0002 adds seeded, tool_calls, first_output_ms with defaults", async () => {
+    const cols = await rows<{
+      table_name: string;
+      column_name: string;
+      column_default: string | null;
+    }>(
+      url,
+      `select table_name, column_name, column_default from information_schema.columns
+       where (table_name, column_name) in (('conversations','seeded'),('turns','tool_calls'),('turns','first_output_ms'))`,
+    );
+    const byName = Object.fromEntries(cols.map((c) => [c.column_name, c.column_default]));
+    expect(byName).toEqual({ seeded: "false", tool_calls: "'[]'::jsonb", first_output_ms: null });
+  });
+
   it("turns has every per-turn metric column (spec §8)", async () => {
     const cols = await rows<{ column_name: string }>(
       url,

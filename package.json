@@ -23,6 +23,7 @@
     "db:migrate": "pnpm --filter @frontdesk/db db:migrate",
     "google:auth": "pnpm --filter @frontdesk/integrations google:auth",
     "api": "pnpm --filter @frontdesk/api start",
+    "owner:hash": "pnpm --silent --filter @frontdesk/api owner:hash",
     "e2e": "playwright test -c e2e",
     "web": "pnpm --filter @frontdesk/web dev"
   },

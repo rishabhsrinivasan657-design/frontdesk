@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { createConfirmationQueue } from "@frontdesk/worker";
 import { createDb, migrate, schema } from "@frontdesk/db";
+import bcrypt from "bcryptjs";
 import { asc, eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -20,6 +21,8 @@ const env = {
   QUEUE_PREFIX,
   LLM_PROVIDER: "scripted",
   FRONTDESK_NOW: TEST_NOW.toISOString(),
+  OWNER_EMAIL: "owner@casafiorella.test",
+  OWNER_PASSWORD_HASH: bcrypt.hashSync("owner smoke password", 4),
 };
 
 const pg = createDb(DATABASE_URL);
@@ -32,7 +35,13 @@ beforeAll(async () => {
   await migrate(DATABASE_URL);
   const built = await buildDeps(env);
   close = () => built.close();
-  app = buildServer({ chat: built.chat, webOrigins: [], logger: false });
+  app = buildServer({
+    chat: built.chat,
+    webOrigins: [],
+    logger: false,
+    ...(built.owner ? { owner: built.owner } : {}),
+    ownerRoutes: built.ownerRoutes,
+  });
   url = (await app.listen({ port: 0, host: "127.0.0.1" })).replace("http", "ws") + "/ws";
 });
 
@@ -54,6 +63,40 @@ async function readBack() {
 }
 
 describe("api against Redis and Postgres", () => {
+  it("the owner api shows a booked conversation, its booking and metrics", async () => {
+    const { client, sessionId } = await readBack();
+    await client.turn("Yes, please");
+    expect((await client.next("action_result")).status).toBe("executed");
+    client.close();
+
+    const login = await app.inject({
+      method: "POST",
+      url: "/owner/login",
+      headers: { "content-type": "application/json" },
+      payload: JSON.stringify({ email: env.OWNER_EMAIL, password: "owner smoke password" }),
+    });
+    expect(login.statusCode).toBe(204);
+    const cookie = String(login.headers["set-cookie"]).split(";")[0]!;
+    const get = (path: string) => app.inject({ url: path, headers: { cookie } });
+
+    const detail = (await get(`/owner/conversations/${sessionId}`)).json<{
+      turns: { toolCalls: { name: string }[]; firstOutputMs: number | null }[];
+      audit: { stage: string }[];
+    }>();
+    expect(detail.turns.flatMap((t) => t.toolCalls.map((c) => c.name))).toContain(
+      "check_availability",
+    );
+    expect(detail.turns.every((t) => t.firstOutputMs !== null)).toBe(true);
+    expect(detail.audit.map((a) => a.stage)).toEqual(["proposed", "confirmed", "executed"]);
+
+    const bookings = (await get("/owner/bookings")).json<
+      { sessionId: string; calendarUrl: null }[]
+    >();
+    expect(bookings.find((b) => b.sessionId === sessionId)).toMatchObject({ calendarUrl: null });
+    expect((await get("/owner/metrics")).statusCode).toBe(200);
+    expect((await app.inject({ url: "/owner/metrics" })).statusCode).toBe(401);
+  });
+
   it("confirms after reconnecting, stores turns, audits and enqueues the email", async () => {
     const { client, sessionId, pending } = await readBack();
     client.close();
@@ -65,10 +108,11 @@ describe("api against Redis and Postgres", () => {
     expect((await again.next("action_result")).status).toBe("executed");
     again.close();
 
-    const turns = await pg.db
-      .select()
-      .from(schema.turns)
-      .where(eq(schema.turns.conversationId, sessionId));
+    const readTurns = () =>
+      pg.db.select().from(schema.turns).where(eq(schema.turns.conversationId, sessionId));
+    // The last turn is stored after its reply reaches the caller.
+    await expect.poll(async () => (await readTurns()).length).toBe(3);
+    const turns = await readTurns();
     expect(turns.map((t) => t.turnIndex).sort()).toEqual([1, 2, 3]);
     expect(turns.every((t) => t.totalMs !== null && t.costUsd === 0)).toBe(true);
     const [conversation] = await pg.db
@@ -124,10 +168,15 @@ describe("api against Redis and Postgres", () => {
       .from(schema.handoffs)
       .where(eq(schema.handoffs.sessionId, sessionId));
     expect(rows).toHaveLength(1);
-    const [conversation] = await pg.db
-      .select()
-      .from(schema.conversations)
-      .where(eq(schema.conversations.id, sessionId));
-    expect(conversation).toMatchObject({ outcome: "handoff", handoffReason: "human_requested" });
+    // The turn is stored after the reply reaches the caller, so wait for that write.
+    await expect
+      .poll(async () => {
+        const [conversation] = await pg.db
+          .select()
+          .from(schema.conversations)
+          .where(eq(schema.conversations.id, sessionId));
+        return conversation;
+      })
+      .toMatchObject({ outcome: "handoff", handoffReason: "human_requested" });
   });
 });

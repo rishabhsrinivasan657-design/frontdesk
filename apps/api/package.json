@@ -7,15 +7,18 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "start": "tsx src/main.ts"
+    "start": "tsx src/main.ts",
+    "owner:hash": "tsx src/owner/hash-cli.ts"
   },
   "dependencies": {
+    "@fastify/cookie": "^11.1.3",
     "@fastify/websocket": "^11.3.4",
     "@frontdesk/core": "workspace:*",
     "@frontdesk/db": "workspace:*",
     "@frontdesk/integrations": "workspace:*",
     "@frontdesk/llm": "workspace:*",
     "@frontdesk/worker": "workspace:*",
+    "bcryptjs": "^3.0.3",
     "dotenv": "^18.0.8",
     "fastify": "^5.12.7",
     "ioredis": "^6.0.0",

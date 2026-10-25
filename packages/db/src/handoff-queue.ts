@@ -1,5 +1,5 @@
 import type { HandoffQueue, HandoffReason, HandoffTicket, TranscriptEntry } from "@frontdesk/core";
-import { asc, isNull } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import type { Db } from "./client.js";
 import { handoffs } from "./schema.js";
 import { iso } from "./time.js";
@@ -38,5 +38,24 @@ export class PgHandoffQueue implements HandoffQueue {
       transcript: r.transcript as TranscriptEntry[],
       createdAt: iso(r.createdAt),
     }));
+  }
+
+  /** Resolves an open ticket with the owner's notes. A resolved ticket keeps its first notes. */
+  async resolve(
+    id: string,
+    notes: string,
+    at: string,
+  ): Promise<"resolved" | "not_found" | "already_resolved"> {
+    const updated = await this.db
+      .update(handoffs)
+      .set({ resolvedAt: at, notes })
+      .where(and(eq(handoffs.id, id), isNull(handoffs.resolvedAt)))
+      .returning({ id: handoffs.id });
+    if (updated.length > 0) return "resolved";
+    const [existing] = await this.db
+      .select({ id: handoffs.id })
+      .from(handoffs)
+      .where(eq(handoffs.id, id));
+    return existing ? "already_resolved" : "not_found";
   }
 }

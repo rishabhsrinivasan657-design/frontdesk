@@ -11,6 +11,7 @@ import {
 import type { Price } from "@frontdesk/llm";
 import { overBudgetFlags } from "../metrics/latency.js";
 import { toTurnRecord } from "../metrics/turn-record.js";
+import type { OwnerFeed } from "../owner/feed.js";
 import type { ConversationLog } from "./conversation-log.js";
 import type { SessionHub, Turn } from "./hub.js";
 import { safeError, sessionTag } from "./log-safety.js";
@@ -26,6 +27,8 @@ export interface ChatContext {
   hub: SessionHub;
   /** A monotonic ms clock for voice timings; defaults to `performance.now`. */
   monotonicMs?: () => number;
+  /** The owner's Live view hears about sessions, turns and read-backs here. */
+  feed?: OwnerFeed;
 }
 
 export interface ChatSocket {
@@ -66,6 +69,8 @@ export async function openChat(
   const existing = requestedSessionId ? await deps.sessions.load(requestedSessionId) : undefined;
   const sessionId = existing?.id ?? ctx.newSessionId();
   const claim = ctx.hub.claim(sessionId, socket);
+  const at = () => deps.clock.now().toISOString();
+  ctx.feed?.publish({ type: "session_open", sessionId, at: at() });
   await ctx.hub.settled(sessionId);
   send(await sessionMessage(deps, sessionId, existing !== undefined));
   const now = ctx.monotonicMs ?? (() => performance.now());
@@ -119,6 +124,18 @@ export async function openChat(
         firstSentenceAt.set(m.turnId, now());
       }
       if (m.type === "turn_metrics") turn.replied();
+      if (m.type === "pending_action") {
+        ctx.feed?.publish({
+          type: "pending",
+          sessionId,
+          summary: m.summary,
+          expiresAt: m.expiresAt,
+        });
+      }
+      if (m.type === "action_result") {
+        ctx.feed?.publish({ type: "pending_cleared", sessionId, status: m.status });
+      }
+      if (m.type === "handoff") ctx.feed?.publish({ type: "handoff", sessionId, reason: m.reason });
       send(m);
     });
     return { result, ...(firstOutputMs !== undefined ? { firstOutputMs } : {}) };
@@ -126,7 +143,12 @@ export async function openChat(
 
   return {
     sessionId,
-    close: () => claim.release(),
+    close: () => {
+      // A socket replaced by a newer one leaves the session live.
+      const wasCurrent = claim.isCurrent();
+      claim.release();
+      if (wasCurrent) ctx.feed?.publish({ type: "session_closed", sessionId, at: at() });
+    },
     async onMessage(raw: string) {
       // A newer socket took over this session; this one is closing.
       if (!claim.isCurrent()) return;
@@ -180,6 +202,16 @@ export async function openChat(
         settle();
       }
       const turnId = turn.result.turnId;
+      ctx.feed?.publish({
+        type: "turn",
+        sessionId,
+        turnId,
+        callerText: message.text,
+        agentText: turn.result.reply,
+        firstOutputMs: turn.firstOutputMs === undefined ? null : Math.round(turn.firstOutputMs),
+        flags: turn.result.flags,
+        at: at(),
+      });
       const included = ttsStartMs.get(turnId);
       await record(ctx, sessionId, message.text, message.timings, turn.result, {
         ...(turn.firstOutputMs !== undefined ? { firstOutputMs: turn.firstOutputMs } : {}),

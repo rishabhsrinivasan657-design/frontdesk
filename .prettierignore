@@ -8,3 +8,5 @@ packages/db/drizzle/meta
 .next
 next-env.d.ts
 test-results
+# Local Claude Code skills (ui-ux-pro-max), installed per machine, not committed.
+.claude

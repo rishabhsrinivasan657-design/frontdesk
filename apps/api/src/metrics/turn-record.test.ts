@@ -19,6 +19,7 @@ const result: TurnResult = {
       tokensOut: 500_000,
     },
   ],
+  toolCalls: [{ name: "check_availability", ms: 12.2, ok: true }],
 };
 
 const base = {
@@ -33,6 +34,13 @@ const base = {
 };
 
 describe("toTurnRecord", () => {
+  it("stores toolCalls and firstOutputMs", () => {
+    const r = toTurnRecord({ ...base, firstOutputMs: 812.4 });
+    expect(r.firstOutputMs).toBe(812);
+    expect(r.toolCalls).toEqual([{ name: "check_availability", ms: 12, ok: true }]);
+    expect(toTurnRecord(base).firstOutputMs).toBeNull();
+  });
+
   it("copies metrics from turn_metrics, rounded to whole ms", () => {
     const r = toTurnRecord({ ...base, firstOutputMs: 900 });
     expect(r).toMatchObject({
