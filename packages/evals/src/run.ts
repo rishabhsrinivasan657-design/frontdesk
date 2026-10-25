@@ -9,7 +9,7 @@ import {
 import { CallerTurnSchema, type TranscriptLine, callerRequest } from "./caller/prompt.js";
 import type { Scenario } from "./scenario.js";
 import { type World, seedWorld } from "./seed.js";
-import { withErrorTap } from "./wrappers.js";
+import { withErrorTap, withMetaTap } from "./wrappers.js";
 
 export type RunStatus = "ok" | "missing" | "stale" | "quota" | "error";
 export const RUN_STATUSES: readonly RunStatus[] = ["ok", "missing", "stale", "quota", "error"];
@@ -26,6 +26,8 @@ export interface ScenarioRun {
   latencyMs: number[];
   tokensIn: number;
   tokensOut: number;
+  /** `@meta` confidence of each agent draft, in order. */
+  confidences: number[];
   world: World;
   handoff?: HandoffReason;
 }
@@ -46,7 +48,9 @@ export async function runScenario(scenario: Scenario, options: RunOptions): Prom
   const { config, now = () => performance.now() } = options;
   const tapped: LLMError[] = [];
   const caller = withErrorTap(options.caller, tapped);
-  const world = seedWorld(scenario, config, withErrorTap(options.agent, tapped));
+  const confidences: number[] = [];
+  const agent = withMetaTap(withErrorTap(options.agent, tapped), confidences);
+  const world = seedWorld(scenario, config, agent);
   const run: ScenarioRun = {
     scenario,
     status: "ok",
@@ -56,6 +60,7 @@ export async function runScenario(scenario: Scenario, options: RunOptions): Prom
     latencyMs: [],
     tokensIn: 0,
     tokensOut: 0,
+    confidences,
     world,
   };
 

@@ -23,6 +23,8 @@ export interface ScenarioScore {
   latencyMs: number[];
   tokensIn: number;
   tokensOut: number;
+  /** Lowest `@meta` confidence the agent reported in the run; null when it reported none. */
+  minConfidence: number | null;
 }
 
 const OUTCOME_BY_OP = { create: "booked", move: "rescheduled", cancel: "cancelled" } as const;
@@ -145,5 +147,6 @@ export async function scoreRun(run: ScenarioRun, tz: string): Promise<ScenarioSc
     latencyMs: run.latencyMs,
     tokensIn: run.tokensIn,
     tokensOut: run.tokensOut,
+    minConfidence: run.confidences.length > 0 ? Math.min(...run.confidences) : null,
   };
 }

@@ -1,9 +1,9 @@
-import { LLMError } from "@frontdesk/core";
+import { LLMError, TURN_TEMPLATE } from "@frontdesk/core";
 import { FakeProvider } from "@frontdesk/llm";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { text } from "./testing.js";
-import { withErrorTap, withPatience } from "./wrappers.js";
+import { withErrorTap, withMetaTap, withPatience } from "./wrappers.js";
 
 const REQ = {
   purpose: "turn" as const,
@@ -24,6 +24,35 @@ describe("withErrorTap", () => {
     const llm = withErrorTap(new FakeProvider([{ error: new LLMError("replay_miss", "x") }]), sink);
     await expect(drain(llm.stream(REQ))).rejects.toThrow("x");
     expect(sink.map((e) => e.code)).toEqual(["replay_miss"]);
+  });
+});
+
+describe("withMetaTap", () => {
+  const turn = { ...REQ, template: TURN_TEMPLATE };
+  it("records the confidence of each agent-turn draft", async () => {
+    const sink: number[] = [];
+    const llm = withMetaTap(
+      new FakeProvider([
+        { stream: [text('@meta {"confidence":0.42,'), text('"onTopic":true}\nHi')] },
+      ]),
+      sink,
+    );
+    await drain(llm.stream(turn));
+    expect(sink).toEqual([0.42]);
+  });
+
+  it("ignores other templates and drafts with no meta", async () => {
+    const sink: number[] = [];
+    const llm = withMetaTap(
+      new FakeProvider([
+        { stream: [text('@meta {"confidence":0.1,"onTopic":true}\nHi')] },
+        { stream: [text("Hi, no meta here")] },
+      ]),
+      sink,
+    );
+    await drain(llm.stream(REQ));
+    await drain(llm.stream(turn));
+    expect(sink).toEqual([]);
   });
 });
 

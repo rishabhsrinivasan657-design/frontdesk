@@ -20,6 +20,7 @@ function score(id: string, over: Partial<ScenarioScore> = {}): ScenarioScore {
     latencyMs: [900],
     tokensIn: 100,
     tokensOut: 10,
+    minConfidence: null,
     ...over,
   };
 }

@@ -50,4 +50,5 @@ export {
   type SessionMessage,
 } from "./protocol/messages.js";
 export * from "./agent/index.js";
+export { CONFIDENCE_THRESHOLD, parseMeta, type Meta } from "./guardrails/meta.js";
 export * from "./gate/index.js";
