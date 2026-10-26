@@ -1,8 +1,7 @@
 import type { NextRequest } from "next/server";
+import { forwardHeaders } from "@/lib/forward-headers";
 import { API_URL } from "@/lib/owner-api";
 
-/** Browser → api headers. Never X-Forwarded-For: Next keeps a client-sent one, so it's spoofable. */
-const REQUEST_HEADERS = ["cookie", "content-type", "origin", "accept"];
 const RESPONSE_HEADERS = ["content-type", "cache-control", "x-accel-buffering"];
 
 /**
@@ -18,11 +17,7 @@ async function forward(
     return Response.json({ error: "not_found" }, { status: 404 });
   }
   const url = `${API_URL}/owner/${path.map(encodeURIComponent).join("/")}${req.nextUrl.search}`;
-  const headers = new Headers();
-  for (const name of REQUEST_HEADERS) {
-    const value = req.headers.get(name);
-    if (value) headers.set(name, value);
-  }
+  const headers = forwardHeaders(req.headers, process.env);
   let upstream: Response;
   try {
     upstream = await fetch(url, {

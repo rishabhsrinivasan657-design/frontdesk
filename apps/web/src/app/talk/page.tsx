@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { ChatWindow } from "@/components/chat/chat-window";
 
 export const metadata: Metadata = { title: "Talk to Casa Fiorella" };
@@ -16,6 +17,17 @@ export default function TalkPage() {
       />
       <p className="text-xs text-muted-foreground">
         Front Desk, an AI receptionist. Bookings are confirmed with you before anything is saved.
+      </p>
+      <p
+        data-testid="privacy-notice"
+        className="max-w-xl text-center text-xs text-muted-foreground"
+      >
+        This is a demo AI receptionist for a fictional restaurant. Bookings go on a demo calendar.
+        What you type, and the name, phone or email you give, is stored for up to 30 days to run and
+        improve the service, then deleted. Don&apos;t share anything sensitive.{" "}
+        <Link href="/privacy" className="underline underline-offset-2 hover:text-foreground">
+          Privacy details
+        </Link>
       </p>
     </main>
   );
