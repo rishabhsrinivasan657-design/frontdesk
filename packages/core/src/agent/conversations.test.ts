@@ -144,6 +144,54 @@ describe("scripted conversations", () => {
     ]);
   });
 
+  it("changes a party of 2 to 3 with one read-back and no cancel", async () => {
+    const fx = agentFixture(testConfig(), []);
+    await converse(fx, [
+      [
+        "A table for 2 Friday at 7, Raj Mehta, raj@example.com",
+        [call("check_availability", { date: "2026-11-06", time: "19:00", partySize: 2 })],
+        [
+          call("book", {
+            slotId: "2026-11-06T19:00@t2-1#2",
+            name: "Raj Mehta",
+            contact: "raj@example.com",
+            partySize: 2,
+          }),
+        ],
+      ],
+      ["yes"],
+    ]);
+    const [made] = await fx.deps.calendar.listReservations({
+      from: new Date("2026-11-01T00:00:00Z"),
+      to: new Date("2026-12-01T00:00:00Z"),
+    });
+    const [change, done] = await converse(fx, [
+      [
+        "Actually we'll be 3, can you change it to 3?",
+        [call("check_availability", { date: "2026-11-06", time: "19:00", partySize: 3 })],
+        [call("reschedule", { reservationId: made!.id, slotId: "2026-11-06T19:00@t4-1#3" })],
+      ],
+      ["yes"],
+    ]);
+    expect(types(change!).filter((t) => t === "pending_action")).toHaveLength(1);
+    expect(change!.reply).toBe(
+      "To confirm: change your reservation on Friday, November 6 at 7:00 PM from a party of 2 to a party of 3. Shall I make the change?",
+    );
+    expect(done!.reply).toContain("Your reservation for 3 is now on Friday, November 6 at 7:00 PM");
+    expect(await calendarState(fx)).toEqual([
+      { name: "Raj Mehta", start: "2026-11-07T00:00:00.000Z", party: 3 },
+    ]);
+    expect(stagesOf(fx)).toEqual([
+      "book:proposed",
+      "book:confirmed",
+      "book:executed",
+      "reschedule:proposed",
+      "reschedule:confirmed",
+      "reschedule:executed",
+    ]);
+    expect(fx.deps.calendar.writes.map((w) => w.op)).toEqual(["create", "move"]);
+  });
+
   it("cancels a reservation", async () => {
     const fx = agentFixture(testConfig());
     const results = await converse(fx, [

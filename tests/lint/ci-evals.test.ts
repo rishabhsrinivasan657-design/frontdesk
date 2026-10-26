@@ -22,6 +22,10 @@ describe("CI eval gate", () => {
     expect(job("evals")).toMatch(/run: pnpm eval:ci/);
   });
 
+  it("the evals job also checks the whole suite against its targets (M9)", () => {
+    expect(job("evals")).toMatch(/run: pnpm eval:targets/);
+  });
+
   it("the evals job uses no secrets or API keys", () => {
     const text = job("evals") ?? "";
     expect(text).not.toMatch(/secrets\./);

@@ -2,6 +2,7 @@ import {
   type Booking,
   type Calendar,
   CalendarUnavailableError,
+  type MoveTo,
   type NewBooking,
   normalizeContact,
 } from "../../ports/calendar.js";
@@ -63,11 +64,12 @@ export class InMemoryCalendar implements Calendar {
     });
   }
 
-  moveReservation(id: string, to: { start: Date; end: Date; tableId: string }): Promise<Booking> {
+  moveReservation(id: string, to: MoveTo): Promise<Booking> {
     return this.run(() => {
       const existing = this.bookings.get(id);
       if (!existing) throw new Error(`No reservation ${id}`);
-      const moved = { ...existing, ...deepCopy(to) };
+      const { partySize = existing.partySize, ...placement } = to;
+      const moved = { ...existing, ...deepCopy(placement), partySize };
       this.bookings.set(id, moved);
       this.writes.push({ op: "move", id });
       return moved;

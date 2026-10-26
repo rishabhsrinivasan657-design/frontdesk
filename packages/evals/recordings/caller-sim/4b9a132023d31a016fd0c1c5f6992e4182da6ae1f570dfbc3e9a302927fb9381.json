@@ -22,13 +22,13 @@
   },
   "response": {
     "value": {
-      "say": "Hi, I’m Wes Carter. Email is wes@example.com. I’d like to book a table for 4.",
+      "say": "Hi, I’m Wes Carter. Email is wes@example.com. I’d like to book a table for 4 this Saturday.",
       "done": false
     },
     "usage": {
       "inputTokens": 402,
-      "outputTokens": 38
+      "outputTokens": 40
     }
   },
-  "recordedAt": "2026-10-25T18:06:36.722Z"
+  "recordedAt": "2026-10-26T15:41:06.048Z"
 }

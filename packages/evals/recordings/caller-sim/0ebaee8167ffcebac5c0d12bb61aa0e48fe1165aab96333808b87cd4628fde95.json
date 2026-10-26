@@ -22,13 +22,13 @@
   },
   "response": {
     "value": {
-      "say": "Cy Young, email cy@example.com, for a table for two. Saturday the 7th at 7pm.",
+      "say": "Cy Young here. I’d like to book a table for two.",
       "done": false
     },
     "usage": {
       "inputTokens": 378,
-      "outputTokens": 36
+      "outputTokens": 25
     }
   },
-  "recordedAt": "2026-10-25T18:15:32.633Z"
+  "recordedAt": "2026-10-26T16:11:50.662Z"
 }

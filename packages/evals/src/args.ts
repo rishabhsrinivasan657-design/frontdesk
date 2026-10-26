@@ -9,15 +9,23 @@ export interface CliOptions {
   only?: string[];
   save: boolean;
   check: boolean;
+  /** Check the whole suite against targets.json. */
+  targets: boolean;
   /** Print every transcript to stderr. */
   verbose: boolean;
 }
 
 export const USAGE =
-  "usage: pnpm eval [--live | --record | --replay] [--filter <category>] [--subset ci] [--only <id,...>] [--save] [--check] [--verbose]";
+  "usage: pnpm eval [--live | --record | --replay] [--filter <category>] [--subset ci] [--only <id,...>] [--save] [--check] [--targets] [--verbose]";
 
 export function parseArgs(argv: string[]): CliOptions {
-  const options: CliOptions = { mode: "replay", save: false, check: false, verbose: false };
+  const options: CliOptions = {
+    mode: "replay",
+    save: false,
+    check: false,
+    targets: false,
+    verbose: false,
+  };
   let modeSet = false;
   const fail = (why: string): never => {
     throw new Error(`${why}\n${USAGE}`);
@@ -54,6 +62,9 @@ export function parseArgs(argv: string[]): CliOptions {
       }
       case "--save":
         options.save = true;
+        break;
+      case "--targets":
+        options.targets = true;
         break;
       case "--check":
         options.check = true;

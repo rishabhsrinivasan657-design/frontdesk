@@ -94,6 +94,45 @@ describe("GoogleCalendar", () => {
     ]);
   });
 
+  it("moveReservation patches the party size into the private properties", async () => {
+    const patches: calendar_v3.Params$Resource$Events$Patch[] = [];
+    const stored = { ...toEvent(ana), id: "ev1" };
+    const { events } = fakeEvents({
+      get: () => Promise.resolve({ data: stored }),
+      patch: (p) => {
+        patches.push(p);
+        return Promise.resolve({ data: { ...p.requestBody, id: "ev1" } });
+      },
+    });
+    const moved = await calendar(events).moveReservation("ev1", {
+      start: ana.start,
+      end: ana.end,
+      tableId: "t2-1",
+      partySize: 2,
+    });
+    expect(moved).toMatchObject({ id: "ev1", tableId: "t2-1", partySize: 2, name: "Ana Ruiz" });
+    expect(patches[0]?.requestBody?.extendedProperties?.private).toMatchObject({
+      partySize: "2",
+      tableId: "t2-1",
+    });
+    expect(patches[0]?.requestBody?.summary).toBe("Ana Ruiz (party of 2)");
+  });
+
+  it("moveReservation without a party size keeps the stored one", async () => {
+    const stored = { ...toEvent(ana), id: "ev1" };
+    const { events } = fakeEvents({
+      get: () => Promise.resolve({ data: stored }),
+      patch: (p) => Promise.resolve({ data: { ...p.requestBody, id: "ev1" } }),
+    });
+    const moved = await calendar(events).moveReservation("ev1", {
+      start: ana.start,
+      end: ana.end,
+      tableId: "t4-2",
+      partySize: undefined,
+    });
+    expect(moved.partySize).toBe(4);
+  });
+
   it("returns undefined for a missing or deleted event", async () => {
     const { events } = fakeEvents({ get: reject(httpError(404)) });
     expect(await calendar(events).getReservation("gone")).toBeUndefined();

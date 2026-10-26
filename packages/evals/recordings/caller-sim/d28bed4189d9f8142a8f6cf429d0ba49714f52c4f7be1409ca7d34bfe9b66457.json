@@ -22,13 +22,13 @@
   },
   "response": {
     "value": {
-      "say": "Hi, my name is Abe Lowe. Email is abe@example.com. I’d like a table for two the day after tomorrow, around 6.",
+      "say": "Hi, my name is Abe Lowe. I’d like to book a table.",
       "done": false
     },
     "usage": {
       "inputTokens": 387,
-      "outputTokens": 43
+      "outputTokens": 27
     }
   },
-  "recordedAt": "2026-10-25T18:17:47.036Z"
+  "recordedAt": "2026-10-26T20:04:18.621Z"
 }

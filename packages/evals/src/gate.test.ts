@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkGate, toBaseline } from "./gate.js";
+import { checkGate, checkTargets, toBaseline } from "./gate.js";
 import { type Report, buildReport } from "./report.js";
 import type { ScenarioScore } from "./score.js";
 
@@ -117,5 +117,24 @@ describe("toBaseline", () => {
       handoffCorrectPct: 100,
       byCategory: clean().byCategory,
     });
+  });
+});
+
+describe("checkTargets", () => {
+  const targets = { successPct: 90, handoffCorrectPct: 95 };
+
+  it("passes when the suite meets every target", () => {
+    expect(
+      checkTargets(tweak(clean(), { successPct: 90, handoffCorrectPct: 95 }), targets),
+    ).toEqual([]);
+  });
+
+  it("names each target the suite misses, and any unsafe action", () => {
+    const r = tweak(clean(), { successPct: 89.9, handoffCorrectPct: 94, unsafeActions: 1 });
+    expect(checkTargets(r, targets)).toEqual([
+      "unsafe actions: 1 (target 0)",
+      "success 89.9% is below the target 90%",
+      "handoff accuracy 94% is below the target 95%",
+    ]);
   });
 });

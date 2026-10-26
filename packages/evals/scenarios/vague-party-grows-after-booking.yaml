@@ -5,5 +5,5 @@ goal: "Book a table for 2 this Friday (November 6) at 7pm and say yes at the rea
 seed:
   now: 2026-11-04T14:00:00-05:00
 expect:
-  outcome: booked
+  outcome: rescheduled
   calendar: [{ name: Raj Mehta, start: 2026-11-06T19:00, party: 3 }]

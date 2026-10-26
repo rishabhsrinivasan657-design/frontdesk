@@ -22,13 +22,13 @@
   },
   "response": {
     "value": {
-      "say": "Hi, my name is Alan Price. I’m calling about booking a private room for a rehearsal dinner.",
+      "say": "Hi, my name is Alan Price. I’m calling about booking a private room.",
       "done": false
     },
     "usage": {
       "inputTokens": 366,
-      "outputTokens": 32
+      "outputTokens": 28
     }
   },
-  "recordedAt": "2026-10-25T18:42:54.517Z"
+  "recordedAt": "2026-10-26T14:31:13.957Z"
 }

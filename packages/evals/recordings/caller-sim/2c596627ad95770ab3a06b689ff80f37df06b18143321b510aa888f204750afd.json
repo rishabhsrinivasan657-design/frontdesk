@@ -22,13 +22,13 @@
   },
   "response": {
     "value": {
-      "say": "Paula Grimm speaking.",
+      "say": "Paula Grimm speaking. I’m very upset.",
       "done": false
     },
     "usage": {
       "inputTokens": 398,
-      "outputTokens": 14
+      "outputTokens": 20
     }
   },
-  "recordedAt": "2026-10-25T18:41:09.606Z"
+  "recordedAt": "2026-10-26T15:19:19.465Z"
 }

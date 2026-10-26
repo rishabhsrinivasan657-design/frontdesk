@@ -22,7 +22,7 @@
   },
   "response": {
     "value": {
-      "say": "Hi, I'm Rene Duval. I'm a food writer.",
+      "say": "Hi, I’m Rene Duval. I’m a food writer.",
       "done": false
     },
     "usage": {
@@ -30,5 +30,5 @@
       "outputTokens": 25
     }
   },
-  "recordedAt": "2026-10-25T18:17:23.349Z"
+  "recordedAt": "2026-10-26T16:21:52.632Z"
 }

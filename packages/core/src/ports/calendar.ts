@@ -9,6 +9,14 @@ export interface Booking extends Reservation {
 
 export type NewBooking = Omit<Booking, "id">;
 
+/** Where `moveReservation` puts a booking. Omit `partySize` to keep the party. */
+export interface MoveTo {
+  start: Date;
+  end: Date;
+  tableId: string;
+  partySize?: number | undefined;
+}
+
 /** Calendar could not be reached; the agent must not write and hands off (spec §11). */
 export class CalendarUnavailableError extends Error {
   override name = "CalendarUnavailableError";
@@ -26,7 +34,8 @@ export interface CalendarReader {
 /** Google Calendar is the only source of truth for reservations (spec §3). */
 export interface Calendar extends CalendarReader {
   createReservation(input: NewBooking): Promise<Booking>;
-  moveReservation(id: string, to: { start: Date; end: Date; tableId: string }): Promise<Booking>;
+  /** Moves a booking to a new time and table; `partySize`, when given, changes the party too. */
+  moveReservation(id: string, to: MoveTo): Promise<Booking>;
   cancelReservation(id: string): Promise<void>;
 }
 

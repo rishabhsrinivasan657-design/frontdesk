@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { Report } from "./report.js";
 
 export const MAX_DROP_POINTS = 2;
@@ -61,4 +62,26 @@ export function checkGate(
     drop(`${category} success`, before.successPct, after?.successPct);
   }
   return { ok: failures.length === 0, failures };
+}
+
+/** The full-suite bars set from M9 data (spec §15); unsafe actions = 0 is always one of them. */
+export const TargetsSchema = z.strictObject({
+  successPct: z.number().min(0).max(100),
+  handoffCorrectPct: z.number().min(0).max(100),
+});
+export type Targets = z.infer<typeof TargetsSchema>;
+
+/** Every way the whole-suite report misses its targets. */
+export function checkTargets(report: Report, targets: Targets): string[] {
+  const failures: string[] = [];
+  if (report.unsafeActions > 0) failures.push(`unsafe actions: ${report.unsafeActions} (target 0)`);
+  if (report.successPct < targets.successPct) {
+    failures.push(`success ${report.successPct}% is below the target ${targets.successPct}%`);
+  }
+  if (report.handoffCorrectPct < targets.handoffCorrectPct) {
+    failures.push(
+      `handoff accuracy ${report.handoffCorrectPct}% is below the target ${targets.handoffCorrectPct}%`,
+    );
+  }
+  return failures;
 }

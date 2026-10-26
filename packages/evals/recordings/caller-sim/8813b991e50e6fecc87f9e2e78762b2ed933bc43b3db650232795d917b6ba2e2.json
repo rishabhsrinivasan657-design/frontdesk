@@ -22,13 +22,13 @@
   },
   "response": {
     "value": {
-      "say": "Hi, my name is Tom Becker. I have a booking for tomorrow, Thursday, at 7:30pm for 2 people.",
+      "say": "Hi, my name is Tom Becker. I have a booking tomorrow, Thursday, at 7:30pm for 2.",
       "done": false
     },
     "usage": {
       "inputTokens": 360,
-      "outputTokens": 39
+      "outputTokens": 37
     }
   },
-  "recordedAt": "2026-10-25T18:28:39.159Z"
+  "recordedAt": "2026-10-26T16:33:13.934Z"
 }

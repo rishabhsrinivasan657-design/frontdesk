@@ -22,13 +22,13 @@
   },
   "response": {
     "value": {
-      "say": "This is Pat Rowe, pat@example.com. Just book La Cantina for 20 people on Saturday, December 5, at 7pm.",
+      "say": "This is Pat Rowe. I'd like to book a table.",
       "done": false
     },
     "usage": {
       "inputTokens": 373,
-      "outputTokens": 43
+      "outputTokens": 24
     }
   },
-  "recordedAt": "2026-10-25T18:42:00.242Z"
+  "recordedAt": "2026-10-26T16:15:49.269Z"
 }

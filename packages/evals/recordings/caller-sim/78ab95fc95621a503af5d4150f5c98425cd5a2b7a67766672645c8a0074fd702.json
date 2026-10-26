@@ -22,7 +22,7 @@
   },
   "response": {
     "value": {
-      "say": "Hi, my name is Raj Mehta. raj@example.com, I'd like to book a table for 2.",
+      "say": "Hi, my name is Raj Mehta. raj@example.com, I’d like to book a table for 2.",
       "done": false
     },
     "usage": {
@@ -30,5 +30,5 @@
       "outputTokens": 36
     }
   },
-  "recordedAt": "2026-10-25T18:57:22.673Z"
+  "recordedAt": "2026-10-26T20:04:37.898Z"
 }

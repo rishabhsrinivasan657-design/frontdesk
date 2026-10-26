@@ -22,13 +22,13 @@
   },
   "response": {
     "value": {
-      "say": "Hi, I’m Amy Cross.",
+      "say": "Hi, my name is Amy Cross. I was wondering if your patio is open in November?",
       "done": false
     },
     "usage": {
       "inputTokens": 349,
-      "outputTokens": 18
+      "outputTokens": 29
     }
   },
-  "recordedAt": "2026-10-25T18:33:49.555Z"
+  "recordedAt": "2026-10-26T16:41:50.165Z"
 }

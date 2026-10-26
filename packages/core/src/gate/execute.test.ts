@@ -157,6 +157,27 @@ describe("confirmAndExecute", () => {
     expect(fx.deps.calendar.writes).toEqual([{ op: "move", id: ANA.id }]);
   });
 
+  it("changes the party size with one move, never a cancel", async () => {
+    const fx = agentFixture(testConfig());
+    await fx.find("Ana Ruiz", "ana@example.com");
+    const slotId = await fx.offer("2026-11-06", "19:00", 6);
+    const result = await propose(fx.deps, fx.session, "turn_1", "reschedule", {
+      reservationId: ANA.id,
+      slotId,
+    });
+    if (!result.ok) throw new Error(result.message);
+    const outcome = await confirmAndExecute(fx.deps, "s1", result.action.id, "turn_2");
+    expect(outcome.reply).toBe(
+      "Done. Your reservation for 6 is now on Friday, November 6 at 7:00 PM. A confirmation email is on its way.",
+    );
+    expect(await fx.deps.calendar.getReservation(ANA.id)).toMatchObject({
+      partySize: 6,
+      tableId: fx.session.offeredSlots[slotId]!.tableId,
+      name: "Ana Ruiz",
+    });
+    expect(fx.deps.calendar.writes).toEqual([{ op: "move", id: ANA.id }]);
+  });
+
   it("cancels a confirmed cancel", async () => {
     const fx = agentFixture(testConfig());
     await fx.find("Ana Ruiz", "ana@example.com");

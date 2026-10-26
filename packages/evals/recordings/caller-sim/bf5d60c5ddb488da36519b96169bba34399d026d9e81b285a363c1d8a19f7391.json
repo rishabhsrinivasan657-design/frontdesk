@@ -22,13 +22,13 @@
   },
   "response": {
     "value": {
-      "say": "Hello, my name is Marco Bell. I have a booking under Marco Bell for this Friday at 7pm for 6 people.",
+      "say": "Hello, my name is Marco Bell. I have a booking for this Friday at 7pm for 6 people.",
       "done": false
     },
     "usage": {
       "inputTokens": 392,
-      "outputTokens": 37
+      "outputTokens": 34
     }
   },
-  "recordedAt": "2026-10-25T18:41:33.818Z"
+  "recordedAt": "2026-10-26T19:57:39.270Z"
 }

@@ -62,7 +62,7 @@ const DESCRIPTIONS: Record<ToolName, string> = {
     "Look up a menu item and its price by dish name, or list dishes by dietary tag (vegan, vegetarian, gluten-free).",
   book: "Propose a booking for an offered slot. The caller must confirm before it happens.",
   reschedule:
-    "Propose moving a found reservation to an offered slot. The caller must confirm first.",
+    "Propose moving a found reservation to an offered slot, which can also change its party size to the slot's. The caller must confirm first.",
   cancel: "Propose cancelling a found reservation. The caller must confirm first.",
   request_handoff: "Pass the conversation to a human with a short summary.",
 };

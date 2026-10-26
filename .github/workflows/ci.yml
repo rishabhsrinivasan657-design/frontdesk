@@ -35,6 +35,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm eval:ci
+      # The whole suite, replayed offline, against the M9 targets (packages/evals/targets.json).
+      - run: pnpm eval:targets
 
   infra:
     runs-on: ubuntu-latest

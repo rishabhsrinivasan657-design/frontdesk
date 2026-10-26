@@ -22,13 +22,13 @@
   },
   "response": {
     "value": {
-      "say": "Hi, my name is Pia Stone. I have a booking under Pia Stone for this Friday at 7pm for 2 people.",
+      "say": "Hi, my name is Pia Stone. I have a booking for this Friday at 7pm for 2 people.",
       "done": false
     },
     "usage": {
       "inputTokens": 395,
-      "outputTokens": 37
+      "outputTokens": 34
     }
   },
-  "recordedAt": "2026-10-25T18:25:45.936Z"
+  "recordedAt": "2026-10-26T20:02:30.761Z"
 }

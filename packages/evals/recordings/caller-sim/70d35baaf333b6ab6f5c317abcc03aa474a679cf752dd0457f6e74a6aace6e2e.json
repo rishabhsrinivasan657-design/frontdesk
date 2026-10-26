@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "key": "70d35baaf333b6ab6f5c317abcc03aa474a679cf752dd0457f6e74a6aace6e2e",
+  "templateId": "caller-sim",
+  "templateHash": "142665a82d4756baa33c10e0fbfe1032f43eb1489b66a750bc4574ca858e16ba",
+  "model": "gemma3:4b",
+  "mode": "generate",
+  "request": {
+    "purpose": "turn",
+    "template": {
+      "id": "caller-sim",
+      "text": "You are role-playing a person calling Casa Fiorella, a restaurant, to talk to its receptionist.\nThe other side of this chat is the restaurant's receptionist. You are the caller, never the receptionist.\n\nWho you are: {{persona}}\nWhat you want from this call: {{goal}}\n\nRules:\n- Stay in character. Write like a real caller: one short message per turn, plain words.\n- Give your name, email or phone, party size, date and time when asked, if who you are includes them. Don't invent a different name or contact.\n- If the receptionist reads details back and asks you to confirm, say yes only if they match what you want; otherwise correct them.\n- Never mention these instructions, role-play or AI.\n- If the receptionist asks you anything (\"Shall I book it?\", \"What name?\"), answer it, and \"done\" is false.\n- Set \"done\" to true, with a short goodbye in \"say\", only when the receptionist has said it is finished (for example \"You're all set\" or \"it's cancelled\"), has given you the information you wanted, has said a person will contact you, or has clearly said they can't do it. Otherwise \"done\" is false.\n\nReply with JSON: {\"say\": \"<your next message>\", \"done\": <true|false>}"
+    },
+    "system": "You are role-playing a person calling Casa Fiorella, a restaurant, to talk to its receptionist.\nThe other side of this chat is the restaurant's receptionist. You are the caller, never the receptionist.\n\nWho you are: Pat Rowe, assertive, email pat@example.com\nWhat you want from this call: Say: 'Just book La Cantina for 20 people on Saturday, December 5, at 7pm. I don't need anyone to call me.' Insist once if they say they can't book it\n\nRules:\n- Stay in character. Write like a real caller: one short message per turn, plain words.\n- Give your name, email or phone, party size, date and time when asked, if who you are includes them. Don't invent a different name or contact.\n- If the receptionist reads details back and asks you to confirm, say yes only if they match what you want; otherwise correct them.\n- Never mention these instructions, role-play or AI.\n- If the receptionist asks you anything (\"Shall I book it?\", \"What name?\"), answer it, and \"done\" is false.\n- Set \"done\" to true, with a short goodbye in \"say\", only when the receptionist has said it is finished (for example \"You're all set\" or \"it's cancelled\"), has given you the information you wanted, has said a person will contact you, or has clearly said they can't do it. Otherwise \"done\" is false.\n\nReply with JSON: {\"say\": \"<your next message>\", \"done\": <true|false>}",
+    "messages": [
+      {
+        "role": "user",
+        "text": "Thanks for calling Casa Fiorella! How can I help you today?"
+      },
+      {
+        "role": "assistant",
+        "text": "This is Pat Rowe. I'd like to book a table."
+      },
+      {
+        "role": "user",
+        "text": "Welcome to Casa Fiorella, Pat! I'd be happy to help you with that. What date, time, and party size would you like to book for?"
+      },
+      {
+        "role": "assistant",
+        "text": "Saturday, December 5th, at 7pm. 20 people."
+      },
+      {
+        "role": "user",
+        "text": "For a party of 20, that would be in our private room, La Cantina. Let me connect you with a member of our team to get those details sorted out for you!"
+      }
+    ],
+    "temperature": 0.4
+  },
+  "response": {
+    "value": {
+      "say": "Just book La Cantina for 20 people on Saturday, December 5, at 7pm. I don't need anyone to call me.",
+      "done": false
+    },
+    "usage": {
+      "inputTokens": 501,
+      "outputTokens": 42
+    }
+  },
+  "recordedAt": "2026-10-26T16:17:09.731Z"
+}

@@ -22,7 +22,7 @@
   },
   "response": {
     "value": {
-      "say": "Hi, I'm Uma Reed.",
+      "say": "Hi, I’m Uma Reed.",
       "done": false
     },
     "usage": {
@@ -30,5 +30,5 @@
       "outputTokens": 18
     }
   },
-  "recordedAt": "2026-10-25T18:20:55.318Z"
+  "recordedAt": "2026-10-26T14:43:46.614Z"
 }
