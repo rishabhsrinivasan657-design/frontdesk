@@ -8,6 +8,10 @@ import { OWNER } from "./helpers";
  * Needs Docker Postgres + Redis (`pnpm infra:up`, `pnpm db:migrate`).
  */
 const API_PORT = 4100;
+const TURNSTILE_TEST = {
+  siteKey: "1x00000000000000000000AA",
+  secret: "1x0000000000000000000000000000000AA",
+} as const;
 const WEB_PORT = 3100;
 const ci = !!process.env.CI;
 
@@ -48,6 +52,9 @@ export default defineConfig({
         GOOGLE_CALENDAR_ID: "",
         OWNER_EMAIL: OWNER.email,
         OWNER_PASSWORD_HASH: OWNER.hash,
+        // Cloudflare's published always-pass Turnstile test keys: the real bot-check flow, no account.
+        TURNSTILE_SECRET_KEY: TURNSTILE_TEST.secret,
+        TURNSTILE_HOSTNAMES: "localhost,example.com",
       },
     },
     {
@@ -59,6 +66,7 @@ export default defineConfig({
       env: {
         NEXT_PUBLIC_API_WS_URL: `ws://localhost:${API_PORT}/ws`,
         NEXT_PUBLIC_VOICE_TEST_HOOK: "1",
+        NEXT_PUBLIC_TURNSTILE_SITE_KEY: TURNSTILE_TEST.siteKey,
         // The dashboard's server side talks to the api directly.
         API_URL: `http://127.0.0.1:${API_PORT}`,
       },

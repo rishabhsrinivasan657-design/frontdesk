@@ -9,7 +9,7 @@ type Timings = { speechEnd?: number; sttFinal?: number };
 type Listener = (message: ServerMessage) => void;
 
 /** The chat socket and its state for one page. `send` refuses while busy or disconnected. */
-export function useChat(url: string) {
+export function useChat(url: string, botToken?: () => Promise<string>) {
   const [state, dispatch] = useReducer(chatReducer, initialChatState);
   const connection = useRef<ChatConnection | undefined>(undefined);
   const listeners = useRef(new Set<Listener>());
@@ -18,6 +18,7 @@ export function useChat(url: string) {
     const chat = connectChat({
       url,
       storage: window.sessionStorage,
+      ...(botToken ? { botToken } : {}),
       onEvent: (event) => {
         dispatch(event);
         if (event.type === "server") for (const l of listeners.current) l(event.message);
@@ -25,7 +26,7 @@ export function useChat(url: string) {
     });
     connection.current = chat;
     return () => chat.close();
-  }, [url]);
+  }, [url, botToken]);
 
   const send = useCallback(
     (text: string, timings?: Timings): boolean => {

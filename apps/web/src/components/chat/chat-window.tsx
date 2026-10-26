@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useChat } from "@/chat/use-chat";
+import { useTurnstile } from "@/chat/use-turnstile";
 import { useVoice } from "@/voice/use-voice";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,8 +24,18 @@ const STATUS = {
   bot_check_failed: "Unavailable",
 } as const;
 
-export function ChatWindow({ url, businessName }: { url: string; businessName: string }) {
-  const chat = useChat(url);
+export function ChatWindow({
+  url,
+  businessName,
+  turnstileSiteKey,
+}: {
+  url: string;
+  businessName: string;
+  /** Cloudflare Turnstile's public site key (M10); no bot check when empty. */
+  turnstileSiteKey?: string;
+}) {
+  const turnstile = useTurnstile(turnstileSiteKey || undefined);
+  const chat = useChat(url, turnstile.botToken);
   const { state } = chat;
   const voice = useVoice(chat);
   const ended = state.feedback !== undefined;
@@ -76,6 +87,12 @@ export function ChatWindow({ url, businessName }: { url: string; businessName: s
         <div ref={end} />
       </CardContent>
       <div className="flex flex-col gap-2 px-4">
+        {turnstileSiteKey && <div ref={turnstile.el} data-testid="turnstile" />}
+        {turnstile.failed && (
+          <p role="alert" className="text-xs text-destructive">
+            The security check couldn&apos;t load. Please disable blockers for this site and reload.
+          </p>
+        )}
         {state.notice && (
           <p role="alert" className="text-xs text-destructive">
             {state.notice}

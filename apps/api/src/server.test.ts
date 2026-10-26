@@ -219,3 +219,83 @@ describe("chat limits (M10)", () => {
     expect(seen.connect).toEqual(["1.2.3.4"]);
   });
 });
+
+describe("bot check (M10)", () => {
+  const botCheck = (valid = "good-token") => {
+    const calls: [string, string][] = [];
+    return {
+      calls,
+      check: {
+        verify: (token: string, ip: string) => {
+          calls.push([token, ip]);
+          return Promise.resolve(token === valid);
+        },
+      },
+    };
+  };
+
+  it("new session without a token closes 4403", async () => {
+    const { check } = botCheck();
+    const { url } = await start({ botCheck: check });
+    const client = await connect(url);
+    expect(await client.closed).toBe(4403);
+    expect(client.received).toEqual([]);
+  });
+
+  it("new session with a bad token closes 4403", async () => {
+    const { check, calls } = botCheck();
+    const { url } = await start({ botCheck: check });
+    const client = await connect(`${url}?ts=forged`);
+    expect(await client.closed).toBe(4403);
+    expect(calls).toEqual([["forged", "127.0.0.1"]]);
+  });
+
+  it("new session with a valid token opens", async () => {
+    const { check } = botCheck();
+    const { url } = await start({ botCheck: check });
+    const client = await connect(`${url}?ts=good-token`);
+    expect((await client.next("session")).resumed).toBe(false);
+  });
+
+  it("unknown sessionId without a token is refused", async () => {
+    const { check } = botCheck();
+    const { url } = await start({ botCheck: check });
+    const client = await connect(`${url}?sessionId=sess_made_up`);
+    expect(await client.closed).toBe(4403);
+  });
+
+  it("resume of an existing session needs no token", async () => {
+    const { check, calls } = botCheck();
+    const { url } = await start({ botCheck: check });
+    const first = await connect(`${url}?ts=good-token`);
+    const { sessionId } = await first.next("session");
+    await first.turn(BOOK);
+    first.close();
+    await first.closed;
+    const again = await connect(`${url}?sessionId=${sessionId}`);
+    expect(await again.next("session")).toMatchObject({ sessionId, resumed: true });
+    expect(calls).toHaveLength(1);
+  });
+
+  it("a verified session reconnects once before its first turn, then needs a token", async () => {
+    const { check } = botCheck();
+    const { url } = await start({ botCheck: check });
+    const first = await connect(`${url}?ts=good-token`);
+    const { sessionId } = await first.next("session");
+    first.close();
+    await first.closed;
+    // Nothing was stored yet, so the server issues a fresh id (it never adopts unknown ids).
+    const again = await connect(`${url}?sessionId=${sessionId}`);
+    const second = await again.next("session");
+    again.close();
+    await again.closed;
+    const third = await connect(`${url}?sessionId=${second.sessionId}`);
+    expect(await third.closed).toBe(4403);
+  });
+
+  it("no botCheck configured keeps the old behavior", async () => {
+    const { url } = await start();
+    const client = await connect(url);
+    expect((await client.next("session")).resumed).toBe(false);
+  });
+});

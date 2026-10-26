@@ -103,3 +103,9 @@ test("keeps the latest reply and the card in view, and the cursor in the box", a
   await expect(page.getByTestId("action-status")).toBeInViewport();
   await expect(page.getByTestId("agent-message").last()).toBeInViewport();
 });
+
+test("a new chat passes the Turnstile check before connecting", async ({ page }) => {
+  await expect(page.getByTestId("turnstile")).toBeAttached();
+  await say(page, "What are your hours?");
+  await expect(page.getByTestId("agent-message").last()).not.toBeEmpty();
+});

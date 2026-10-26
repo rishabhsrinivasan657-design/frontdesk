@@ -1,5 +1,6 @@
 import websocket from "@fastify/websocket";
 import Fastify, { type FastifyInstance } from "fastify";
+import type { BotCheck } from "./abuse/bot-check.js";
 import type { ChatGuard } from "./abuse/chat-limits.js";
 import { type Chat, type ChatContext, openChat } from "./chat/connection.js";
 import { safeError, safeRequest } from "./chat/log-safety.js";
@@ -17,6 +18,8 @@ export interface ServerOptions {
   owner?: OwnerContext;
   /** Owner routes beyond login/logout/me (REST, live feed). */
   ownerRoutes?: OwnerRouteSet[];
+  /** A new chat session must pass this check (`?ts=<token>`, M10); none when undefined. */
+  botCheck?: BotCheck;
   /** Per-IP and per-session limits on the public chat (M10); none when undefined. */
   chatGuard?: ChatGuard;
   /** Peers allowed to say who the client is (X-Forwarded-For). Defaults to loopback only. */
@@ -27,6 +30,10 @@ export interface ServerOptions {
 
 /** Close code for a socket refused by the chat limits (M10). */
 export const RATE_LIMITED = 4429;
+/** Close code for a new session whose bot check failed (M10). */
+export const BOT_CHECK_FAILED = 4403;
+/** A session that passed the bot check may reconnect for this long before its first turn. */
+const VERIFIED_TTL_MS = 3_600_000;
 
 /** `GET /ws`: one socket ↔ one session (spec §8). `?sessionId=` resumes after a drop (spec §11). */
 export function buildServer(opts: ServerOptions): FastifyInstance {
@@ -50,8 +57,20 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
     prefix: "/owner",
   });
 
+  // Sessions that passed the bot check but may not be stored yet (no turn), by expiry time.
+  const verified = new Map<string, number>();
+  /** Resuming a known session needs no new token: the session id is already the credential. */
+  async function mayResume(sessionId: string | undefined): Promise<boolean> {
+    if (!sessionId) return false;
+    const until = verified.get(sessionId);
+    if (until !== undefined && until > Date.now()) return true;
+    verified.delete(sessionId);
+    await opts.chat.hub.settled(sessionId);
+    return (await opts.chat.deps.sessions.load(sessionId)) !== undefined;
+  }
+
   void app.register((scoped, _o, done) => {
-    scoped.get<{ Querystring: { sessionId?: string } }>(
+    scoped.get<{ Querystring: { sessionId?: string; ts?: string } }>(
       "/ws",
       { websocket: true },
       (socket, req) => {
@@ -77,12 +96,31 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
             }
             socket.on("close", () => guard.release(ip));
           }
-          return openChat(
+          const requested =
+            typeof req.query.sessionId === "string" ? req.query.sessionId : undefined;
+          const bot = opts.botCheck;
+          let checked = false;
+          if (bot && !(await mayResume(requested))) {
+            const token = typeof req.query.ts === "string" ? req.query.ts : "";
+            if (!(await bot.verify(token, ip))) {
+              socket.close(BOT_CHECK_FAILED, "bot check failed");
+              return undefined;
+            }
+            checked = true;
+          }
+          if (requested) verified.delete(requested);
+          const chat = await openChat(
             peer,
             opts.chat,
-            typeof req.query.sessionId === "string" ? req.query.sessionId : undefined,
+            requested,
             guard ? { allowTurn: (sessionId) => guard.turn(ip, sessionId) } : {},
           );
+          // Only a session that just passed the check earns a token-free reconnect, once.
+          if (checked) {
+            verified.set(chat.sessionId, Date.now() + VERIFIED_TTL_MS);
+            for (const [id, until] of verified) if (until <= Date.now()) verified.delete(id);
+          }
+          return chat;
         })();
         ready.catch((error: unknown) => {
           opts.chat.logger.error({ err: safeError(error) }, "opening the chat failed");

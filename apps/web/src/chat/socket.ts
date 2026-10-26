@@ -23,7 +23,9 @@ export interface ChatConnection {
 
 export interface ConnectOptions {
   url: string;
-  storage: Pick<Storage, "getItem" | "setItem">;
+  storage: Pick<Storage, "getItem" | "setItem" | "removeItem">;
+  /** A fresh bot-check token (Turnstile, M10) for opening a new session; none when unset. */
+  botToken?: () => Promise<string>;
   onEvent(event: ChatEvent): void;
   WebSocketImpl?: typeof WebSocket;
   now?: () => number;
@@ -43,7 +45,19 @@ export function connectChat(opts: ConnectOptions): ChatConnection {
 
   function open() {
     const sessionId = opts.storage.getItem(SESSION_KEY);
-    const url = sessionId ? `${opts.url}?sessionId=${encodeURIComponent(sessionId)}` : opts.url;
+    if (sessionId) {
+      openUrl(`${opts.url}?sessionId=${encodeURIComponent(sessionId)}`);
+    } else if (opts.botToken) {
+      // A token is single-use, so each new session asks for its own.
+      void opts.botToken().then((token) => {
+        if (!stopped) openUrl(`${opts.url}?ts=${encodeURIComponent(token)}`);
+      });
+    } else {
+      openUrl(opts.url);
+    }
+  }
+
+  function openUrl(url: string) {
     const ws = new Impl(url);
     socket = ws;
     ws.onmessage = (e: MessageEvent<string>) => {
@@ -67,6 +81,8 @@ export function connectChat(opts: ConnectOptions): ChatConnection {
         return;
       }
       if (e.code === BOT_CHECK_FAILED) {
+        // The stored session can't be resumed; a reload starts a new one with a new token.
+        opts.storage.removeItem(SESSION_KEY);
         opts.onEvent({ type: "socket", status: "bot_check_failed" });
         return;
       }

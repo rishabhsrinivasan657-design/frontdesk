@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Redis } from "ioredis";
-import { assertNotEvalDatabase, chatLimitsEnabled, readOwnerEnv } from "./deps.js";
+import { TurnstileBotCheck } from "./abuse/bot-check.js";
+import { assertNotEvalDatabase, chatLimitsEnabled, readBotCheck, readOwnerEnv } from "./deps.js";
 
 describe("assertNotEvalDatabase", () => {
   const base = "postgres://u:p@localhost:54320";
@@ -57,5 +58,21 @@ describe("chatLimitsEnabled", () => {
   it("is off locally unless CHAT_LIMITS=on", () => {
     expect(chatLimitsEnabled({})).toBe(false);
     expect(chatLimitsEnabled({ CHAT_LIMITS: "on" })).toBe(true);
+  });
+});
+
+describe("readBotCheck", () => {
+  it("is off without a secret", () => {
+    expect(readBotCheck({})).toBeUndefined();
+  });
+
+  it("needs the hostnames the widget serves", () => {
+    expect(() => readBotCheck({ TURNSTILE_SECRET_KEY: "s" })).toThrow("TURNSTILE_HOSTNAMES");
+  });
+
+  it("builds a Turnstile check", () => {
+    expect(
+      readBotCheck({ TURNSTILE_SECRET_KEY: "s", TURNSTILE_HOSTNAMES: "a.duckdns.org, localhost" }),
+    ).toBeInstanceOf(TurnstileBotCheck);
   });
 });

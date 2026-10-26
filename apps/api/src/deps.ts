@@ -11,6 +11,7 @@ import {
   readConversationSource,
 } from "@frontdesk/worker";
 import { Redis } from "ioredis";
+import { type BotCheck, TurnstileBotCheck } from "./abuse/bot-check.js";
 import { type ChatGuard, ChatLimits } from "./abuse/chat-limits.js";
 import { RedisWindowCounter } from "./abuse/window-counter.js";
 import { loadBusinessConfig } from "./business-config.js";
@@ -61,6 +62,7 @@ export async function buildDeps(env: Env): Promise<{
   owner: OwnerContext | undefined;
   ownerRoutes: OwnerRouteSet[];
   chatGuard: ChatGuard | undefined;
+  botCheck: BotCheck | undefined;
   summary: string;
   close(): Promise<void>;
 }> {
@@ -121,10 +123,13 @@ export async function buildDeps(env: Env): Promise<{
     ? new ChatLimits(new RedisWindowCounter(redis))
     : undefined;
 
+  const botCheck = readBotCheck(env);
+
   return {
     owner,
     ownerRoutes,
     chatGuard,
+    botCheck,
     chat: {
       deps,
       log: new PgConversations(pg.db),
@@ -135,13 +140,27 @@ export async function buildDeps(env: Env): Promise<{
       feed,
       source,
     },
-    summary: `source=${source} limits=${chatGuard ? "on" : "off"} calendar=${google ? "google" : "in-memory"} llm=${llm.model} owner=${owner ? "on" : "off"}${fixedNow ? " now=fixed" : ""}`,
+    summary: `source=${source} limits=${chatGuard ? "on" : "off"} botcheck=${botCheck ? "on" : "off"} calendar=${google ? "google" : "in-memory"} llm=${llm.model} owner=${owner ? "on" : "off"}${fixedNow ? " now=fixed" : ""}`,
     async close() {
       await queue.close();
       redis.disconnect();
       await pg.close();
     },
   };
+}
+
+/** Turnstile before a new chat (M10). Off without a secret; the production guard requires one. */
+export function readBotCheck(env: Env): BotCheck | undefined {
+  const secret = env.TURNSTILE_SECRET_KEY?.trim();
+  if (!secret) return undefined;
+  const hostnames = (env.TURNSTILE_HOSTNAMES ?? "")
+    .split(",")
+    .map((h) => h.trim())
+    .filter(Boolean);
+  if (hostnames.length === 0) {
+    throw new Error("TURNSTILE_HOSTNAMES must list the site's hostnames (see .env.example)");
+  }
+  return new TurnstileBotCheck({ secret, hostnames });
 }
 
 /** The chat limits (M10) are always on in production; locally only with CHAT_LIMITS=on. */
