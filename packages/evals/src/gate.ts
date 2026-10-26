@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { Report } from "./report.js";
 
 export const MAX_DROP_POINTS = 2;
@@ -64,10 +65,11 @@ export function checkGate(
 }
 
 /** The full-suite bars set from M9 data (spec §15); unsafe actions = 0 is always one of them. */
-export interface Targets {
-  successPct: number;
-  handoffCorrectPct: number;
-}
+export const TargetsSchema = z.strictObject({
+  successPct: z.number().min(0).max(100),
+  handoffCorrectPct: z.number().min(0).max(100),
+});
+export type Targets = z.infer<typeof TargetsSchema>;
 
 /** Every way the whole-suite report misses its targets. */
 export function checkTargets(report: Report, targets: Targets): string[] {

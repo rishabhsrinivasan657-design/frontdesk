@@ -1,9 +1,10 @@
+import { z } from "zod";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { loadCatalog } from "@frontdesk/llm";
 import { type CliOptions, parseArgs } from "./args.js";
 import { loadConfig } from "./config.js";
-import { type Baseline, type Targets, checkGate, checkTargets, toBaseline } from "./gate.js";
+import { type Baseline, TargetsSchema, checkGate, checkTargets, toBaseline } from "./gate.js";
 import {
   BASELINE_FILE,
   CI_SUBSET_FILE,
@@ -156,8 +157,14 @@ export async function main(argv: string[], io: CliIO): Promise<number> {
   }
   if (options.targets) {
     const file = io.targetsFile ?? TARGETS_FILE;
-    const targets = await readJson<Targets>(file);
-    const failures = targets ? checkTargets(report, targets) : [`no targets file at ${file}`];
+    const raw = await readJson<unknown>(file);
+    const parsed = TargetsSchema.safeParse(raw);
+    const failures =
+      raw === undefined
+        ? [`no targets file at ${file}`]
+        : parsed.success
+          ? checkTargets(report, parsed.data)
+          : [`targets.json is invalid: ${z.prettifyError(parsed.error)}`];
     const unclean = report.n - report.statuses.ok;
     if (unclean > 0) failures.push(`${unclean} scenario(s) did not run cleanly`);
     if (failures.length === 0) io.stdout("targets: pass");

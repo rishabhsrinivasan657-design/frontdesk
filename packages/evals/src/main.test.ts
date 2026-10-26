@@ -184,6 +184,13 @@ describe("main", () => {
     expect(out.join("\n")).toContain("targets: pass");
   });
 
+  it("--targets fails on a malformed targets.json instead of skipping a target", async () => {
+    const { io, out } = await workspace([scenario()]);
+    await writeFile(io.targetsFile!, JSON.stringify({ successpct: 90, handoffCorrectPct: 90 }));
+    expect(await main(["--targets"], io)).toBe(1);
+    expect(out.join("\n")).toContain("targets.json is invalid");
+  });
+
   it("--targets fails below a target", async () => {
     const other = scenario({ id: "never-recorded", category: "faq", persona: "Someone else" });
     const { io, out } = await workspace([scenario(), other], [scenario()]);
