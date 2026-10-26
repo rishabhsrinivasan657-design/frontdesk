@@ -249,24 +249,24 @@
     "chunks": [
       {
         "type": "text",
-        "text": "@meta"
+        "text": "@"
       },
       {
         "type": "text",
-        "text": " {\"confidence\":1.0,\"onTopic\":true}\nHello Bea! Welcome"
+        "text": "meta {\"confidence\":1.0,\"onTopic\":true}\nHello Bea! Welcome"
       },
       {
         "type": "text",
-        "text": " to Casa Fiorella. How can I help you with your reservation or our menu today?"
+        "text": " to Casa Fiorella. How can I help you with your visit today?"
       },
       {
         "type": "usage",
         "usage": {
           "inputTokens": 1906,
-          "outputTokens": 37
+          "outputTokens": 34
         }
       }
     ]
   },
-  "recordedAt": "2026-10-26T16:13:48.454Z"
+  "recordedAt": "2026-10-26T19:58:11.362Z"
 }

@@ -257,16 +257,16 @@
       },
       {
         "type": "text",
-        "text": " can I help you with a reservation or answer any questions about our trattoria today?"
+        "text": " can I help you with your reservation or any questions about our trattoria today?"
       },
       {
         "type": "usage",
         "usage": {
           "inputTokens": 1907,
-          "outputTokens": 39
+          "outputTokens": 38
         }
       }
     ]
   },
-  "recordedAt": "2026-10-26T14:08:09.406Z"
+  "recordedAt": "2026-10-26T19:58:38.234Z"
 }

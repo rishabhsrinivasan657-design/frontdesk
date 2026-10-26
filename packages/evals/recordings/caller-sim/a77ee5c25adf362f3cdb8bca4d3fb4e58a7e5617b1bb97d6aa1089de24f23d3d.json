@@ -22,7 +22,7 @@
   },
   "response": {
     "value": {
-      "say": "Hi, my name is Nora Vance. I’d like to book a table for two this Saturday, November 7th, at 7pm.",
+      "say": "Hello, my name is Nora Vance. I’d like to book a table for two this Saturday, November 7th, at 7pm.",
       "done": false
     },
     "usage": {
@@ -30,5 +30,5 @@
       "outputTokens": 45
     }
   },
-  "recordedAt": "2026-10-26T17:00:23.138Z"
+  "recordedAt": "2026-10-26T19:59:36.661Z"
 }

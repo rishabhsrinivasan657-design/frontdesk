@@ -1,11 +1,11 @@
 id: double-booking-move-into-full
 category: double_booking
-persona: "Marco Bell, particular. Has a booking under 'Marco Bell' this Friday at 7pm for 6, email marco@example.com"
+persona: "Nico Brandt, particular. Has a booking under 'Nico Brandt' this Friday at 7pm for 6, email nico@example.com"
 goal: "Ask to move the Friday booking to this Saturday (November 7) at exactly 8pm, still 6 people. If 8pm isn't available, keep the Friday booking as it is, say thanks and end the call"
 seed:
   now: 2026-11-04T14:00:00-05:00
   reservations:
-    - { name: Marco Bell, start: 2026-11-06T19:00, party: 6 }
+    - { name: Nico Brandt, start: 2026-11-06T19:00, party: 6 }
     - { name: Oscar Patel, start: 2026-11-07T19:45, party: 6 }
     - { name: Helen Moss, start: 2026-11-07T19:45, party: 6 }
 expect:

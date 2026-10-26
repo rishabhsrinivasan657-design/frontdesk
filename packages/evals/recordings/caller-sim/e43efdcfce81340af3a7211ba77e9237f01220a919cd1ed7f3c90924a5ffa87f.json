@@ -22,13 +22,13 @@
   },
   "response": {
     "value": {
-      "say": "Hello, my name is Fay Quinn. I have a booking for this Saturday at 8pm for 2 people.",
+      "say": "Hello, my name is Fay Quinn. I have a booking under Fay Quinn for this Saturday at 8pm for 2 people.",
       "done": false
     },
     "usage": {
       "inputTokens": 376,
-      "outputTokens": 34
+      "outputTokens": 37
     }
   },
-  "recordedAt": "2026-10-26T17:00:48.650Z"
+  "recordedAt": "2026-10-26T20:01:56.600Z"
 }

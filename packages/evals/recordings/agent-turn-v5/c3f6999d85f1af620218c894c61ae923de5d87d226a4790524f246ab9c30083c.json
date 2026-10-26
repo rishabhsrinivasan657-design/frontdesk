@@ -257,7 +257,7 @@
       },
       {
         "type": "text",
-        "text": " how many people would you like to book, and what contact number or email should we use?"
+        "text": " how many people would you like to book, and what specific time on Friday would you prefer?"
       },
       {
         "type": "usage",
@@ -268,5 +268,5 @@
       }
     ]
   },
-  "recordedAt": "2026-10-26T14:34:21.436Z"
+  "recordedAt": "2026-10-26T20:03:48.281Z"
 }

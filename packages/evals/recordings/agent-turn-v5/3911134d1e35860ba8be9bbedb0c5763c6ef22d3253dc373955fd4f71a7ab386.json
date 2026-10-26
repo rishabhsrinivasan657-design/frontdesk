@@ -253,24 +253,20 @@
       },
       {
         "type": "text",
-        "text": "meta {\"confidence\":1.0,\"onTopic\":true}\nHello Marco! I"
+        "text": "meta {\"confidence\":1.0,\"onTopic\":true}\nWelcome to Casa Fiorella,"
       },
       {
         "type": "text",
-        "text": "'d be happy to help you with your booking. Could you please share the email address or phone number associated with your reservation so"
-      },
-      {
-        "type": "text",
-        "text": " I can look it up?"
+        "text": " Marco! To help you with your booking, could you please give me the email address or phone number associated with your reservation?"
       },
       {
         "type": "usage",
         "usage": {
           "inputTokens": 1917,
-          "outputTokens": 51
+          "outputTokens": 46
         }
       }
     ]
   },
-  "recordedAt": "2026-10-26T16:55:07.551Z"
+  "recordedAt": "2026-10-26T20:07:13.216Z"
 }

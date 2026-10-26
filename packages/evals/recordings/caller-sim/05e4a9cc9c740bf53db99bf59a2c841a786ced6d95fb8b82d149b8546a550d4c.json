@@ -22,13 +22,13 @@
   },
   "response": {
     "value": {
-      "say": "Hi, I think I booked Saturday at 7pm for 4 under Priya Nair. Can you check?",
+      "say": "I think I booked Saturday at 7 for 4 under Priya Nair. Can you check?",
       "done": false
     },
     "usage": {
       "inputTokens": 404,
-      "outputTokens": 32
+      "outputTokens": 29
     }
   },
-  "recordedAt": "2026-10-26T17:01:17.797Z"
+  "recordedAt": "2026-10-26T19:56:53.596Z"
 }

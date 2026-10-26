@@ -258,14 +258,14 @@
       {
         "type": "tool_call",
         "call": {
-          "id": "call_2088159",
+          "id": "call_2230821",
           "name": "check_availability",
           "args": {
             "partySize": 2,
             "time": "19:00",
             "date": "2026-11-06"
           },
-          "signature": "EmAKXgFpFH0ThuvkqQ0xoLBpEAKxQ6IPipfASzr3SnNr/+c3K9ubebYq7HvUGoc6CE0EtjxzXc3isczroqFNci1Ebh/MJjlCwXesq/t2VnHjfprXM9xXxD6vNk5YsckE+hQ="
+          "signature": "EmAKXgFpFH0TuE0XmMwOpiUBkeaw46evhIEJIoO1SFw90ivngY3cQ65uLOiQ5oaFtK5yM07TX5dQnaUnY3ax7SwWW7tUV7g0U2/cIUW2xJKsHvbsGuwpH6dGCEy3uprZSE4="
         }
       },
       {
@@ -277,5 +277,5 @@
       }
     ]
   },
-  "recordedAt": "2026-10-26T14:00:49.548Z"
+  "recordedAt": "2026-10-26T19:57:26.157Z"
 }

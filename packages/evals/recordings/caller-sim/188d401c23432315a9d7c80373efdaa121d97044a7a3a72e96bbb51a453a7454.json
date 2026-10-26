@@ -22,13 +22,13 @@
   },
   "response": {
     "value": {
-      "say": "Hi, yeah, I was wondering about a table...",
+      "say": "Hi, yeah, I was hoping to book a table.",
       "done": false
     },
     "usage": {
       "inputTokens": 381,
-      "outputTokens": 21
+      "outputTokens": 22
     }
   },
-  "recordedAt": "2026-10-26T17:01:14.562Z"
+  "recordedAt": "2026-10-26T20:05:25.904Z"
 }

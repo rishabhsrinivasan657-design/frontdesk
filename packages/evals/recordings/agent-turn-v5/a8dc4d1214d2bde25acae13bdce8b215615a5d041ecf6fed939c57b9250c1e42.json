@@ -249,11 +249,11 @@
     "chunks": [
       {
         "type": "text",
-        "text": "@"
+        "text": "@meta"
       },
       {
         "type": "text",
-        "text": "meta {\"confidence\":1.0,\"onTopic\":true}\nWelcome to Casa Fiorella,"
+        "text": " {\"confidence\":1.0,\"onTopic\":true}\nWelcome to Casa Fiorella,"
       },
       {
         "type": "text",
@@ -272,5 +272,5 @@
       }
     ]
   },
-  "recordedAt": "2026-10-26T19:46:35.690Z"
+  "recordedAt": "2026-10-26T19:57:22.640Z"
 }

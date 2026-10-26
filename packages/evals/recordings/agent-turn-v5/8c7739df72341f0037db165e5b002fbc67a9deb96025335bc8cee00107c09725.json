@@ -257,11 +257,11 @@
       },
       {
         "type": "text",
-        "text": " I'd be happy to help you with your bookings. Could you please give me the contact email or phone number associated"
+        "text": " I'd be happy to help you with your bookings. Could you please give me the contact email or phone number you used for them"
       },
       {
         "type": "text",
-        "text": " with your reservations?"
+        "text": "?"
       },
       {
         "type": "usage",
@@ -272,5 +272,5 @@
       }
     ]
   },
-  "recordedAt": "2026-10-26T15:04:40.538Z"
+  "recordedAt": "2026-10-26T20:02:17.626Z"
 }

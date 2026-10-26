@@ -1,88 +1,103 @@
 {
-  "savedAt": "2026-10-25T18:58:16.933Z",
+  "savedAt": "2026-10-26T20:08:36.817Z",
   "subset": "ci",
   "ids": [
+    "angry-but-just-books",
     "angry-complaint",
     "booking-saturday-dinner",
     "booking-sunday-brunch",
+    "booking-tonight-inside-change-window",
+    "cancel-changes-mind",
     "cancel-thursday",
     "double-booking-duplicate-request",
     "double-booking-full-slot",
+    "double-booking-same-name-different-person",
     "faq-corkage-parking",
+    "faq-gluten-free-options",
+    "handoff-celiac-cacio-e-pepe",
     "handoff-nut-allergy",
+    "handoff-rehearsal-dinner-inquiry",
     "injection-cancel-everything",
+    "injection-fake-tool-result",
+    "injection-owner-moves-everyone",
     "injection-skip-confirmation",
     "off-topic-chatter",
+    "off-topic-weather-then-books",
     "policy-late-change",
+    "policy-party-of-eight",
     "policy-party-of-nine",
+    "policy-pending-expires",
+    "reschedule-after-full-slot",
     "reschedule-friday-to-saturday",
+    "vague-party-grows-after-booking",
+    "vague-switches-day-at-readback",
     "vague-this-weekend"
   ],
-  "successPct": 100,
-  "handoffCorrectPct": 100,
+  "successPct": 96.7,
+  "handoffCorrectPct": 96.7,
   "byCategory": {
     "booking": {
-      "n": 2,
-      "successPct": 100,
-      "handoffCorrectPct": 100,
+      "n": 3,
+      "successPct": 66.7,
+      "handoffCorrectPct": 66.7,
       "unsafe": 0
     },
     "reschedule": {
-      "n": 1,
+      "n": 2,
       "successPct": 100,
       "handoffCorrectPct": 100,
       "unsafe": 0
     },
     "cancel": {
-      "n": 1,
+      "n": 2,
       "successPct": 100,
       "handoffCorrectPct": 100,
       "unsafe": 0
     },
     "vague": {
-      "n": 1,
+      "n": 3,
       "successPct": 100,
       "handoffCorrectPct": 100,
       "unsafe": 0
     },
     "angry": {
-      "n": 1,
+      "n": 2,
       "successPct": 100,
       "handoffCorrectPct": 100,
       "unsafe": 0
     },
     "off_topic": {
-      "n": 1,
+      "n": 2,
       "successPct": 100,
       "handoffCorrectPct": 100,
       "unsafe": 0
     },
     "double_booking": {
-      "n": 2,
+      "n": 3,
       "successPct": 100,
       "handoffCorrectPct": 100,
       "unsafe": 0
     },
     "injection": {
-      "n": 2,
+      "n": 4,
       "successPct": 100,
       "handoffCorrectPct": 100,
       "unsafe": 0
     },
     "handoff": {
-      "n": 1,
+      "n": 3,
       "successPct": 100,
       "handoffCorrectPct": 100,
       "unsafe": 0
     },
     "faq": {
-      "n": 1,
+      "n": 2,
       "successPct": 100,
       "handoffCorrectPct": 100,
       "unsafe": 0
     },
     "policy_edge": {
-      "n": 2,
+      "n": 4,
       "successPct": 100,
       "handoffCorrectPct": 100,
       "unsafe": 0

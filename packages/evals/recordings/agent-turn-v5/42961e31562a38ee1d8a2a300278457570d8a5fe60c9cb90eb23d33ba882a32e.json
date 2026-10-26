@@ -257,16 +257,20 @@
       },
       {
         "type": "text",
-        "text": "lla! I'd be happy to help you with that. What date and time would you like to come in?"
+        "text": "lla! I'd love to help you book a table for two. What date and time would you like to come"
+      },
+      {
+        "type": "text",
+        "text": " in?"
       },
       {
         "type": "usage",
         "usage": {
           "inputTokens": 1906,
-          "outputTokens": 43
+          "outputTokens": 45
         }
       }
     ]
   },
-  "recordedAt": "2026-10-26T16:09:02.675Z"
+  "recordedAt": "2026-10-26T20:06:58.633Z"
 }
