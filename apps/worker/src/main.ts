@@ -4,6 +4,8 @@ import { type Clock, type Mailer, parseBusinessConfig } from "@frontdesk/core";
 import { createDb, PgAuditLog, PgHandoffQueue } from "@frontdesk/db";
 import { createGmailMailer, readGoogleEnv } from "@frontdesk/integrations";
 import { config, parse } from "dotenv";
+import { Redis } from "ioredis";
+import { RedisEmailQuota } from "./email-quota.js";
 import { assertPilotSafe } from "./pilot-guard.js";
 import { startConfirmationWorker } from "./worker.js";
 
@@ -30,6 +32,7 @@ function realMailer(): Mailer {
 }
 
 const pg = createDb(env("DATABASE_URL"));
+const redis = new Redis(env("REDIS_URL"), { maxRetriesPerRequest: 2 });
 const worker = startConfirmationWorker({
   redisUrl: env("REDIS_URL"),
   deps: {
@@ -37,6 +40,7 @@ const worker = startConfirmationWorker({
     attempts: new PgAuditLog(pg.db),
     handoffs: new PgHandoffQueue(pg.db),
     clock,
+    quota: new RedisEmailQuota(redis),
   },
 });
 console.log("confirmation worker started");
@@ -46,6 +50,7 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
     void worker
       .close()
       .then(() => pg.close())
+      .then(() => redis.disconnect())
       .then(() => process.exit(0));
   });
 }

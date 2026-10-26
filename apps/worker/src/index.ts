@@ -16,3 +16,9 @@ export {
 } from "./process-confirmation.js";
 export { createConfirmationQueue, startConfirmationWorker } from "./worker.js";
 export { assertPilotSafe, readConversationSource } from "./pilot-guard.js";
+export {
+  DEFAULT_EMAIL_CAPS,
+  type EmailQuota,
+  MemoryEmailQuota,
+  RedisEmailQuota,
+} from "./email-quota.js";

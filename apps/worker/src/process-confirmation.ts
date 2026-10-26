@@ -1,6 +1,7 @@
 import type { Clock, HandoffQueue, HandoffTicket, Mailer } from "@frontdesk/core";
 import type { EmailAttempt } from "@frontdesk/db";
 import { parseConfirmationJob } from "./confirmation-job.js";
+import type { EmailQuota } from "./email-quota.js";
 
 /** Where each send attempt is audited; `PgAuditLog` satisfies it. */
 export interface EmailAttemptLog {
@@ -12,6 +13,8 @@ export interface ProcessDeps {
   attempts: EmailAttemptLog;
   handoffs: HandoffQueue;
   clock: Clock;
+  /** Daily email caps (M10); none when undefined. */
+  quota?: EmailQuota;
 }
 
 /** Saving the final handoff is retried this many times (1 s, 2 s apart) before giving up loudly. */
@@ -30,6 +33,12 @@ export function redactError(message: string): string {
     .slice(0, MAX_ERROR_CHARS);
 }
 
+/** An error's message for a log line, minus the query parameters (names, emails) Drizzle appends. */
+function safeWhy(error: unknown): string {
+  const message = error instanceof Error ? error.message : "non-error thrown";
+  return redactError(message.split(/\n\s*params:/)[0]!);
+}
+
 async function saveHandoff(deps: ProcessDeps, ticket: HandoffTicket): Promise<void> {
   for (let tryNo = 1; ; tryNo++) {
     try {
@@ -37,8 +46,8 @@ async function saveHandoff(deps: ProcessDeps, ticket: HandoffTicket): Promise<vo
       return;
     } catch (error) {
       if (tryNo >= HANDOFF_TRIES) {
-        const why = error instanceof Error ? error.message : String(error);
-        console.error(`HANDOFF LOST for ${ticket.sessionId}: ${ticket.summary} (${why})`);
+        // The ticket id names the action, not the caller; the summary holds personal data.
+        console.error(`HANDOFF LOST: ${ticket.id} (${safeWhy(error)})`);
         return;
       }
       await deps.clock.sleep(1000 * 2 ** (tryNo - 1));
@@ -71,9 +80,20 @@ export async function processConfirmation(
         ...(error === undefined ? {} : { error }),
       })
       .catch((auditError: unknown) => {
-        const why = auditError instanceof Error ? auditError.message : String(auditError);
-        console.error(`audit of email attempt for ${email.actionId} failed: ${why}`);
+        console.error(
+          `audit of email attempt for ${email.actionId} failed: ${safeWhy(auditError)}`,
+        );
       });
+
+  // Counted once per email, on its first attempt; retries are the same email.
+  if (deps.quota && attempt.made === 0) {
+    const day = deps.clock.now().toISOString().slice(0, 10);
+    if ((await deps.quota.take(email.to, day)) !== "ok") {
+      // Skipped for good: no retry, no handoff. The booking itself stands (spec §11).
+      await record(false, "daily_cap");
+      return;
+    }
+  }
 
   try {
     await deps.mailer.sendConfirmation(email);
