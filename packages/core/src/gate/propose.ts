@@ -11,7 +11,7 @@ import { readBack } from "./summary.js";
 import { localToday } from "../availability/local-time.js";
 
 export const BOOKING_LIMIT_REPLY =
-  "I can only take 2 online bookings per contact each day. For more, please call the restaurant.";
+  "I can only take 2 online bookings per contact, or per chat, each day. For more, please call the restaurant.";
 
 type Failure = Extract<ToolResult, { ok: false }>;
 export type ProposeResult = { ok: true; action: PendingAction } | Failure;
@@ -142,7 +142,7 @@ async function resolve(
       }
       if (deps.bookingQuota) {
         const today = localToday(now, config.business.timezone);
-        if ((await deps.bookingQuota.remaining(args.contact, today)) <= 0) {
+        if ((await deps.bookingQuota.remaining(args.contact, today, session.id)) <= 0) {
           return fail(
             "booking_limit",
             `This contact has reached today's online booking limit. Tell the caller: "${BOOKING_LIMIT_REPLY}" Don't hand off.`,

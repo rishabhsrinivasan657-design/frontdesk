@@ -15,6 +15,7 @@ const good = (): Record<string, string | undefined> => ({
   OWNER_EMAIL: "owner@example.com",
   OWNER_PASSWORD_HASH: "$2b$12$abcdefghijklmnopqrstuuabcdefghijklmnopqrstuvwxyz01234",
   WEB_ORIGINS: "https://casa.duckdns.org",
+  KEY_HASH_SECRET: "a-long-random-secret-of-32-chars",
 });
 
 describe("assertPilotSafe", () => {
@@ -38,6 +39,8 @@ describe("assertPilotSafe", () => {
     ["OWNER_EMAIL", ""],
     ["OWNER_PASSWORD_HASH", ""],
     ["WEB_ORIGINS", `http://${SECRET}`],
+    ["KEY_HASH_SECRET", ""],
+    ["KEY_HASH_SECRET", "short"],
   ])("refuses %s, naming it but never its value", (key, value) => {
     const env = { ...good(), [key]: value };
     expect(() => assertPilotSafe(env)).toThrow(key);

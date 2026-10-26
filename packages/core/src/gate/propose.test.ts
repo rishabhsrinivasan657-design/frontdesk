@@ -323,8 +323,8 @@ describe("bookings per contact per day (M10)", () => {
   it("third booking for the same contact today is refused before any pending action", async () => {
     const fx = agentFixture(testConfig(), []);
     const quota = new InMemoryBookingQuota(2);
-    await quota.record("ana@example.com", DAY);
-    await quota.record("ana@example.com", DAY);
+    await quota.record("ana@example.com", DAY, "other");
+    await quota.record("ana@example.com", DAY, "other");
     const slotId = await fx.offer("2026-11-06", "19:00", 4);
     const result = await propose(
       { ...fx.deps, bookingQuota: quota },
@@ -335,7 +335,7 @@ describe("bookings per contact per day (M10)", () => {
     );
     expect(result).toMatchObject({ ok: false, error: "booking_limit" });
     expect((result as { message: string }).message).toContain(
-      "I can only take 2 online bookings per contact each day. For more, please call the restaurant.",
+      "I can only take 2 online bookings per contact, or per chat, each day. For more, please call the restaurant.",
     );
     expect(fx.deps.audit.entries()).toEqual([]);
     expect(await fx.deps.sessions.getPending("s1")).toBeUndefined();
@@ -343,16 +343,24 @@ describe("bookings per contact per day (M10)", () => {
 
   it("counts ' A@x.com ' and 'a@x.com' as one contact", async () => {
     const quota = new InMemoryBookingQuota(2);
-    await quota.record(" ANA@example.com ", DAY);
-    await quota.record("ana@example.com", DAY);
-    expect(await quota.remaining("ana@EXAMPLE.com", DAY)).toBe(0);
-    expect(await quota.remaining("ana@example.com", "2026-11-05")).toBe(2);
+    await quota.record(" ANA@example.com ", DAY, "s1");
+    await quota.record("ana@example.com", DAY, "s2");
+    expect(await quota.remaining("ana@EXAMPLE.com", DAY, "s3")).toBe(0);
+    expect(await quota.remaining("ana@example.com", "2026-11-05", "s3")).toBe(2);
+  });
+
+  it("caps bookings per session whatever contact is given", async () => {
+    const quota = new InMemoryBookingQuota(2);
+    await quota.record("a@example.com", DAY, "s1");
+    await quota.record("b@example.com", DAY, "s1");
+    expect(await quota.remaining("c@example.com", DAY, "s1")).toBe(0);
+    expect(await quota.remaining("c@example.com", DAY, "s2")).toBe(2);
   });
 
   it("allows the second booking today", async () => {
     const fx = agentFixture(testConfig(), []);
     const quota = new InMemoryBookingQuota(2);
-    await quota.record("ana@example.com", DAY);
+    await quota.record("ana@example.com", DAY, "other");
     const slotId = await fx.offer("2026-11-06", "19:00", 4);
     const result = await propose(
       { ...fx.deps, bookingQuota: quota },

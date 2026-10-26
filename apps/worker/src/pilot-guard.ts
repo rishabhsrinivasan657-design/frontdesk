@@ -14,6 +14,7 @@ const RULES: { key: string; ok: (v: string) => boolean; why: string }[] = [
   { key: "TURNSTILE_SECRET_KEY", ok: (v) => v !== "", why: "must be set" },
   { key: "OWNER_EMAIL", ok: (v) => v !== "", why: "must be set" },
   { key: "OWNER_PASSWORD_HASH", ok: (v) => v !== "", why: "must be set" },
+  { key: "KEY_HASH_SECRET", ok: (v) => v.length >= 32, why: "must be at least 32 characters" },
   {
     key: "WEB_ORIGINS",
     ok: (v) => {

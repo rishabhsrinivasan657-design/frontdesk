@@ -7,6 +7,7 @@ import { config, parse } from "dotenv";
 import { Redis } from "ioredis";
 import { RedisEmailQuota } from "./email-quota.js";
 import { startHeartbeat } from "./heartbeat.js";
+import { readKeyTag } from "./key-tag.js";
 import { assertPilotSafe, readConversationSource } from "./pilot-guard.js";
 import { startRetentionSchedule } from "./retention-job.js";
 import { startConfirmationWorker } from "./worker.js";
@@ -42,7 +43,7 @@ const worker = startConfirmationWorker({
     attempts: new PgAuditLog(pg.db),
     handoffs: new PgHandoffQueue(pg.db),
     clock,
-    quota: new RedisEmailQuota(redis),
+    quota: new RedisEmailQuota(redis, readKeyTag({ KEY_HASH_SECRET: env("KEY_HASH_SECRET") })),
   },
 });
 // Retention runs only for the pilot: it is the only source with real callers' data, and it

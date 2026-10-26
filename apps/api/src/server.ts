@@ -97,14 +97,18 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
           close: (code?: number) => socket.close(code),
         };
         // Registered before the limits and openChat resolve, so no early message is lost.
+        // Asked now and released on close, registered before any await: a socket that closes
+        // while the limits are checked must still give its slot back.
+        const admitted = guard?.connect(ip);
+        if (guard && admitted) {
+          socket.on("close", () => {
+            void admitted.then((v) => v === "ok" && guard.release(ip)).catch(() => undefined);
+          });
+        }
         const ready: Promise<Chat | undefined> = (async () => {
-          if (guard) {
-            const verdict = await guard.connect(ip);
-            if (verdict !== "ok") {
-              socket.close(RATE_LIMITED, "rate limited");
-              return undefined;
-            }
-            socket.on("close", () => guard.release(ip));
+          if (admitted && (await admitted) !== "ok") {
+            socket.close(RATE_LIMITED, "rate limited");
+            return undefined;
           }
           const requested =
             typeof req.query.sessionId === "string" ? req.query.sessionId : undefined;

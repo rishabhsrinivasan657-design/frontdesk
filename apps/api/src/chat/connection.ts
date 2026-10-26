@@ -62,6 +62,10 @@ const LIMIT_ERRORS = {
     code: "rate_limited",
     message: "We've had a lot of chats from your network today. Please call the restaurant.",
   },
+  busy_today: {
+    code: "rate_limited",
+    message: "Our online receptionist is fully booked for today. Please call the restaurant.",
+  },
 } as const;
 
 export interface ChatOptions {

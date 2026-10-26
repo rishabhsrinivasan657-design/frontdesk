@@ -110,7 +110,9 @@ export async function confirmAndExecute(
   if (action.args.kind === "book" && deps.bookingQuota) {
     // Counted only once Calendar has the booking; a failed count must not undo it.
     const today = localToday(deps.clock.now(), deps.config.business.timezone);
-    await deps.bookingQuota.record(action.args.contact, today).catch(() => undefined);
+    await deps.bookingQuota
+      .record(action.args.contact, today, action.sessionId)
+      .catch(() => undefined);
   }
 
   const outcome: Extract<ExecutionOutcome, { status: "executed" }> = {

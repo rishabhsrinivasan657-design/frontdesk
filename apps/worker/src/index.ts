@@ -24,3 +24,4 @@ export {
 } from "./email-quota.js";
 export { RETENTION_DAYS, runRetention, startRetentionSchedule } from "./retention-job.js";
 export { HEARTBEAT_KEY, startHeartbeat } from "./heartbeat.js";
+export { createKeyTag, type KeyTag, readKeyTag } from "./key-tag.js";

@@ -1,6 +1,6 @@
-import { createHash } from "node:crypto";
-import { normalizeContact } from "@frontdesk/core";
+import { quotaKey } from "@frontdesk/core";
 import type { Redis } from "ioredis";
+import { createKeyTag, type KeyTag } from "./key-tag.js";
 
 export type EmailVerdict = "ok" | "recipient_cap" | "global_cap";
 
@@ -16,16 +16,12 @@ export interface EmailCaps {
 }
 export const DEFAULT_EMAIL_CAPS: EmailCaps = { perRecipient: 3, global: 50 };
 
-/** A short one-way tag, so Redis keys never hold an address. */
-const tag = (to: string) =>
-  createHash("sha256").update(normalizeContact(to)).digest("hex").slice(0, 16);
-
 export class MemoryEmailQuota implements EmailQuota {
   private readonly counts = new Map<string, number>();
   constructor(private readonly caps: EmailCaps = DEFAULT_EMAIL_CAPS) {}
 
   take(to: string, day: string): Promise<EmailVerdict> {
-    const r = `r:${tag(to)}:${day}`;
+    const r = `r:${quotaKey(to)}:${day}`;
     const g = `g:${day}`;
     if ((this.counts.get(r) ?? 0) >= this.caps.perRecipient)
       return Promise.resolve("recipient_cap");
@@ -45,6 +41,8 @@ const TTL_MS = 48 * 3_600_000;
 export class RedisEmailQuota implements EmailQuota {
   constructor(
     private readonly redis: Redis,
+    /** Keys hold a keyed hash of the address, never the address. */
+    private readonly tag: KeyTag = createKeyTag("dev"),
     private readonly caps: EmailCaps = DEFAULT_EMAIL_CAPS,
     private readonly prefix = "eq:",
   ) {}
@@ -57,7 +55,9 @@ export class RedisEmailQuota implements EmailQuota {
   }
 
   async take(to: string, day: string): Promise<EmailVerdict> {
-    if ((await this.incr(`${this.prefix}r:${tag(to)}:${day}`)) > this.caps.perRecipient) {
+    if (
+      (await this.incr(`${this.prefix}r:${this.tag(quotaKey(to))}:${day}`)) > this.caps.perRecipient
+    ) {
       return "recipient_cap";
     }
     if ((await this.incr(`${this.prefix}g:${day}`)) > this.caps.global) return "global_cap";

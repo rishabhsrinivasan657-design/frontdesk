@@ -181,6 +181,33 @@ describe("chat limits (M10)", () => {
     await expect.poll(() => seen.release).toEqual(["127.0.0.1"]);
   });
 
+  it("a socket that closes while the limits are checked still frees its slot", async () => {
+    const { guard, seen } = spyGuard();
+    let admit!: () => void;
+    guard.connect = (ip) => {
+      seen.connect.push(ip);
+      return new Promise((r) => (admit = () => r("ok")));
+    };
+    const { url } = await start({ chatGuard: guard });
+    const client = await connect(url);
+    await expect.poll(() => seen.connect).toHaveLength(1);
+    client.close();
+    await client.closed;
+    // Let the server finish its side of the close before the limits answer.
+    await new Promise((r) => setTimeout(r, 50));
+    admit();
+    await expect.poll(() => seen.release).toEqual(["127.0.0.1"]);
+  });
+
+  it("a refused connect is not released again", async () => {
+    const { guard, seen } = spyGuard({ connect: "too_many_sockets" });
+    const { url } = await start({ chatGuard: guard });
+    const client = await connect(url);
+    await client.closed;
+    await new Promise((r) => setTimeout(r, 20));
+    expect(seen.release).toEqual([]);
+  });
+
   it("a refused turn gets an error and runs nothing", async () => {
     const { guard } = spyGuard({ turn: "slow_down" });
     const { url, deps } = await start({ chatGuard: guard });

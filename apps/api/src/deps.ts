@@ -13,6 +13,7 @@ import { loadCatalog, type Price } from "@frontdesk/llm";
 import {
   HEARTBEAT_KEY,
   assertPilotSafe,
+  readKeyTag,
   createConfirmationQueue,
   QueueMailer,
   readConversationSource,
@@ -20,7 +21,7 @@ import {
 import { Redis } from "ioredis";
 import { type BotCheck, TurnstileBotCheck } from "./abuse/bot-check.js";
 import { RedisBookingQuota } from "./abuse/booking-quota.js";
-import { type ChatGuard, ChatLimits } from "./abuse/chat-limits.js";
+import { type ChatGuard, ChatLimits, DEFAULT_CHAT_LIMITS } from "./abuse/chat-limits.js";
 import { RedisWindowCounter } from "./abuse/window-counter.js";
 import { loadBusinessConfig } from "./business-config.js";
 import { type Readiness, readiness } from "./health.js";
@@ -102,6 +103,7 @@ export async function buildDeps(env: Env): Promise<{
   const price = loadCatalog().get(llm.model)?.pricePerMTok ?? FREE;
 
   const limits = chatLimitsEnabled(env);
+  const keyTag = readKeyTag(env);
   const deps: AgentDeps = {
     config,
     calendar,
@@ -114,7 +116,7 @@ export async function buildDeps(env: Env): Promise<{
     audit: new PgAuditLog(pg.db),
     handoffs: new PgHandoffQueue(pg.db),
     mailer: new QueueMailer(queue),
-    ...(limits ? { bookingQuota: new RedisBookingQuota(redis) } : {}),
+    ...(limits ? { bookingQuota: new RedisBookingQuota(redis, keyTag) } : {}),
   };
 
   const owner = readOwnerEnv(env, redis);

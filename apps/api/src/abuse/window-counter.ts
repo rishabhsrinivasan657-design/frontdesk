@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import type { Redis } from "ioredis";
 
 /** Counts hits per key in a fixed window that starts at the key's first hit. */
@@ -7,10 +6,7 @@ export interface WindowCounter {
   hit(key: string, windowMs: number): Promise<number>;
 }
 
-/** A short one-way tag, so Redis keys never hold an IP, contact or session id (M10 privacy). */
-export function keyTag(value: string): string {
-  return createHash("sha256").update(value).digest("hex").slice(0, 16);
-}
+export { createKeyTag, type KeyTag } from "@frontdesk/worker";
 
 /** One api process; tests. */
 export class MemoryWindowCounter implements WindowCounter {

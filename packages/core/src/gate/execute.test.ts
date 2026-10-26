@@ -291,7 +291,8 @@ describe("booking quota (M10)", () => {
     const { fx, action } = await pendingBook();
     const quota = new InMemoryBookingQuota(2);
     await confirmAndExecute({ ...fx.deps, bookingQuota: quota }, "s1", action.id, "turn_2");
-    expect(await quota.remaining("bo@example.com", "2026-11-04")).toBe(1);
+    expect(await quota.remaining("bo@example.com", "2026-11-04", "other")).toBe(1);
+    expect(await quota.remaining("x@example.com", "2026-11-04", "s1")).toBe(1);
   });
 
   it("does not record when the create fails", async () => {
@@ -299,7 +300,7 @@ describe("booking quota (M10)", () => {
     const quota = new InMemoryBookingQuota(2);
     fx.deps.calendar.setUnavailable(true);
     await confirmAndExecute({ ...fx.deps, bookingQuota: quota }, "s1", action.id, "turn_2");
-    expect(await quota.remaining("bo@example.com", "2026-11-04")).toBe(2);
+    expect(await quota.remaining("bo@example.com", "2026-11-04", "s1")).toBe(2);
   });
 
   it("a failing quota store doesn't fail the booking", async () => {
