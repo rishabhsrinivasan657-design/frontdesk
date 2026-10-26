@@ -22,3 +22,4 @@ export {
   MemoryEmailQuota,
   RedisEmailQuota,
 } from "./email-quota.js";
+export { RETENTION_DAYS, runRetention, startRetentionSchedule } from "./retention-job.js";

@@ -187,4 +187,38 @@ describe("createGoogleCalendar", () => {
       .context._options;
     expect(options).toMatchObject({ timeout: 10_000, retry: false });
   });
+
+  it("redacts bookings that ended before the cutoff, keeping start, end, table and party", async () => {
+    const old = { ...toEvent({ ...ana, notes: "nut allergy" }), id: "old" };
+    const ongoing = {
+      ...toEvent({ ...ana, end: new Date("2026-12-31T00:00:00.000Z") }),
+      id: "ongoing",
+    };
+    const done = { ...toEvent({ ...ana, name: "Guest", contact: "" }), id: "done" };
+    const patches: calendar_v3.Params$Resource$Events$Patch[] = [];
+    const { events, listCalls } = fakeEvents({
+      list: (p) => {
+        listCalls.push(p);
+        return Promise.resolve({ data: { items: [old, ongoing, done] } });
+      },
+      patch: (p) => {
+        patches.push(p);
+        return Promise.resolve({ data: { ...p.requestBody, id: p.eventId } });
+      },
+    });
+    const before = new Date("2026-12-01T00:00:00.000Z");
+    expect(await calendar(events).redactReservationsBefore(before)).toBe(1);
+    expect(listCalls[0]).toMatchObject({
+      timeMin: new Date(before.getTime() - 60 * 86_400_000).toISOString(),
+      timeMax: before.toISOString(),
+    });
+    expect(patches.map((p) => p.eventId)).toEqual(["old"]);
+    const body = JSON.stringify(patches[0]!.requestBody);
+    for (const pii of ["Ana", "ana@example.com", "nut allergy"]) expect(body).not.toContain(pii);
+    expect(patches[0]!.requestBody).toMatchObject({
+      start: { dateTime: ana.start.toISOString() },
+      end: { dateTime: ana.end.toISOString() },
+      extendedProperties: { private: { tableId: "t4-1", partySize: "4", name: "Guest" } },
+    });
+  });
 });

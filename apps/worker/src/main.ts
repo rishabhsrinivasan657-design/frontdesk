@@ -1,12 +1,13 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { type Clock, type Mailer, parseBusinessConfig } from "@frontdesk/core";
-import { createDb, PgAuditLog, PgHandoffQueue } from "@frontdesk/db";
-import { createGmailMailer, readGoogleEnv } from "@frontdesk/integrations";
+import { createDb, PgAuditLog, PgHandoffQueue, purgePilotPii } from "@frontdesk/db";
+import { createGmailMailer, createGoogleCalendar, readGoogleEnv } from "@frontdesk/integrations";
 import { config, parse } from "dotenv";
 import { Redis } from "ioredis";
 import { RedisEmailQuota } from "./email-quota.js";
-import { assertPilotSafe } from "./pilot-guard.js";
+import { assertPilotSafe, readConversationSource } from "./pilot-guard.js";
+import { startRetentionSchedule } from "./retention-job.js";
 import { startConfirmationWorker } from "./worker.js";
 
 const root = resolve(import.meta.dirname, "../../..");
@@ -43,12 +44,33 @@ const worker = startConfirmationWorker({
     quota: new RedisEmailQuota(redis),
   },
 });
-console.log("confirmation worker started");
+// Retention runs only for the pilot: it is the only source with real callers' data, and it
+// must never rewrite bookings on a calendar someone is using for local testing.
+const google = readGoogleEnv();
+const retention =
+  readConversationSource({ CONVERSATION_SOURCE: env("CONVERSATION_SOURCE") }) === "pilot"
+    ? await startRetentionSchedule({
+        redisUrl: env("REDIS_URL"),
+        deps: {
+          clock,
+          purge: (o) => purgePilotPii(pg.db, o),
+          ...(google
+            ? {
+                redactCalendar: (before: Date) =>
+                  createGoogleCalendar(google).redactReservationsBefore(before),
+              }
+            : {}),
+          log: (line) => console.log(line),
+        },
+      })
+    : undefined;
+console.log(`confirmation worker started (retention ${retention ? "on" : "off"})`);
 
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
   process.once(signal, () => {
     void worker
       .close()
+      .then(() => retention?.close())
       .then(() => pg.close())
       .then(() => redis.disconnect())
       .then(() => process.exit(0));

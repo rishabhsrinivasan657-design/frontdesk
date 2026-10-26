@@ -54,7 +54,7 @@ describe.each(Object.entries(TEST_DATABASES))("audit_log on the %s database", (_
     expect(await count()).toBe(before + 1);
   });
 
-  /** The retention job's one narrow exception (M10): args/result only, flag set, in a transaction. */
+  /** The retention job's one narrow exception (M10): args/result/reason only, flag set. */
   const asRetention = async (sql: string) => {
     await client.query("begin");
     try {
@@ -73,9 +73,9 @@ describe.each(Object.entries(TEST_DATABASES))("audit_log on the %s database", (_
     ).rejects.toThrow(/append-only/);
   });
 
-  it("audit UPDATE with the flag may change args only", async () => {
+  it("audit UPDATE with the flag may change args, result and reason only", async () => {
     await asRetention(
-      `update audit_log set args = '{"name":"[redacted]"}'::jsonb, result = null where action_id = $1`,
+      `update audit_log set args = '{"name":"[redacted]"}'::jsonb, result = null, reason = null where action_id = $1`,
     );
     const rows = await client.query<{ args: unknown }>(
       "select args from audit_log where action_id = $1",
