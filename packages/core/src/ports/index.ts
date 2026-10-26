@@ -1,4 +1,5 @@
 export type { AuditLog } from "./audit-log.js";
+export type { BookingQuota } from "./booking-quota.js";
 export {
   CalendarUnavailableError,
   normalizeContact,

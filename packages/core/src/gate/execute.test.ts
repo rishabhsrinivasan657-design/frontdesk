@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { testConfig } from "../config/test-config.js";
 import { ANA, agentFixture } from "../testing/agent-fixtures.js";
+import { InMemoryBookingQuota } from "../adapters/memory/booking-quota.js";
 import { confirmAndExecute, voidPending } from "./execute.js";
 import { propose } from "./propose.js";
 
@@ -282,5 +283,37 @@ describe("voidPending", () => {
     expect(await fx.deps.sessions.getPending("s1")).toBeUndefined();
     expect(stages(fx, action.id)).toEqual(["proposed", "voided"]);
     expect(await voidPending(fx.deps, "s1", "turn_3", "deny")).toBeUndefined();
+  });
+});
+
+describe("booking quota (M10)", () => {
+  it("records the booking after a successful create, in the business day", async () => {
+    const { fx, action } = await pendingBook();
+    const quota = new InMemoryBookingQuota(2);
+    await confirmAndExecute({ ...fx.deps, bookingQuota: quota }, "s1", action.id, "turn_2");
+    expect(await quota.remaining("bo@example.com", "2026-11-04")).toBe(1);
+  });
+
+  it("does not record when the create fails", async () => {
+    const { fx, action } = await pendingBook();
+    const quota = new InMemoryBookingQuota(2);
+    fx.deps.calendar.setUnavailable(true);
+    await confirmAndExecute({ ...fx.deps, bookingQuota: quota }, "s1", action.id, "turn_2");
+    expect(await quota.remaining("bo@example.com", "2026-11-04")).toBe(2);
+  });
+
+  it("a failing quota store doesn't fail the booking", async () => {
+    const { fx, action } = await pendingBook();
+    const quota = {
+      remaining: () => Promise.resolve(2),
+      record: () => Promise.reject(new Error("redis down")),
+    };
+    const outcome = await confirmAndExecute(
+      { ...fx.deps, bookingQuota: quota },
+      "s1",
+      action.id,
+      "turn_2",
+    );
+    expect(outcome.status).toBe("executed");
   });
 });

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { testConfig } from "../config/test-config.js";
 import { agentFixture, ANA } from "../testing/agent-fixtures.js";
+import { InMemoryBookingQuota } from "../adapters/memory/booking-quota.js";
 import { propose } from "./propose.js";
 import { readBack } from "./summary.js";
 
@@ -312,5 +313,69 @@ describe("propose", () => {
       ok: false,
       error: "invalid_args",
     });
+  });
+});
+
+describe("bookings per contact per day (M10)", () => {
+  // FIXTURE_NOW is Wed 2026-11-04 in New York.
+  const DAY = "2026-11-04";
+
+  it("third booking for the same contact today is refused before any pending action", async () => {
+    const fx = agentFixture(testConfig(), []);
+    const quota = new InMemoryBookingQuota(2);
+    await quota.record("ana@example.com", DAY);
+    await quota.record("ana@example.com", DAY);
+    const slotId = await fx.offer("2026-11-06", "19:00", 4);
+    const result = await propose(
+      { ...fx.deps, bookingQuota: quota },
+      fx.session,
+      "turn_1",
+      "book",
+      book(slotId),
+    );
+    expect(result).toMatchObject({ ok: false, error: "booking_limit" });
+    expect((result as { message: string }).message).toContain(
+      "I can only take 2 online bookings per contact each day. For more, please call the restaurant.",
+    );
+    expect(fx.deps.audit.entries()).toEqual([]);
+    expect(await fx.deps.sessions.getPending("s1")).toBeUndefined();
+  });
+
+  it("counts ' A@x.com ' and 'a@x.com' as one contact", async () => {
+    const quota = new InMemoryBookingQuota(2);
+    await quota.record(" ANA@example.com ", DAY);
+    await quota.record("ana@example.com", DAY);
+    expect(await quota.remaining("ana@EXAMPLE.com", DAY)).toBe(0);
+    expect(await quota.remaining("ana@example.com", "2026-11-05")).toBe(2);
+  });
+
+  it("allows the second booking today", async () => {
+    const fx = agentFixture(testConfig(), []);
+    const quota = new InMemoryBookingQuota(2);
+    await quota.record("ana@example.com", DAY);
+    const slotId = await fx.offer("2026-11-06", "19:00", 4);
+    const result = await propose(
+      { ...fx.deps, bookingQuota: quota },
+      fx.session,
+      "turn_1",
+      "book",
+      book(slotId),
+    );
+    expect(result).toMatchObject({ ok: true });
+  });
+
+  it("reschedule is not limited", async () => {
+    const fx = agentFixture(testConfig());
+    const quota = new InMemoryBookingQuota(0);
+    fx.session.knownReservations[ANA.id] = ANA;
+    const slotId = await fx.offer("2026-11-07", "19:00", 4);
+    const result = await propose(
+      { ...fx.deps, bookingQuota: quota },
+      fx.session,
+      "turn_1",
+      "reschedule",
+      { reservationId: ANA.id, slotId },
+    );
+    expect(result).toMatchObject({ ok: true });
   });
 });

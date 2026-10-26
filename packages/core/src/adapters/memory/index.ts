@@ -1,4 +1,5 @@
 export { InMemoryAuditLog } from "./audit-log.js";
+export { InMemoryBookingQuota } from "./booking-quota.js";
 export { InMemoryCalendar, type CalendarWrite } from "./calendar.js";
 export { ManualClock } from "./clock.js";
 export { InMemoryHandoffQueue } from "./handoff-queue.js";

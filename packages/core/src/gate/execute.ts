@@ -1,6 +1,7 @@
 import type { Slot } from "../availability/types.js";
 import type { PendingAction } from "../agent/types.js";
 import type { Booking } from "../ports/calendar.js";
+import { localToday } from "../availability/local-time.js";
 import { insideChangeWindow, recheckSlot } from "./availability.js";
 import { type GateDeps, SLOT_LOCK_TTL_MS } from "./deps.js";
 import {
@@ -104,6 +105,12 @@ export async function confirmAndExecute(
       );
     }
     return failed("calendar_unavailable", CALENDAR_DOWN_REPLY);
+  }
+
+  if (action.args.kind === "book" && deps.bookingQuota) {
+    // Counted only once Calendar has the booking; a failed count must not undo it.
+    const today = localToday(deps.clock.now(), deps.config.business.timezone);
+    await deps.bookingQuota.record(action.args.contact, today).catch(() => undefined);
   }
 
   const outcome: Extract<ExecutionOutcome, { status: "executed" }> = {

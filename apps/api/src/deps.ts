@@ -12,6 +12,7 @@ import {
 } from "@frontdesk/worker";
 import { Redis } from "ioredis";
 import { type BotCheck, TurnstileBotCheck } from "./abuse/bot-check.js";
+import { RedisBookingQuota } from "./abuse/booking-quota.js";
 import { type ChatGuard, ChatLimits } from "./abuse/chat-limits.js";
 import { RedisWindowCounter } from "./abuse/window-counter.js";
 import { loadBusinessConfig } from "./business-config.js";
@@ -91,6 +92,7 @@ export async function buildDeps(env: Env): Promise<{
   const llm = buildLLM(env, redis);
   const price = loadCatalog().get(llm.model)?.pricePerMTok ?? FREE;
 
+  const limits = chatLimitsEnabled(env);
   const deps: AgentDeps = {
     config,
     calendar,
@@ -103,6 +105,7 @@ export async function buildDeps(env: Env): Promise<{
     audit: new PgAuditLog(pg.db),
     handoffs: new PgHandoffQueue(pg.db),
     mailer: new QueueMailer(queue),
+    ...(limits ? { bookingQuota: new RedisBookingQuota(redis) } : {}),
   };
 
   const owner = readOwnerEnv(env, redis);
@@ -119,9 +122,7 @@ export async function buildDeps(env: Env): Promise<{
     }),
   ];
 
-  const chatGuard = chatLimitsEnabled(env)
-    ? new ChatLimits(new RedisWindowCounter(redis))
-    : undefined;
+  const chatGuard = limits ? new ChatLimits(new RedisWindowCounter(redis)) : undefined;
 
   const botCheck = readBotCheck(env);
 
@@ -163,7 +164,10 @@ export function readBotCheck(env: Env): BotCheck | undefined {
   return new TurnstileBotCheck({ secret, hostnames });
 }
 
-/** The chat limits (M10) are always on in production; locally only with CHAT_LIMITS=on. */
+/**
+ * The chat limits and the bookings-per-contact cap (M10) are always on in production; locally
+ * only with CHAT_LIMITS=on.
+ */
 export function chatLimitsEnabled(env: Env): boolean {
   return env.NODE_ENV === "production" || env.CHAT_LIMITS?.trim() === "on";
 }

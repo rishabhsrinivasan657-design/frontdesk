@@ -1,6 +1,7 @@
 import type { BusinessConfig } from "../config/schema.js";
 import type { LLMProvider } from "../llm/types.js";
 import type { AuditLog } from "../ports/audit-log.js";
+import type { BookingQuota } from "../ports/booking-quota.js";
 import type { Calendar } from "../ports/calendar.js";
 import type { Clock } from "../ports/clock.js";
 import type { IdGenerator } from "../ports/ids.js";
@@ -18,6 +19,8 @@ export interface GateDeps {
   mailer: Mailer;
   ids: IdGenerator;
   llm: LLMProvider;
+  /** Caps online bookings per contact per day (M10); unlimited when undefined. */
+  bookingQuota?: BookingQuota;
 }
 
 export const PENDING_TTL_MS = 300_000;
