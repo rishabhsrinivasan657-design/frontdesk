@@ -23,6 +23,7 @@ const app = buildServer({
   ownerRoutes: built.ownerRoutes,
   ...(built.chatGuard ? { chatGuard: built.chatGuard } : {}),
   ...(built.botCheck ? { botCheck: built.botCheck } : {}),
+  ready: built.ready,
   webOrigins: list(env.WEB_ORIGINS ?? ""),
   trustProxy: list(env.TRUST_PROXY ?? "127.0.0.1,::1"),
 });

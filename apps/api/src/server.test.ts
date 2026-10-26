@@ -129,6 +129,22 @@ describe("api server", () => {
     expect(lines.join("\n")).not.toContain(sessionId);
   });
 
+  it("ready answers 200 when ready and 503 with the failing check otherwise", async () => {
+    let up = true;
+    const ready = () =>
+      Promise.resolve({
+        ok: up,
+        checks: { redis: "ok", postgres: "ok", google: up ? "ok" : "fail", worker: "ok" } as const,
+      });
+    const { http } = await start({ ready });
+    const first = await fetch(`${http}/health/ready`);
+    expect(first.status).toBe(200);
+    up = false;
+    const second = await fetch(`${http}/health/ready`);
+    expect(second.status).toBe(503);
+    expect(await second.json()).toMatchObject({ ok: false, checks: { google: "fail" } });
+  });
+
   it("health is ok", async () => {
     const { http } = await start();
     expect(await (await fetch(`${http}/health`)).json()).toEqual({ ok: true });

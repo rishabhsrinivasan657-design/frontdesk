@@ -1,6 +1,7 @@
 import websocket from "@fastify/websocket";
 import Fastify, { type FastifyInstance } from "fastify";
 import type { BotCheck } from "./abuse/bot-check.js";
+import type { Readiness } from "./health.js";
 import type { ChatGuard } from "./abuse/chat-limits.js";
 import { type Chat, type ChatContext, openChat } from "./chat/connection.js";
 import { safeError, safeRequest } from "./chat/log-safety.js";
@@ -18,6 +19,8 @@ export interface ServerOptions {
   owner?: OwnerContext;
   /** Owner routes beyond login/logout/me (REST, live feed). */
   ownerRoutes?: OwnerRouteSet[];
+  /** `GET /health/ready` (M10): Redis, Postgres, the Google token and the worker. */
+  ready?: () => Promise<Readiness>;
   /** A new chat session must pass this check (`?ts=<token>`, M10); none when undefined. */
   botCheck?: BotCheck;
   /** Per-IP and per-session limits on the public chat (M10); none when undefined. */
@@ -53,6 +56,13 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
   void app.register(websocket, { options: { maxPayload: MAX_PAYLOAD_BYTES } });
 
   app.get("/health", () => ({ ok: true }));
+  const ready = opts.ready;
+  if (ready) {
+    app.get("/health/ready", async (_req, reply) => {
+      const result = await ready();
+      return reply.code(result.ok ? 200 : 503).send(result);
+    });
+  }
   void app.register(ownerPlugin(opts.owner, opts.webOrigins, opts.ownerRoutes), {
     prefix: "/owner",
   });

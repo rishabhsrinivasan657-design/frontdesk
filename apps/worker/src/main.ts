@@ -6,6 +6,7 @@ import { createGmailMailer, createGoogleCalendar, readGoogleEnv } from "@frontde
 import { config, parse } from "dotenv";
 import { Redis } from "ioredis";
 import { RedisEmailQuota } from "./email-quota.js";
+import { startHeartbeat } from "./heartbeat.js";
 import { assertPilotSafe, readConversationSource } from "./pilot-guard.js";
 import { startRetentionSchedule } from "./retention-job.js";
 import { startConfirmationWorker } from "./worker.js";
@@ -64,10 +65,12 @@ const retention =
         },
       })
     : undefined;
+const stopHeartbeat = startHeartbeat(redis);
 console.log(`confirmation worker started (retention ${retention ? "on" : "off"})`);
 
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
   process.once(signal, () => {
+    stopHeartbeat();
     void worker
       .close()
       .then(() => retention?.close())

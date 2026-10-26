@@ -2,9 +2,16 @@ import { randomUUID } from "node:crypto";
 import { resolve } from "node:path";
 import { type AgentDeps, type Calendar, InMemoryCalendar } from "@frontdesk/core";
 import { createDb, PgAuditLog, PgConversations, PgHandoffQueue } from "@frontdesk/db";
-import { createGoogleCalendar, readGoogleEnv } from "@frontdesk/integrations";
+import { sql } from "drizzle-orm";
+import {
+  checkGoogleToken,
+  createGoogleCalendar,
+  createOAuthClient,
+  readGoogleEnv,
+} from "@frontdesk/integrations";
 import { loadCatalog, type Price } from "@frontdesk/llm";
 import {
+  HEARTBEAT_KEY,
   assertPilotSafe,
   createConfirmationQueue,
   QueueMailer,
@@ -16,6 +23,7 @@ import { RedisBookingQuota } from "./abuse/booking-quota.js";
 import { type ChatGuard, ChatLimits } from "./abuse/chat-limits.js";
 import { RedisWindowCounter } from "./abuse/window-counter.js";
 import { loadBusinessConfig } from "./business-config.js";
+import { type Readiness, readiness } from "./health.js";
 import type { ChatContext } from "./chat/connection.js";
 import { SessionHub } from "./chat/hub.js";
 import { offsetClock } from "./clock.js";
@@ -64,6 +72,7 @@ export async function buildDeps(env: Env): Promise<{
   ownerRoutes: OwnerRouteSet[];
   chatGuard: ChatGuard | undefined;
   botCheck: BotCheck | undefined;
+  ready: () => Promise<Readiness>;
   summary: string;
   close(): Promise<void>;
 }> {
@@ -125,12 +134,23 @@ export async function buildDeps(env: Env): Promise<{
   const chatGuard = limits ? new ChatLimits(new RedisWindowCounter(redis)) : undefined;
 
   const botCheck = readBotCheck(env);
+  const ready = readiness({
+    redis: async () => (await redis.ping()) === "PONG",
+    postgres: async () => (await pg.db.execute(sql`select 1`), true),
+    // Without Google, production can't book: fail there; locally the in-memory calendar is fine.
+    google: () =>
+      google
+        ? checkGoogleToken(() => createOAuthClient(google))
+        : Promise.resolve(env.NODE_ENV !== "production"),
+    worker: async () => (await redis.exists(HEARTBEAT_KEY)) === 1,
+  });
 
   return {
     owner,
     ownerRoutes,
     chatGuard,
     botCheck,
+    ready,
     chat: {
       deps,
       log: new PgConversations(pg.db),
