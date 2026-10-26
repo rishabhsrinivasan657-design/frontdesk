@@ -53,4 +53,46 @@ describe.each(Object.entries(TEST_DATABASES))("audit_log on the %s database", (_
     );
     expect(await count()).toBe(before + 1);
   });
+
+  /** The retention job's one narrow exception (M10): args/result only, flag set, in a transaction. */
+  const asRetention = async (sql: string) => {
+    await client.query("begin");
+    try {
+      await client.query("set local frontdesk.retention = 'on'");
+      await client.query(sql, [actionId]);
+      await client.query("commit");
+    } catch (error) {
+      await client.query("rollback");
+      throw error;
+    }
+  };
+
+  it("audit UPDATE without the retention flag is rejected", async () => {
+    await expect(
+      client.query(`update audit_log set args = '{}'::jsonb where action_id = $1`, [actionId]),
+    ).rejects.toThrow(/append-only/);
+  });
+
+  it("audit UPDATE with the flag may change args only", async () => {
+    await asRetention(
+      `update audit_log set args = '{"name":"[redacted]"}'::jsonb, result = null where action_id = $1`,
+    );
+    const rows = await client.query<{ args: unknown }>(
+      "select args from audit_log where action_id = $1",
+      [actionId],
+    );
+    expect(rows.rows.every((r) => JSON.stringify(r.args).includes("[redacted]"))).toBe(true);
+  });
+
+  it("audit UPDATE with the flag that changes stage is rejected", async () => {
+    await expect(
+      asRetention(`update audit_log set stage = 'executed' where action_id = $1`),
+    ).rejects.toThrow(/append-only/);
+  });
+
+  it("audit DELETE is rejected even with the flag", async () => {
+    await expect(asRetention(`delete from audit_log where action_id = $1`)).rejects.toThrow(
+      /append-only/,
+    );
+  });
 });

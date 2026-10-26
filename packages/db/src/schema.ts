@@ -27,6 +27,8 @@ export const conversations = pgTable(
     handoffReason: text("handoff_reason"),
     /** Demo rows written by `pnpm db:seed`: never counted under `pilot`. */
     seeded: boolean("seeded").notNull().default(false),
+    /** When the retention job redacted this conversation's personal data (M10). */
+    piiPurgedAt: at("pii_purged_at"),
   },
   (t) => [check("conversations_source_check", sql`${t.source} in ('live', 'pilot', 'eval')`)],
 );
@@ -92,26 +94,51 @@ export const auditLog = pgTable(
   ],
 );
 
-/** The human review queue (spec §6 handoff). */
-export const handoffs = pgTable("handoffs", {
-  id: text("id").primaryKey(),
-  sessionId: text("session_id").notNull(),
-  reason: text("reason").notNull(),
-  summary: text("summary").notNull(),
-  transcript: jsonb("transcript").notNull(),
-  createdAt: at("created_at").notNull(),
-  resolvedAt: at("resolved_at"),
-  notes: text("notes"),
-});
+export const HANDOFF_OUTCOMES = [
+  "booked_by_staff",
+  "resolved_no_booking",
+  "caller_unreachable",
+  "not_needed",
+] as const;
+export type HandoffOutcome = (typeof HANDOFF_OUTCOMES)[number];
 
+/** The human review queue (spec §6 handoff). `outcome` is set when the owner resolves it (§12). */
+export const handoffs = pgTable(
+  "handoffs",
+  {
+    id: text("id").primaryKey(),
+    sessionId: text("session_id").notNull(),
+    reason: text("reason").notNull(),
+    summary: text("summary").notNull(),
+    transcript: jsonb("transcript").notNull(),
+    createdAt: at("created_at").notNull(),
+    resolvedAt: at("resolved_at"),
+    notes: text("notes"),
+    outcome: text("outcome").$type<HandoffOutcome>(),
+  },
+  (t) => [
+    check(
+      "handoffs_outcome_check",
+      sql`${t.outcome} in ('booked_by_staff', 'resolved_no_booking', 'caller_unreachable', 'not_needed')`,
+    ),
+  ],
+);
+
+/** One post-conversation rating per conversation (spec §12). */
 export const feedback = pgTable(
   "feedback",
   {
     id: text("id").primaryKey(),
-    conversationId: text("conversation_id").references(() => conversations.id),
+    conversationId: text("conversation_id")
+      .notNull()
+      .references(() => conversations.id),
     rating: integer("rating"),
     comment: text("comment").notNull(),
     createdAt: at("created_at").notNull(),
   },
-  (t) => [check("feedback_rating_check", sql`${t.rating} between 1 and 5`)],
+  (t) => [
+    check("feedback_rating_check", sql`${t.rating} between 1 and 5`),
+    check("feedback_comment_length_check", sql`char_length(${t.comment}) <= 1000`),
+    unique("feedback_conversation_unique").on(t.conversationId),
+  ],
 );
