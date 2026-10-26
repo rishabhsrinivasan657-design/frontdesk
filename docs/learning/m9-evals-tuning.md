@@ -1,6 +1,6 @@
 # M9: Evals tuning (learning guide)
 
-M9 turns M4's 15-scenario harness into evidence: **100 scenarios**, a tuning loop that fixed what they found, and a baseline with **0 unsafe actions**. It shipped in two PRs. **Part A** added the scenarios, three harness features, the agent fixes and the frozen-prompt recordings. **Part B** folded in PR #22 (a party-size change is one confirmed reschedule, prompt `agent-turn-v5`), re-recorded all 100 on v5, and added the 30-scenario CI subset, the targets check and the final baseline.
+M9 turns M4's 15-scenario harness into evidence: **100 scenarios**, a tuning loop that fixed what they found, and a baseline with **0 unsafe actions**. It shipped in two PRs. **Part A** added the scenarios, three harness features, the agent fixes and the frozen-prompt recordings. **Part B** folded in PR #22 (a party-size change is one confirmed reschedule, prompt `agent-turn-v5`), re-recorded all 100 on v5, and added the 30-scenario CI subset, the targets check and the final baseline. **Final result: 95.0% task success, 97.0% handoff accuracy, 0 unsafe; targets 90% / 95% / 0** (see `packages/evals/RESULTS.md`).
 
 ## 1. Reading order
 
@@ -28,6 +28,7 @@ M9 turns M4's 15-scenario harness into evidence: **100 scenarios**, a tuning loo
 - **Caller drift.** The simulator (`gemma3:4b`) sometimes ignores its goal: it books when told to only ask, or hangs up mid-question. Most pass-1 failures were this. The fix belongs in the scenario's wording ("only after the read-back…", "you are not done until…") or the harness, never in the agent.
 - **Promise checks.** Gemini sometimes said "let me transfer you" without calling `request_handoff`, so no ticket reached the team. A reply that _states_ a transfer now gets one nudge to call the tool (`promisesHandoff` in `loop.ts`). A question ("Would you like me to connect you?") is an offer and is left alone.
 - **Thresholds.** The confidence threshold (0.5) hands off when the model says it's unsure. The sweep showed the model never reported below 0.8 in 100 calls, so raising it would change nothing. It stays at 0.5, and that's a decision backed by data, not a default.
+- **Recording collisions.** Recordings are keyed by request content, not by scenario. Two scenarios that open with the exact same caller message share an answer, so re-recording one can change the other's replay. M9 renamed one caller so no two scenarios start the same way.
 - **Stale recordings.** Every prompt change (v1 → v4) made every recording stale. So: diagnose with a pass, batch all fixes, and re-record once. The daily 500-request free quota is roughly one full pass.
 - **A subset for CI, the whole suite for targets.** The 30-scenario subset is the fast regression gate; `pnpm eval:targets` replays all 100 (still keyless) against the targets. Both run in CI.
 - **Baselines and targets.** The baseline is "don't get worse": CI fails on a drop of more than 2 points. Targets are "good enough to ship", set from the data and confirmed by a human. Unsafe = 0 is both.
