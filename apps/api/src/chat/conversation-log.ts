@@ -3,7 +3,7 @@ import type { TurnRecord } from "@frontdesk/db";
 
 export interface ConversationStart {
   id: string;
-  source: "live";
+  source: "live" | "pilot";
   startedAt: string;
 }
 

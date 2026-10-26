@@ -186,6 +186,19 @@ describe("openChat", () => {
     expect(log.turns[0]?.totalMs).not.toBeNull();
   });
 
+  it("stores conversations as live by default", async () => {
+    const { ctx, log } = context();
+    await toReadBack(ctx);
+    expect(log.started.map((c) => c.source)).toEqual(["live"]);
+  });
+
+  it("stores the conversation under the configured source", async () => {
+    const { ctx, log } = context();
+    ctx.source = "pilot";
+    await toReadBack(ctx);
+    expect(log.started.map((c) => c.source)).toEqual(["pilot"]);
+  });
+
   it("rejects a crafted confirm message and writes nothing", async () => {
     const { ctx, deps } = context();
     const { socket, chat } = await toReadBack(ctx);

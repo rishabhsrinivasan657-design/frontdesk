@@ -29,6 +29,8 @@ export interface ChatContext {
   monotonicMs?: () => number;
   /** The owner's Live view hears about sessions, turns and read-backs here. */
   feed?: OwnerFeed;
+  /** Where conversations are counted (spec §10); `pilot` in production. Defaults to `live`. */
+  source?: "live" | "pilot";
 }
 
 export interface ChatSocket {
@@ -279,7 +281,7 @@ async function record(
   // Every turn (re)starts its conversation: one failed start must not orphan the later turns.
   await ctx.log.start({
     id: sessionId,
-    source: "live",
+    source: ctx.source ?? "live",
     startedAt: session?.createdAt ?? now.toISOString(),
   });
   await ctx.log.recordTurn(

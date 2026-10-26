@@ -15,3 +15,4 @@ export {
   processConfirmation,
 } from "./process-confirmation.js";
 export { createConfirmationQueue, startConfirmationWorker } from "./worker.js";
+export { assertPilotSafe, readConversationSource } from "./pilot-guard.js";

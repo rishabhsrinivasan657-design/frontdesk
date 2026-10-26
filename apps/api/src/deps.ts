@@ -4,7 +4,12 @@ import { type AgentDeps, type Calendar, InMemoryCalendar } from "@frontdesk/core
 import { createDb, PgAuditLog, PgConversations, PgHandoffQueue } from "@frontdesk/db";
 import { createGoogleCalendar, readGoogleEnv } from "@frontdesk/integrations";
 import { loadCatalog, type Price } from "@frontdesk/llm";
-import { createConfirmationQueue, QueueMailer } from "@frontdesk/worker";
+import {
+  assertPilotSafe,
+  createConfirmationQueue,
+  QueueMailer,
+  readConversationSource,
+} from "@frontdesk/worker";
 import { Redis } from "ioredis";
 import { loadBusinessConfig } from "./business-config.js";
 import type { ChatContext } from "./chat/connection.js";
@@ -56,6 +61,8 @@ export async function buildDeps(env: Env): Promise<{
   summary: string;
   close(): Promise<void>;
 }> {
+  assertPilotSafe(env);
+  const source = readConversationSource(env);
   const config = loadBusinessConfig(
     resolve(REPO_ROOT, env.BUSINESS_CONFIG || "businesses/casa-fiorella.yaml"),
   );
@@ -118,8 +125,9 @@ export async function buildDeps(env: Env): Promise<{
       logger: { error: (obj, msg) => console.error(msg, obj) },
       hub,
       feed,
+      source,
     },
-    summary: `calendar=${google ? "google" : "in-memory"} llm=${llm.model} owner=${owner ? "on" : "off"}${fixedNow ? " now=fixed" : ""}`,
+    summary: `source=${source} calendar=${google ? "google" : "in-memory"} llm=${llm.model} owner=${owner ? "on" : "off"}${fixedNow ? " now=fixed" : ""}`,
     async close() {
       await queue.close();
       redis.disconnect();

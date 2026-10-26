@@ -16,6 +16,8 @@ export interface ServerOptions {
   owner?: OwnerContext;
   /** Owner routes beyond login/logout/me (REST, live feed). */
   ownerRoutes?: OwnerRouteSet[];
+  /** Peers allowed to say who the client is (X-Forwarded-For). Defaults to loopback only. */
+  trustProxy?: string[];
   /** false for silence; a stream to capture log lines (tests). Defaults to stdout. */
   logger?: boolean | { stream: { write(line: string): void } };
 }
@@ -26,7 +28,7 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
   const app = Fastify({
     // The web app's owner proxy runs on this machine and forwards the browser's address, so
     // per-IP login limits see the visitor, not the proxy. Only loopback is trusted to say so.
-    trustProxy: ["127.0.0.1", "::1"],
+    trustProxy: opts.trustProxy ?? ["127.0.0.1", "::1"],
     logger:
       logger === false
         ? false

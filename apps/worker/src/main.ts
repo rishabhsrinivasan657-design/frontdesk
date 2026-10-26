@@ -4,12 +4,14 @@ import { type Clock, type Mailer, parseBusinessConfig } from "@frontdesk/core";
 import { createDb, PgAuditLog, PgHandoffQueue } from "@frontdesk/db";
 import { createGmailMailer, readGoogleEnv } from "@frontdesk/integrations";
 import { config, parse } from "dotenv";
+import { assertPilotSafe } from "./pilot-guard.js";
 import { startConfirmationWorker } from "./worker.js";
 
 const root = resolve(import.meta.dirname, "../../..");
 config({ path: resolve(root, ".env"), quiet: true });
 const defaults = parse(readFileSync(resolve(root, ".env.example")));
 const env = (key: string) => process.env[key] ?? defaults[key] ?? "";
+assertPilotSafe({ ...defaults, ...process.env });
 
 const clock: Clock = {
   now: () => new Date(),
