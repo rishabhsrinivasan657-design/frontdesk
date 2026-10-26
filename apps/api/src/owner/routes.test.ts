@@ -72,6 +72,7 @@ function fakeReads(): OwnerReads & { [K in keyof OwnerReads]: ReturnType<typeof 
       ),
     ),
     metrics: vi.fn(() => Promise.resolve(report)),
+    listFeedback: vi.fn(() => Promise.resolve([])),
   } as never;
 }
 
@@ -136,7 +137,7 @@ describe("owner REST routes", () => {
 
   it("source=eval is a 400", async () => {
     const { reads, get } = await start();
-    for (const path of ["conversations", "bookings", "handoffs", "metrics"]) {
+    for (const path of ["conversations", "bookings", "handoffs", "metrics", "feedback"]) {
       const res = await get(`/owner/${path}?source=eval`);
       expect(res.statusCode, path).toBe(400);
     }
@@ -186,21 +187,43 @@ describe("owner REST routes", () => {
 
   it("resolve validates notes length", async () => {
     const { reads, post } = await start();
-    expect((await post("/owner/handoffs/ho_1/resolve", { notes: "   " })).statusCode).toBe(400);
-    expect(
-      (await post("/owner/handoffs/ho_1/resolve", { notes: "x".repeat(2001) })).statusCode,
-    ).toBe(400);
-    expect((await post("/owner/handoffs/ho_1/resolve", { notes: "ok", extra: 1 })).statusCode).toBe(
+    const body = (notes: string) => ({ notes, outcome: "booked_by_staff" });
+    expect((await post("/owner/handoffs/ho_1/resolve", body("   "))).statusCode).toBe(400);
+    expect((await post("/owner/handoffs/ho_1/resolve", body("x".repeat(2001)))).statusCode).toBe(
       400,
     );
     expect(
-      (await post("/owner/handoffs/ho_1/resolve", { notes: "  Called back  " })).statusCode,
-    ).toBe(204);
-    expect(reads.resolveHandoff).toHaveBeenCalledWith("ho_1", "Called back", NOW.toISOString());
-    expect((await post("/owner/handoffs/ho_done/resolve", { notes: "again" })).statusCode).toBe(
-      409,
+      (await post("/owner/handoffs/ho_1/resolve", { ...body("ok"), extra: 1 })).statusCode,
+    ).toBe(400);
+    expect((await post("/owner/handoffs/ho_1/resolve", body("  Called back  "))).statusCode).toBe(
+      204,
     );
-    expect((await post("/owner/handoffs/ho_x/resolve", { notes: "x" })).statusCode).toBe(404);
+    expect(reads.resolveHandoff).toHaveBeenCalledWith(
+      "ho_1",
+      "Called back",
+      NOW.toISOString(),
+      "booked_by_staff",
+    );
+    expect((await post("/owner/handoffs/ho_done/resolve", body("again"))).statusCode).toBe(409);
+    expect((await post("/owner/handoffs/ho_x/resolve", body("x"))).statusCode).toBe(404);
+  });
+
+  it("resolve without outcome is 400", async () => {
+    const { reads, post } = await start();
+    expect((await post("/owner/handoffs/ho_1/resolve", { notes: "ok" })).statusCode).toBe(400);
+    expect(
+      (await post("/owner/handoffs/ho_1/resolve", { notes: "ok", outcome: "shrug" })).statusCode,
+    ).toBe(400);
+    expect(reads.resolveHandoff).not.toHaveBeenCalled();
+  });
+
+  it("feedback filters by source", async () => {
+    const { reads, get } = await start();
+    expect((await get("/owner/feedback")).statusCode).toBe(200);
+    expect(reads.listFeedback).toHaveBeenCalledWith({ source: "live", limit: 100 });
+    await get("/owner/feedback?source=pilot&limit=20");
+    expect(reads.listFeedback).toHaveBeenLastCalledWith({ source: "pilot", limit: 20 });
+    expect((await get("/owner/feedback?limit=500")).statusCode).toBe(400);
   });
 
   it("metrics include the budget", async () => {

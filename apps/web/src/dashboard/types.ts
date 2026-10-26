@@ -77,6 +77,15 @@ export interface HandoffRow {
   createdAt: string;
   resolvedAt: string | null;
   notes: string | null;
+  outcome: string | null;
+}
+
+export interface FeedbackRow {
+  conversationId: string;
+  rating: number | null;
+  comment: string;
+  createdAt: string;
+  seeded: boolean;
 }
 
 export interface ConversationDetail {
@@ -128,6 +137,8 @@ export interface MetricsReport {
     avgTokens: number | null;
     avgCostUsd: number | null;
     latency: Record<Stage, Percentiles>;
+    feedback: { avgRating: number | null; count: number };
+    handoffOutcomes: Record<string, number>;
   };
   daily: DailyMetrics[];
   hasSeeded: boolean;

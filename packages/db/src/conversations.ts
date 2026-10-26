@@ -83,13 +83,27 @@ export class PgConversations {
     return rows.map((r) => ({ ...r, createdAt: iso(r.createdAt) }));
   }
 
-  async addFeedback(f: {
+  /**
+   * One rating per conversation (spec §12). A second one is ignored; feedback for a conversation
+   * that was never stored (no turn yet) is refused.
+   */
+  async saveFeedback(f: {
     id: string;
-    conversationId?: string;
-    rating?: number;
+    conversationId: string;
+    rating: number;
     comment: string;
     createdAt: string;
-  }): Promise<void> {
-    await this.db.insert(feedback).values(f);
+  }): Promise<"saved" | "duplicate" | "no_conversation"> {
+    const known = await this.db
+      .select({ id: conversations.id })
+      .from(conversations)
+      .where(eq(conversations.id, f.conversationId));
+    if (known.length === 0) return "no_conversation";
+    const inserted = await this.db
+      .insert(feedback)
+      .values(f)
+      .onConflictDoNothing({ target: feedback.conversationId })
+      .returning({ id: feedback.id });
+    return inserted.length > 0 ? "saved" : "duplicate";
   }
 }

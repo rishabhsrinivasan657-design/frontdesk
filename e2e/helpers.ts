@@ -83,3 +83,16 @@ export async function demoBookingSession(): Promise<string> {
   if (!rows[0]) throw new Error("no seeded booking: did the e2e global setup run pnpm db:seed?");
   return rows[0].id;
 }
+
+export async function logIn(page: Page, password: string = OWNER.password): Promise<void> {
+  await page.getByLabel("Email").fill(OWNER.email);
+  await page.getByLabel("Password").fill(password);
+  await page.getByRole("button", { name: "Sign in" }).click();
+}
+
+export async function openDashboard(page: Page, path = "/dashboard"): Promise<void> {
+  await page.goto(path);
+  await expect(page).toHaveURL(/\/login\?next=/);
+  await logIn(page);
+  await expect(page).toHaveURL(new RegExp(`${path.replace(/[?]/g, "\\?")}$`));
+}

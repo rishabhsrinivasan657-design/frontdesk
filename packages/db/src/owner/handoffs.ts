@@ -1,6 +1,7 @@
 import type { TranscriptEntry } from "@frontdesk/core";
 import { sql } from "drizzle-orm";
 import type { Db } from "../client.js";
+import type { HandoffOutcome } from "../schema.js";
 import { type OwnerSource, isoOf, isoOrNullOf, rows, sourceIs } from "./shared.js";
 
 export interface HandoffRow {
@@ -14,6 +15,7 @@ export interface HandoffRow {
   createdAt: string;
   resolvedAt: string | null;
   notes: string | null;
+  outcome: HandoffOutcome | null;
 }
 
 export function toHandoffRow(r: {
@@ -27,12 +29,14 @@ export function toHandoffRow(r: {
   createdAt: Date | string;
   resolvedAt: Date | string | null;
   notes: string | null;
+  outcome: string | null;
 }): HandoffRow {
   return {
     ...r,
     transcript: r.transcript as TranscriptEntry[],
     createdAt: isoOf(r.createdAt),
     resolvedAt: isoOrNullOf(r.resolvedAt),
+    outcome: r.outcome as HandoffOutcome | null,
   };
 }
 
@@ -57,12 +61,13 @@ export async function listHandoffs(
     created_at: Date;
     resolved_at: Date | null;
     notes: string | null;
+    outcome: string | null;
   }>(
     db,
     sql`select * from (
       select h.id, h.session_id, coalesce(c.source, 'live') as source,
         coalesce(c.seeded, false) as seeded, h.reason, h.summary, h.transcript,
-        h.created_at, h.resolved_at, h.notes
+        h.created_at, h.resolved_at, h.notes, h.outcome
       from handoffs h left join conversations c on c.id = h.session_id
     ) c
     where ${sourceIs(o.source)} and ${open ? sql`c.resolved_at is null` : sql`c.resolved_at is not null`}
@@ -81,6 +86,7 @@ export async function listHandoffs(
       createdAt: r.created_at,
       resolvedAt: r.resolved_at,
       notes: r.notes,
+      outcome: r.outcome,
     }),
   );
 }

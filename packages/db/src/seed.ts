@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import type { Db } from "./client.js";
-import { auditLog, conversations, handoffs, turns } from "./schema.js";
+import { HANDOFF_OUTCOMES, auditLog, conversations, handoffs, turns } from "./schema.js";
 
 /**
  * Demo data for the owner dashboard (`pnpm db:seed`): realistic Casa Fiorella conversations
@@ -535,6 +535,7 @@ export async function seedDemo(db: Db, o: { now: Date }): Promise<{ inserted: nu
           createdAt: new Date(at).toISOString(),
           resolvedAt: open ? null : new Date(at + 5 * 3_600_000).toISOString(),
           notes: open ? null : RESOLVED_NOTES[handoffIndex - 1]!,
+          outcome: open ? null : HANDOFF_OUTCOMES[handoffIndex % HANDOFF_OUTCOMES.length]!,
         })
         .onConflictDoNothing();
     }

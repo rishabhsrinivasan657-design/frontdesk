@@ -6,7 +6,9 @@ import { useVoice } from "@/voice/use-voice";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Composer } from "./composer";
+import { Button } from "@/components/ui/button";
 import { ConfirmationCard } from "./confirmation-card";
+import { FeedbackForm } from "./feedback-form";
 import { HandoffBanner } from "./handoff-banner";
 import { LatencyBadge } from "./latency-badge";
 import { MessageList } from "./message-list";
@@ -23,7 +25,11 @@ export function ChatWindow({ url, businessName }: { url: string; businessName: s
   const chat = useChat(url);
   const { state } = chat;
   const voice = useVoice(chat);
-  const closed = state.status !== "open" || state.handoff !== undefined;
+  const ended = state.feedback !== undefined;
+  const closed = state.status !== "open" || state.handoff !== undefined || ended;
+  // Ending is offered once the receptionist has said something and nothing is mid-flight.
+  const canEnd =
+    !ended && !state.busy && state.messages.some((m) => m.role === "agent") && !state.handoff;
   // Typed text and card buttons: same path as before; voice hears that turn's reply too.
   const send = (text: string) => {
     const ok = chat.send(text);
@@ -39,7 +45,7 @@ export function ChatWindow({ url, businessName }: { url: string; businessName: s
   // return a cleanup function.
   useEffect(() => {
     end.current?.scrollIntoView({ block: "end" });
-  }, [state.messages.length, last?.text, state.busy, state.pending, state.handoff]);
+  }, [state.messages.length, last?.text, state.busy, state.pending, state.handoff, state.feedback]);
 
   return (
     <Card className="mx-auto flex h-[min(720px,calc(100dvh-2rem))] w-full max-w-xl flex-col">
@@ -58,6 +64,13 @@ export function ChatWindow({ url, businessName }: { url: string; businessName: s
           <ConfirmationCard card={state.pending} disabled={closed || state.busy} onReply={reply} />
         )}
         {state.handoff && <HandoffBanner message={state.handoff.message} />}
+        {state.feedback && state.feedback !== "skipped" && (
+          <FeedbackForm
+            status={state.feedback}
+            onSend={chat.sendFeedback}
+            onSkip={chat.skipFeedback}
+          />
+        )}
         <div ref={end} />
       </CardContent>
       <div className="flex flex-col gap-2 px-4">
@@ -83,7 +96,14 @@ export function ChatWindow({ url, businessName }: { url: string; businessName: s
           {/* Usable while we answer: pressing it then is barge-in. */}
           <MicButton status={voice.status} disabled={closed} onPress={voice.press} />
         </div>
-        <div className="flex h-4 justify-end">
+        <div className="flex min-h-8 items-center justify-between">
+          {canEnd ? (
+            <Button type="button" variant="ghost" size="sm" onClick={chat.endChat}>
+              End chat
+            </Button>
+          ) : (
+            <span />
+          )}
           {state.lastLatency && <LatencyBadge latency={state.lastLatency} voice={voice.latency} />}
         </div>
       </div>

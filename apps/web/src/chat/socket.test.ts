@@ -154,6 +154,16 @@ describe("connectChat", () => {
     });
   });
 
+  it("sendFeedback sends the rating and comment, only while open", () => {
+    const { chat } = setup();
+    expect(chat.sendFeedback(4, "Nice")).toBe(false);
+    latest().open();
+    expect(chat.sendFeedback(4, "Nice")).toBe(true);
+    expect(latest().sent.map((m) => JSON.parse(m) as unknown)).toEqual([
+      { type: "feedback", rating: 4, comment: "Nice" },
+    ]);
+  });
+
   it("sendInterrupt and sendTtsStarted send their messages, only while open", () => {
     const { chat } = setup();
     expect(chat.sendInterrupt()).toBe(false);

@@ -13,6 +13,8 @@ export interface ChatConnection {
   sendInterrupt(): boolean;
   /** The first sentence of `turnId` started playing. */
   sendTtsStarted(turnId: string, at: number): boolean;
+  /** The post-conversation rating (spec §12). */
+  sendFeedback(rating: number, comment: string): boolean;
   close(): void;
 }
 
@@ -75,6 +77,7 @@ export function connectChat(opts: ConnectOptions): ChatConnection {
     sendText: (text, timings = {}) => send({ type: "user_text", text, timings }),
     sendInterrupt: () => send({ type: "interrupt" }),
     sendTtsStarted: (turnId, at) => send({ type: "tts_started", turnId, at }),
+    sendFeedback: (rating, comment) => send({ type: "feedback", rating, comment }),
     close() {
       stopped = true;
       clearTimeout(timer);

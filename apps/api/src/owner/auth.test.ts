@@ -165,6 +165,7 @@ describe("owner auth", () => {
         "GET /owner/conversations/:id",
         "POST /owner/handoffs/:id/resolve",
         "GET /owner/metrics",
+        "GET /owner/feedback",
         "GET /owner/live/stream",
       ]),
     );

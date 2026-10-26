@@ -10,6 +10,7 @@ export const NAV: { href: string; label: string; icon: IconName }[] = [
   { href: "/dashboard/conversations", label: "Conversations", icon: "conversations" },
   { href: "/dashboard/bookings", label: "Bookings", icon: "bookings" },
   { href: "/dashboard/handoffs", label: "Handoffs", icon: "handoffs" },
+  { href: "/dashboard/feedback", label: "Feedback", icon: "star" },
   { href: "/dashboard/metrics", label: "Metrics", icon: "metrics" },
 ];
 

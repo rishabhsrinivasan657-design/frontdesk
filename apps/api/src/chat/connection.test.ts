@@ -199,6 +199,41 @@ describe("openChat", () => {
     expect(log.started.map((c) => c.source)).toEqual(["pilot"]);
   });
 
+  const rate = (rating: number, comment = "") =>
+    JSON.stringify({ type: "feedback", rating, comment });
+
+  it("saves feedback for this socket's session only", async () => {
+    const { ctx, log } = context();
+    const { socket, chat } = await toReadBack(ctx);
+    await chat.onMessage(rate(4, "Quick and friendly"));
+    expect(log.feedback).toEqual([
+      expect.objectContaining({
+        conversationId: chat.sessionId,
+        rating: 4,
+        comment: "Quick and friendly",
+      }),
+    ]);
+    expect(socket.ofType("feedback_saved")).toHaveLength(1);
+  });
+
+  it("a second feedback for the same session is ignored", async () => {
+    const { ctx, log } = context();
+    const { socket, chat } = await toReadBack(ctx);
+    await chat.onMessage(rate(4));
+    await chat.onMessage(rate(1));
+    expect(log.feedback.map((f) => f.rating)).toEqual([4]);
+    expect(socket.ofType("feedback_saved")).toHaveLength(2);
+  });
+
+  it("feedback before any turn is refused with error bad_message", async () => {
+    const { ctx, log } = context();
+    const socket = new FakeSocket();
+    const chat = await openChat(socket, ctx);
+    await chat.onMessage(rate(5));
+    expect(log.feedback).toEqual([]);
+    expect(socket.ofType("error")[0]?.code).toBe("bad_message");
+  });
+
   it("rejects a crafted confirm message and writes nothing", async () => {
     const { ctx, deps } = context();
     const { socket, chat } = await toReadBack(ctx);

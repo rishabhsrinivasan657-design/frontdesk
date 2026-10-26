@@ -108,6 +108,34 @@ export async function openChat(
     if (recorded.has(turnId)) await storeTtsStart(turnId, ms);
   }
 
+  /** The caller's rating for this session only; a repeat is acknowledged but not stored. */
+  async function onFeedback(rating: number, comment: string): Promise<void> {
+    const saved = await ctx.log
+      .saveFeedback({
+        id: deps.ids("fb"),
+        conversationId: sessionId,
+        rating,
+        comment: comment.trim(),
+        createdAt: at(),
+      })
+      .catch((error: unknown) => {
+        ctx.logger.error(
+          { err: safeError(error), session: sessionTag(sessionId) },
+          "storing feedback failed",
+        );
+        return "failed" as const;
+      });
+    if (saved === "no_conversation") {
+      send({ type: "error", code: "bad_message", message: "There's no conversation to rate yet." });
+      return;
+    }
+    if (saved === "failed") {
+      send({ type: "error", code: "server_error", message: SERVER_ERROR_MESSAGE });
+      return;
+    }
+    send({ type: "feedback_saved" });
+  }
+
   /** Runs one turn; resolves once its last message is sent, before the turn is stored. */
   async function runOne(
     text: string,
@@ -173,6 +201,10 @@ export async function openChat(
       }
       if (message.type === "tts_started") {
         await onTtsStarted(message.turnId);
+        return;
+      }
+      if (message.type === "feedback") {
+        await onFeedback(message.rating, message.comment);
         return;
       }
       // Speech that interrupted a turn waits for it to unwind instead of getting `busy`.

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { CostChart, FirstReplyChart, RatesChart, TokensChart } from "@/components/dashboard/charts";
 import { EmptyState, KpiTile, PageHeader } from "@/components/dashboard/page";
+import { HANDOFF_OUTCOMES } from "@/dashboard/handoff-outcomes";
 import { StageBudget } from "@/components/dashboard/stage-budget";
 import { formatPct, formatUsd } from "@/dashboard/format";
 import { type MetricsReport, sourceParam } from "@/dashboard/types";
@@ -86,7 +87,7 @@ export default async function MetricsPage({
         </div>
       ) : (
         <div className="flex flex-col gap-6">
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-5">
             <KpiTile
               testId="kpi"
               label="Conversations"
@@ -109,6 +110,12 @@ export default async function MetricsPage({
             />
             <KpiTile
               testId="kpi"
+              label="Guest rating"
+              value={s.feedback.avgRating === null ? "—" : `${s.feedback.avgRating.toFixed(1)} / 5`}
+              detail={`${s.feedback.count.toLocaleString("en-US")} rated`}
+            />
+            <KpiTile
+              testId="kpi"
               label="Cost per conversation"
               value={s.avgCostUsd === null ? "—" : formatUsd(s.avgCostUsd)}
               detail={
@@ -123,6 +130,22 @@ export default async function MetricsPage({
             <FirstReplyChart data={m.daily} budget={m.budget.firstOutput} />
           </div>
           <StageBudget latency={s.latency} budget={m.budget} />
+          <section
+            aria-labelledby="outcomes-heading"
+            className="rounded-xl border border-border bg-card px-5 py-4"
+          >
+            <h2 id="outcomes-heading" className="text-sm font-medium text-muted-foreground">
+              Resolved handoff outcomes
+            </h2>
+            <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {Object.entries(HANDOFF_OUTCOMES).map(([key, label]) => (
+                <div key={key} data-testid="handoff-outcome-count">
+                  <dt className="text-xs text-muted-foreground">{label}</dt>
+                  <dd className="text-lg font-semibold">{s.handoffOutcomes[key] ?? 0}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
           <div className="grid gap-6 xl:grid-cols-2">
             <TokensChart data={m.daily} />
             <CostChart data={m.daily} />
