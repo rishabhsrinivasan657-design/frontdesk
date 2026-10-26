@@ -8,7 +8,7 @@ export default defineConfig({
       {
         test: {
           name: "unit",
-          include: [`${PACKAGE_SRC}/*.test.ts`, "tests/lint/**/*.test.ts"],
+          include: [`${PACKAGE_SRC}/*.test.ts`, "tests/lint/**/*.test.ts", "scripts/**/*.test.ts"],
           // Redis smoke tests run in `infra`; live LLM tests run in `live`.
           exclude: ["**/node_modules/**", "**/*.smoke.test.ts", "**/*.live.test.ts"],
         },
