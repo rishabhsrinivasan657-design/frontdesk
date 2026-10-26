@@ -9,6 +9,7 @@ import {
   runTurn,
 } from "@frontdesk/core";
 import type { Price } from "@frontdesk/llm";
+import type { TurnVerdict } from "../abuse/chat-limits.js";
 import { overBudgetFlags } from "../metrics/latency.js";
 import { toTurnRecord } from "../metrics/turn-record.js";
 import type { OwnerFeed } from "../owner/feed.js";
@@ -46,6 +47,27 @@ export interface Chat {
 }
 
 export const SERVER_ERROR_MESSAGE = "Sorry, something went wrong. Please try again.";
+
+/** What the caller is told when a turn is over a chat limit (M10). */
+const LIMIT_ERRORS = {
+  slow_down: {
+    code: "rate_limited",
+    message: "You're sending messages quickly. Please wait a moment.",
+  },
+  session_full: {
+    code: "session_full",
+    message: "This chat has reached its limit. Please start a new one or call us.",
+  },
+  daily_limit: {
+    code: "rate_limited",
+    message: "We've had a lot of chats from your network today. Please call the restaurant.",
+  },
+} as const;
+
+export interface ChatOptions {
+  /** Asked before each caller turn; anything but "ok" refuses it (M10 limits). */
+  allowTurn?: (sessionId: string) => Promise<TurnVerdict>;
+}
 const FIRST_OUTPUT = new Set<ServerMessage["type"]>([
   "agent_delta",
   "agent_sentence",
@@ -62,6 +84,7 @@ export async function openChat(
   socket: ChatSocket,
   ctx: ChatContext,
   requestedSessionId?: string,
+  options: ChatOptions = {},
 ): Promise<Chat> {
   const { deps } = ctx;
   const send = (m: ServerMessage) => socket.send(JSON.stringify(m));
@@ -206,6 +229,14 @@ export async function openChat(
       if (message.type === "feedback") {
         await onFeedback(message.rating, message.comment);
         return;
+      }
+      // Every attempt counts, busy or not: the limits are there to stop floods (M10).
+      if (options.allowTurn) {
+        const verdict = await options.allowTurn(sessionId);
+        if (verdict !== "ok") {
+          send({ type: "error", ...LIMIT_ERRORS[verdict] });
+          return;
+        }
       }
       // Speech that interrupted a turn waits for it to unwind instead of getting `busy`.
       if (claim.busy() && current?.controller.signal.aborted) await current.settled;

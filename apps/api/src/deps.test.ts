@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Redis } from "ioredis";
-import { assertNotEvalDatabase, readOwnerEnv } from "./deps.js";
+import { assertNotEvalDatabase, chatLimitsEnabled, readOwnerEnv } from "./deps.js";
 
 describe("assertNotEvalDatabase", () => {
   const base = "postgres://u:p@localhost:54320";
@@ -45,5 +45,17 @@ describe("readOwnerEnv", () => {
       redis,
     );
     expect(owner).toMatchObject({ email: "o@x.test", sessionTtlMs: 7_200_000, secureCookie: true });
+  });
+});
+
+describe("chatLimitsEnabled", () => {
+  it("is on in production whatever CHAT_LIMITS says", () => {
+    expect(chatLimitsEnabled({ NODE_ENV: "production" })).toBe(true);
+    expect(chatLimitsEnabled({ NODE_ENV: "production", CHAT_LIMITS: "off" })).toBe(true);
+  });
+
+  it("is off locally unless CHAT_LIMITS=on", () => {
+    expect(chatLimitsEnabled({})).toBe(false);
+    expect(chatLimitsEnabled({ CHAT_LIMITS: "on" })).toBe(true);
   });
 });

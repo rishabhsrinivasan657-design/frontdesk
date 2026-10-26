@@ -229,3 +229,18 @@ describe("feedback (M10)", () => {
     expect(chatReducer(s, { type: "end_chat" }).feedback).toBe("skipped");
   });
 });
+
+describe("refused sockets (M10)", () => {
+  it("limited shows a notice and stops the composer", () => {
+    const s = run([{ type: "socket", status: "limited" }]);
+    expect(s.status).toBe("limited");
+    expect(s.notice).toBe(
+      "Too many chats from your network right now. Please try again later or call the restaurant.",
+    );
+  });
+
+  it("a failed bot check asks to reload", () => {
+    const s = run([{ type: "socket", status: "bot_check_failed" }]);
+    expect(s.notice).toBe("We couldn't verify you're not a bot. Please reload the page.");
+  });
+});

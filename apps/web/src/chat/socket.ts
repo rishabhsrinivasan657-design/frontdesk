@@ -4,6 +4,9 @@ import type { ChatEvent } from "./state";
 export const SESSION_KEY = "frontdesk.sessionId";
 /** Close code the api uses when another tab or socket takes over this session. */
 export const REPLACED = 4000;
+/** Close codes for a socket the api refused (M10): over the chat limits, or the bot check failed. */
+export const RATE_LIMITED = 4429;
+export const BOT_CHECK_FAILED = 4403;
 const BACKOFF_MS = [250, 500, 1000, 2000, 4000];
 
 export interface ChatConnection {
@@ -56,6 +59,15 @@ export function connectChat(opts: ConnectOptions): ChatConnection {
       if (e.code === REPLACED) {
         // Another tab has this conversation now; reconnecting would take it back and forth.
         opts.onEvent({ type: "socket", status: "replaced" });
+        return;
+      }
+      // Retrying would only count against the limits again, or fail the same check.
+      if (e.code === RATE_LIMITED) {
+        opts.onEvent({ type: "socket", status: "limited" });
+        return;
+      }
+      if (e.code === BOT_CHECK_FAILED) {
+        opts.onEvent({ type: "socket", status: "bot_check_failed" });
         return;
       }
       opts.onEvent({ type: "socket", status: "reconnecting" });

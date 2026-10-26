@@ -11,6 +11,8 @@ import {
   readConversationSource,
 } from "@frontdesk/worker";
 import { Redis } from "ioredis";
+import { type ChatGuard, ChatLimits } from "./abuse/chat-limits.js";
+import { RedisWindowCounter } from "./abuse/window-counter.js";
 import { loadBusinessConfig } from "./business-config.js";
 import type { ChatContext } from "./chat/connection.js";
 import { SessionHub } from "./chat/hub.js";
@@ -58,6 +60,7 @@ export async function buildDeps(env: Env): Promise<{
   chat: ChatContext;
   owner: OwnerContext | undefined;
   ownerRoutes: OwnerRouteSet[];
+  chatGuard: ChatGuard | undefined;
   summary: string;
   close(): Promise<void>;
 }> {
@@ -114,9 +117,14 @@ export async function buildDeps(env: Env): Promise<{
     }),
   ];
 
+  const chatGuard = chatLimitsEnabled(env)
+    ? new ChatLimits(new RedisWindowCounter(redis))
+    : undefined;
+
   return {
     owner,
     ownerRoutes,
+    chatGuard,
     chat: {
       deps,
       log: new PgConversations(pg.db),
@@ -127,13 +135,18 @@ export async function buildDeps(env: Env): Promise<{
       feed,
       source,
     },
-    summary: `source=${source} calendar=${google ? "google" : "in-memory"} llm=${llm.model} owner=${owner ? "on" : "off"}${fixedNow ? " now=fixed" : ""}`,
+    summary: `source=${source} limits=${chatGuard ? "on" : "off"} calendar=${google ? "google" : "in-memory"} llm=${llm.model} owner=${owner ? "on" : "off"}${fixedNow ? " now=fixed" : ""}`,
     async close() {
       await queue.close();
       redis.disconnect();
       await pg.close();
     },
   };
+}
+
+/** The chat limits (M10) are always on in production; locally only with CHAT_LIMITS=on. */
+export function chatLimitsEnabled(env: Env): boolean {
+  return env.NODE_ENV === "production" || env.CHAT_LIMITS?.trim() === "on";
 }
 
 /** The dashboard login (spec §10). Both values unset → the owner api is off (503). */

@@ -19,6 +19,8 @@ const STATUS = {
   open: "Connected",
   reconnecting: "Reconnecting…",
   replaced: "Open in another tab",
+  limited: "Unavailable",
+  bot_check_failed: "Unavailable",
 } as const;
 
 export function ChatWindow({ url, businessName }: { url: string; businessName: string }) {

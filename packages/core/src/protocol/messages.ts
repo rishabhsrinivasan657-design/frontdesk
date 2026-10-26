@@ -85,7 +85,7 @@ export const ServerMessageSchema = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("feedback_saved") }),
   z.strictObject({
     type: z.literal("error"),
-    code: z.enum(["bad_message", "busy", "server_error"]),
+    code: z.enum(["bad_message", "busy", "server_error", "rate_limited", "session_full"]),
     message: z.string(),
   }),
 ]);

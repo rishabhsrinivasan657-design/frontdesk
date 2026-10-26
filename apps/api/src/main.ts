@@ -21,6 +21,7 @@ const app = buildServer({
   chat: built.chat,
   ...(built.owner ? { owner: built.owner } : {}),
   ownerRoutes: built.ownerRoutes,
+  ...(built.chatGuard ? { chatGuard: built.chatGuard } : {}),
   webOrigins: list(env.WEB_ORIGINS ?? ""),
   trustProxy: list(env.TRUST_PROXY ?? "127.0.0.1,::1"),
 });

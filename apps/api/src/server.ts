@@ -1,5 +1,6 @@
 import websocket from "@fastify/websocket";
 import Fastify, { type FastifyInstance } from "fastify";
+import type { ChatGuard } from "./abuse/chat-limits.js";
 import { type Chat, type ChatContext, openChat } from "./chat/connection.js";
 import { safeError, safeRequest } from "./chat/log-safety.js";
 import type { OwnerContext } from "./owner/context.js";
@@ -16,11 +17,16 @@ export interface ServerOptions {
   owner?: OwnerContext;
   /** Owner routes beyond login/logout/me (REST, live feed). */
   ownerRoutes?: OwnerRouteSet[];
+  /** Per-IP and per-session limits on the public chat (M10); none when undefined. */
+  chatGuard?: ChatGuard;
   /** Peers allowed to say who the client is (X-Forwarded-For). Defaults to loopback only. */
   trustProxy?: string[];
   /** false for silence; a stream to capture log lines (tests). Defaults to stdout. */
   logger?: boolean | { stream: { write(line: string): void } };
 }
+
+/** Close code for a socket refused by the chat limits (M10). */
+export const RATE_LIMITED = 4429;
 
 /** `GET /ws`: one socket ↔ one session (spec §8). `?sessionId=` resumes after a drop (spec §11). */
 export function buildServer(opts: ServerOptions): FastifyInstance {
@@ -55,23 +61,40 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
           socket.close(1008, "origin not allowed");
           return;
         }
-        // Registered before openChat resolves, so no early message is lost.
-        const ready: Promise<Chat> = openChat(
-          { send: (text) => socket.send(text), close: (code) => socket.close(code) },
-          opts.chat,
-          typeof req.query.sessionId === "string" ? req.query.sessionId : undefined,
-        );
+        const guard = opts.chatGuard;
+        const ip = req.ip;
+        const peer = {
+          send: (text: string) => socket.send(text),
+          close: (code?: number) => socket.close(code),
+        };
+        // Registered before the limits and openChat resolve, so no early message is lost.
+        const ready: Promise<Chat | undefined> = (async () => {
+          if (guard) {
+            const verdict = await guard.connect(ip);
+            if (verdict !== "ok") {
+              socket.close(RATE_LIMITED, "rate limited");
+              return undefined;
+            }
+            socket.on("close", () => guard.release(ip));
+          }
+          return openChat(
+            peer,
+            opts.chat,
+            typeof req.query.sessionId === "string" ? req.query.sessionId : undefined,
+            guard ? { allowTurn: (sessionId) => guard.turn(ip, sessionId) } : {},
+          );
+        })();
         ready.catch((error: unknown) => {
           opts.chat.logger.error({ err: safeError(error) }, "opening the chat failed");
           socket.close(1011, "unavailable");
         });
         socket.on("close", () => {
-          void ready.then((chat) => chat.close()).catch(() => undefined);
+          void ready.then((chat) => chat?.close()).catch(() => undefined);
         });
         socket.on("message", (data: Buffer) => {
           const raw = data.toString("utf8");
           void ready
-            .then((chat) => chat.onMessage(raw))
+            .then((chat) => chat?.onMessage(raw))
             .catch((error: unknown) =>
               opts.chat.logger.error({ err: safeError(error) }, "message failed"),
             );

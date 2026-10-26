@@ -28,7 +28,7 @@ export interface Latency {
 }
 
 export interface ChatState {
-  status: "connecting" | "open" | "reconnecting" | "replaced";
+  status: "connecting" | "open" | "reconnecting" | "replaced" | "limited" | "bot_check_failed";
   sessionId?: string;
   messages: ChatMessage[];
   pending?: PendingCard;
@@ -47,12 +47,19 @@ export interface ChatState {
 export type ChatEvent =
   | { type: "server"; message: ServerMessage; at: number }
   | { type: "local_send"; text: string; at: number }
-  | { type: "socket"; status: "reconnecting" | "replaced" }
+  | { type: "socket"; status: "reconnecting" | "replaced" | "limited" | "bot_check_failed" }
   | { type: "end_chat" }
   | { type: "feedback_sent" }
   | { type: "feedback_skipped" };
 
 export const initialChatState: ChatState = { status: "connecting", messages: [], busy: false };
+
+/** What the caller reads when the api refused the socket (M10). */
+const SOCKET_NOTICES: Partial<Record<ChatState["status"], string>> = {
+  limited:
+    "Too many chats from your network right now. Please try again later or call the restaurant.",
+  bot_check_failed: "We couldn't verify you're not a bot. Please reload the page.",
+};
 
 let localIds = 0;
 
@@ -71,7 +78,12 @@ export function chatReducer(state: ChatState, event: ChatEvent): ChatState {
       };
     }
     case "socket":
-      return { ...state, status: event.status, busy: false };
+      return {
+        ...state,
+        status: event.status,
+        busy: false,
+        ...(SOCKET_NOTICES[event.status] ? { notice: SOCKET_NOTICES[event.status] } : {}),
+      };
     case "server":
       return onServer(state, event.message, event.at);
     case "end_chat":

@@ -124,6 +124,18 @@ describe("connectChat", () => {
     expect(events.at(-1)).toEqual({ type: "socket", status: "replaced" });
   });
 
+  it.each([
+    [4429, "limited"],
+    [4403, "bot_check_failed"],
+  ] as const)("stops on close code %i without reconnecting", (code, status) => {
+    const { events } = setup();
+    latest().open();
+    latest().drop(code);
+    vi.advanceTimersByTime(10_000);
+    expect(FakeWebSocket.instances).toHaveLength(1);
+    expect(events.at(-1)).toEqual({ type: "socket", status });
+  });
+
   it("doesn't reconnect after close()", () => {
     const { chat } = setup();
     latest().open();
