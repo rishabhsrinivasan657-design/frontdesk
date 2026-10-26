@@ -22,13 +22,13 @@
   },
   "response": {
     "value": {
-      "say": "Hi, this is Gus Novak. I need to cancel a booking.",
+      "say": "Hi, I'd like to cancel a booking, please.",
       "done": false
     },
     "usage": {
       "inputTokens": 405,
-      "outputTokens": 24
+      "outputTokens": 23
     }
   },
-  "recordedAt": "2026-10-25T18:27:14.758Z"
+  "recordedAt": "2026-10-26T16:26:52.644Z"
 }

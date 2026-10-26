@@ -22,13 +22,13 @@
   },
   "response": {
     "value": {
-      "say": "This is Kim Park. I’d like to book a table for three.",
+      "say": "Hello, my name is Kim Park. I’d like to book a table for three.",
       "done": false
     },
     "usage": {
       "inputTokens": 389,
-      "outputTokens": 26
+      "outputTokens": 29
     }
   },
-  "recordedAt": "2026-10-25T18:15:19.457Z"
+  "recordedAt": "2026-10-26T14:23:09.060Z"
 }

@@ -22,13 +22,13 @@
   },
   "response": {
     "value": {
-      "say": "Hello! My name is Ada Bloom, ada@example.com. I’d like to book a table for 2 this Friday, November 6th at 7pm, please.",
+      "say": "Hello! My name is Ada Bloom, ada@example.com. I’d like to book a table for two this Friday, November 6th at 7pm, please.",
       "done": false
     },
     "usage": {
       "inputTokens": 375,
-      "outputTokens": 49
+      "outputTokens": 48
     }
   },
-  "recordedAt": "2026-10-25T18:10:01.243Z"
+  "recordedAt": "2026-10-26T14:04:47.599Z"
 }

@@ -22,7 +22,7 @@
   },
   "response": {
     "value": {
-      "say": "A few of us, Friday, around 8.",
+      "say": "A few of us, Friday, around 8",
       "done": false
     },
     "usage": {
@@ -30,5 +30,5 @@
       "outputTokens": 21
     }
   },
-  "recordedAt": "2026-10-25T18:17:31.661Z"
+  "recordedAt": "2026-10-26T17:00:59.187Z"
 }

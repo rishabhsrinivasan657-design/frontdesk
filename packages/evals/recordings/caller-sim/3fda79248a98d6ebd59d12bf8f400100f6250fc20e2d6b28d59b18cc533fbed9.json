@@ -30,13 +30,13 @@
   },
   "response": {
     "value": {
-      "say": "Nine people, Saturday November 7th at 7pm.",
+      "say": "Nine people this Saturday, November 7th, at 7pm.",
       "done": false
     },
     "usage": {
       "inputTokens": 439,
-      "outputTokens": 27
+      "outputTokens": 26
     }
   },
-  "recordedAt": "2026-10-25T18:14:10.583Z"
+  "recordedAt": "2026-10-26T14:17:50.232Z"
 }

@@ -22,7 +22,7 @@
   },
   "response": {
     "value": {
-      "say": "Hi, my name is Eva Marsh. I’d like to cancel a booking, please.",
+      "say": "Hello, my name is Eva Marsh. I’d like to cancel a booking, please.",
       "done": false
     },
     "usage": {
@@ -30,5 +30,5 @@
       "outputTokens": 29
     }
   },
-  "recordedAt": "2026-10-25T18:28:12.669Z"
+  "recordedAt": "2026-10-26T15:10:13.356Z"
 }

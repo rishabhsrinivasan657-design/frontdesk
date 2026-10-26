@@ -22,7 +22,7 @@
   },
   "response": {
     "value": {
-      "say": "Hello, my name is Test. I'm calling about a booking.",
+      "say": "Hello, my name is David. I'm calling about a booking.",
       "done": false
     },
     "usage": {
@@ -30,5 +30,5 @@
       "outputTokens": 29
     }
   },
-  "recordedAt": "2026-10-25T18:12:05.091Z"
+  "recordedAt": "2026-10-26T17:00:15.837Z"
 }

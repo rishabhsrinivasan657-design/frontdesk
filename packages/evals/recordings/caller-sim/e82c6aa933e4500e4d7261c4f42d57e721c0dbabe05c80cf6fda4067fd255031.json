@@ -22,7 +22,7 @@
   },
   "response": {
     "value": {
-      "say": "Next Friday",
+      "say": "Next Friday.",
       "done": false
     },
     "usage": {
@@ -30,5 +30,5 @@
       "outputTokens": 13
     }
   },
-  "recordedAt": "2026-10-25T18:18:16.631Z"
+  "recordedAt": "2026-10-26T17:01:05.014Z"
 }

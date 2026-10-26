@@ -22,7 +22,7 @@
   },
   "response": {
     "value": {
-      "say": "I'm Tom Becker's assistant.",
+      "say": "I’m Tom Becker’s assistant.",
       "done": false
     },
     "usage": {
@@ -30,5 +30,5 @@
       "outputTokens": 19
     }
   },
-  "recordedAt": "2026-10-25T18:11:28.941Z"
+  "recordedAt": "2026-10-26T14:10:10.356Z"
 }

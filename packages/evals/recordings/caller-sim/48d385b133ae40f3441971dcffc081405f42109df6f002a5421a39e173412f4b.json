@@ -22,7 +22,7 @@
   },
   "response": {
     "value": {
-      "say": "Hi, my name is Noah Burns. I'm a vegan and was wondering about your menu.",
+      "say": "Hi, my name is Noah Burns. I’m a vegan and was wondering about your menu.",
       "done": false
     },
     "usage": {
@@ -30,5 +30,5 @@
       "outputTokens": 30
     }
   },
-  "recordedAt": "2026-10-25T18:34:47.815Z"
+  "recordedAt": "2026-10-26T15:35:13.566Z"
 }
