@@ -1,7 +1,7 @@
 import type { HandoffQueue, HandoffReason, HandoffTicket, TranscriptEntry } from "@frontdesk/core";
 import { and, asc, eq, isNull } from "drizzle-orm";
 import type { Db } from "./client.js";
-import { handoffs } from "./schema.js";
+import { type HandoffOutcome, handoffs } from "./schema.js";
 import { iso } from "./time.js";
 
 /** The human review queue in Postgres (spec §3). */
@@ -40,15 +40,19 @@ export class PgHandoffQueue implements HandoffQueue {
     }));
   }
 
-  /** Resolves an open ticket with the owner's notes. A resolved ticket keeps its first notes. */
+  /**
+   * Resolves an open ticket with the owner's notes and what came of it (spec §12). A resolved
+   * ticket keeps its first notes and outcome.
+   */
   async resolve(
     id: string,
     notes: string,
     at: string,
+    outcome: HandoffOutcome,
   ): Promise<"resolved" | "not_found" | "already_resolved"> {
     const updated = await this.db
       .update(handoffs)
-      .set({ resolvedAt: at, notes })
+      .set({ resolvedAt: at, notes, outcome })
       .where(and(eq(handoffs.id, id), isNull(handoffs.resolvedAt)))
       .returning({ id: handoffs.id });
     if (updated.length > 0) return "resolved";

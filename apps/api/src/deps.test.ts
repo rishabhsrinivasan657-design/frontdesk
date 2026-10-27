@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { Redis } from "ioredis";
-import { assertNotEvalDatabase, readOwnerEnv } from "./deps.js";
+import { TurnstileBotCheck } from "./abuse/bot-check.js";
+import { createKeyTag } from "@frontdesk/worker";
+import {
+  assertNotEvalDatabase,
+  buildChatGuard,
+  chatLimitsEnabled,
+  readBotCheck,
+  readOwnerEnv,
+} from "./deps.js";
 
 describe("assertNotEvalDatabase", () => {
   const base = "postgres://u:p@localhost:54320";
@@ -45,5 +53,44 @@ describe("readOwnerEnv", () => {
       redis,
     );
     expect(owner).toMatchObject({ email: "o@x.test", sessionTtlMs: 7_200_000, secureCookie: true });
+  });
+});
+
+describe("chatLimitsEnabled", () => {
+  it("is on in production whatever CHAT_LIMITS says", () => {
+    expect(chatLimitsEnabled({ NODE_ENV: "production" })).toBe(true);
+    expect(chatLimitsEnabled({ NODE_ENV: "production", CHAT_LIMITS: "off" })).toBe(true);
+  });
+
+  it("is off locally unless CHAT_LIMITS=on", () => {
+    expect(chatLimitsEnabled({})).toBe(false);
+    expect(chatLimitsEnabled({ CHAT_LIMITS: "on" })).toBe(true);
+  });
+});
+
+describe("readBotCheck", () => {
+  it("is off without a secret", () => {
+    expect(readBotCheck({})).toBeUndefined();
+  });
+
+  it("needs the hostnames the widget serves", () => {
+    expect(() => readBotCheck({ TURNSTILE_SECRET_KEY: "s" })).toThrow("TURNSTILE_HOSTNAMES");
+  });
+
+  it("builds a Turnstile check", () => {
+    expect(
+      readBotCheck({ TURNSTILE_SECRET_KEY: "s", TURNSTILE_HOSTNAMES: "a.duckdns.org, localhost" }),
+    ).toBeInstanceOf(TurnstileBotCheck);
+  });
+});
+
+describe("buildChatGuard", () => {
+  it("is off locally and keys its counters with KEY_HASH_SECRET when on", async () => {
+    const keys: string[] = [];
+    const counter = { hit: (k: string) => (keys.push(k), Promise.resolve(1)) };
+    expect(buildChatGuard({}, counter)).toBeUndefined();
+    const guard = buildChatGuard({ CHAT_LIMITS: "on", KEY_HASH_SECRET: "real-secret" }, counter);
+    await guard!.turn("1.2.3.4", "sess_x");
+    expect(keys[0]).toContain(createKeyTag("real-secret")("sess_x"));
   });
 });

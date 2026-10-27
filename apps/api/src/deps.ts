@@ -2,11 +2,29 @@ import { randomUUID } from "node:crypto";
 import { resolve } from "node:path";
 import { type AgentDeps, type Calendar, InMemoryCalendar } from "@frontdesk/core";
 import { createDb, PgAuditLog, PgConversations, PgHandoffQueue } from "@frontdesk/db";
-import { createGoogleCalendar, readGoogleEnv } from "@frontdesk/integrations";
+import { sql } from "drizzle-orm";
+import {
+  checkGoogleToken,
+  createGoogleCalendar,
+  createOAuthClient,
+  readGoogleEnv,
+} from "@frontdesk/integrations";
 import { loadCatalog, type Price } from "@frontdesk/llm";
-import { createConfirmationQueue, QueueMailer } from "@frontdesk/worker";
+import {
+  HEARTBEAT_KEY,
+  assertPilotSafe,
+  readKeyTag,
+  createConfirmationQueue,
+  QueueMailer,
+  readConversationSource,
+} from "@frontdesk/worker";
 import { Redis } from "ioredis";
+import { type BotCheck, TurnstileBotCheck } from "./abuse/bot-check.js";
+import { RedisBookingQuota } from "./abuse/booking-quota.js";
+import { type ChatGuard, ChatLimits, DEFAULT_CHAT_LIMITS } from "./abuse/chat-limits.js";
+import { RedisWindowCounter, type WindowCounter } from "./abuse/window-counter.js";
 import { loadBusinessConfig } from "./business-config.js";
+import { type Readiness, readiness } from "./health.js";
 import type { ChatContext } from "./chat/connection.js";
 import { SessionHub } from "./chat/hub.js";
 import { offsetClock } from "./clock.js";
@@ -53,9 +71,14 @@ export async function buildDeps(env: Env): Promise<{
   chat: ChatContext;
   owner: OwnerContext | undefined;
   ownerRoutes: OwnerRouteSet[];
+  chatGuard: ChatGuard | undefined;
+  botCheck: BotCheck | undefined;
+  ready: () => Promise<Readiness>;
   summary: string;
   close(): Promise<void>;
 }> {
+  assertPilotSafe(env);
+  const source = readConversationSource(env);
   const config = loadBusinessConfig(
     resolve(REPO_ROOT, env.BUSINESS_CONFIG || "businesses/casa-fiorella.yaml"),
   );
@@ -79,6 +102,8 @@ export async function buildDeps(env: Env): Promise<{
   const llm = buildLLM(env, redis);
   const price = loadCatalog().get(llm.model)?.pricePerMTok ?? FREE;
 
+  const limits = chatLimitsEnabled(env);
+  const keyTag = readKeyTag(env);
   const deps: AgentDeps = {
     config,
     calendar,
@@ -91,6 +116,7 @@ export async function buildDeps(env: Env): Promise<{
     audit: new PgAuditLog(pg.db),
     handoffs: new PgHandoffQueue(pg.db),
     mailer: new QueueMailer(queue),
+    ...(limits ? { bookingQuota: new RedisBookingQuota(redis, keyTag) } : {}),
   };
 
   const owner = readOwnerEnv(env, redis);
@@ -107,9 +133,26 @@ export async function buildDeps(env: Env): Promise<{
     }),
   ];
 
+  const chatGuard = buildChatGuard(env, new RedisWindowCounter(redis));
+
+  const botCheck = readBotCheck(env);
+  const ready = readiness({
+    redis: async () => (await redis.ping()) === "PONG",
+    postgres: async () => (await pg.db.execute(sql`select 1`), true),
+    // Without Google, production can't book: fail there; locally the in-memory calendar is fine.
+    google: () =>
+      google
+        ? checkGoogleToken(() => createOAuthClient(google))
+        : Promise.resolve(env.NODE_ENV !== "production"),
+    worker: async () => (await redis.exists(HEARTBEAT_KEY)) === 1,
+  });
+
   return {
     owner,
     ownerRoutes,
+    chatGuard,
+    botCheck,
+    ready,
     chat: {
       deps,
       log: new PgConversations(pg.db),
@@ -118,14 +161,44 @@ export async function buildDeps(env: Env): Promise<{
       logger: { error: (obj, msg) => console.error(msg, obj) },
       hub,
       feed,
+      source,
     },
-    summary: `calendar=${google ? "google" : "in-memory"} llm=${llm.model} owner=${owner ? "on" : "off"}${fixedNow ? " now=fixed" : ""}`,
+    summary: `source=${source} limits=${chatGuard ? "on" : "off"} botcheck=${botCheck ? "on" : "off"} calendar=${google ? "google" : "in-memory"} llm=${llm.model} owner=${owner ? "on" : "off"}${fixedNow ? " now=fixed" : ""}`,
     async close() {
       await queue.close();
       redis.disconnect();
       await pg.close();
     },
   };
+}
+
+/** Turnstile before a new chat (M10). Off without a secret; the production guard requires one. */
+export function readBotCheck(env: Env): BotCheck | undefined {
+  const secret = env.TURNSTILE_SECRET_KEY?.trim();
+  if (!secret) return undefined;
+  const hostnames = (env.TURNSTILE_HOSTNAMES ?? "")
+    .split(",")
+    .map((h) => h.trim())
+    .filter(Boolean);
+  if (hostnames.length === 0) {
+    throw new Error("TURNSTILE_HOSTNAMES must list the site's hostnames (see .env.example)");
+  }
+  return new TurnstileBotCheck({ secret, hostnames });
+}
+
+/**
+ * The chat limits and the bookings-per-contact cap (M10) are always on in production; locally
+ * only with CHAT_LIMITS=on.
+ */
+export function chatLimitsEnabled(env: Env): boolean {
+  return env.NODE_ENV === "production" || env.CHAT_LIMITS?.trim() === "on";
+}
+
+/** The chat limits (M10) when enabled, keyed with KEY_HASH_SECRET. */
+export function buildChatGuard(env: Env, counter: WindowCounter): ChatGuard | undefined {
+  return chatLimitsEnabled(env)
+    ? new ChatLimits(counter, DEFAULT_CHAT_LIMITS, readKeyTag(env))
+    : undefined;
 }
 
 /** The dashboard login (spec §10). Both values unset → the owner api is off (503). */
@@ -145,7 +218,7 @@ export function readOwnerEnv(env: Env, redis: Redis): OwnerContext | undefined {
   return {
     email,
     passwordHash,
-    sessions: new RedisOwnerSessionStore(redis, sessionTtlMs),
+    sessions: new RedisOwnerSessionStore(redis, sessionTtlMs, readKeyTag(env)),
     sessionTtlMs,
     secureCookie: env.NODE_ENV === "production",
   };

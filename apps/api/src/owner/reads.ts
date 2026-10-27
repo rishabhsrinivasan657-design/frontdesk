@@ -1,8 +1,10 @@
 import {
   type BookingRow,
   type ConversationDetail,
+  type FeedbackRow,
   type ConversationSummary,
   type Db,
+  type HandoffOutcome,
   type HandoffRow,
   type MetricsReport,
   type OwnerSource,
@@ -10,6 +12,7 @@ import {
   getConversation,
   listBookings,
   listConversations,
+  listFeedback,
   listHandoffs,
   metrics,
 } from "@frontdesk/db";
@@ -29,8 +32,10 @@ export interface OwnerReads {
     id: string,
     notes: string,
     at: string,
+    outcome: HandoffOutcome,
   ) => Promise<"resolved" | "not_found" | "already_resolved">;
   metrics: (o: { source: OwnerSource; days: number }) => Promise<MetricsReport>;
+  listFeedback: (o: { source: OwnerSource; limit: number }) => Promise<FeedbackRow[]>;
 }
 
 /** The Postgres read model from `@frontdesk/db`; days are in the business timezone. */
@@ -41,7 +46,8 @@ export function pgOwnerReads(db: Db, o: { timezone: string; now: () => Date }): 
     getConversation: (id) => getConversation(db, id),
     listBookings: (q) => listBookings(db, q),
     listHandoffs: (q) => listHandoffs(db, q),
-    resolveHandoff: (id, notes, at) => queue.resolve(id, notes, at),
+    resolveHandoff: (id, notes, at, outcome) => queue.resolve(id, notes, at, outcome),
     metrics: (q) => metrics(db, { ...q, now: o.now(), timezone: o.timezone }),
+    listFeedback: (q) => listFeedback(db, q),
   };
 }

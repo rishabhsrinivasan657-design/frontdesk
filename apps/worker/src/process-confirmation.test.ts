@@ -1,5 +1,6 @@
 import { InMemoryHandoffQueue, ManualClock } from "@frontdesk/core";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { MemoryEmailQuota } from "./email-quota.js";
 import { email, MemoryAttemptLog, ScriptedMailer } from "./fixtures.js";
 import { type ProcessDeps, processConfirmation } from "./process-confirmation.js";
 
@@ -134,5 +135,53 @@ describe("processConfirmation", () => {
     expect(error).not.toMatch(/SECRET/);
     expect(error).toContain("[redacted]");
     expect(error.length).toBeLessThanOrEqual(300);
+  });
+});
+
+describe("daily email caps (M10)", () => {
+  it("4th email to one recipient today is skipped and audited daily_cap", async () => {
+    const { mailer, attempts, handoffs, deps } = setup();
+    deps.quota = new MemoryEmailQuota({ perRecipient: 3, global: 50 });
+    for (let i = 0; i < 4; i++) await processConfirmation(asJob(), { made: 0, max: 5 }, deps);
+    expect(mailer.sent).toHaveLength(3);
+    expect(attempts.attempts.at(-1)).toMatchObject({ ok: false, error: "daily_cap", attempt: 1 });
+    expect(handoffs.tickets).toEqual([]);
+  });
+
+  it("51st email overall is skipped, without throwing so it is never retried", async () => {
+    const { mailer, deps } = setup();
+    deps.quota = new MemoryEmailQuota({ perRecipient: 100, global: 50 });
+    for (let i = 0; i < 50; i++) await processConfirmation(asJob(), { made: 0, max: 5 }, deps);
+    await expect(processConfirmation(asJob(), { made: 0, max: 5 }, deps)).resolves.toBeUndefined();
+    expect(mailer.sent).toHaveLength(50);
+  });
+
+  it("a retry doesn't count against the caps again", async () => {
+    const { mailer, deps } = setup([false, true]);
+    deps.quota = new MemoryEmailQuota({ perRecipient: 1, global: 50 });
+    await expect(processConfirmation(asJob(), { made: 0, max: 5 }, deps)).rejects.toThrow();
+    await processConfirmation(asJob(), { made: 1, max: 5 }, deps);
+    expect(mailer.sent).toHaveLength(1);
+  });
+});
+
+describe("logs carry no personal data (M10)", () => {
+  it("a lost handoff and a failed audit log neither names, addresses nor session ids", async () => {
+    const { deps } = setup([false]);
+    const leak = new Error("insert failed\nparams: Ana Ruiz,ana@example.com,s1");
+    deps.handoffs = { enqueue: () => Promise.reject(leak) };
+    deps.attempts = { recordEmailAttempt: () => Promise.reject(leak) };
+    const logged: string[] = [];
+    const spy = vi
+      .spyOn(console, "error")
+      .mockImplementation((m: unknown) => void logged.push(String(m)));
+    try {
+      await expect(processConfirmation(asJob(), { made: 4, max: 5 }, deps)).rejects.toThrow();
+    } finally {
+      spy.mockRestore();
+    }
+    expect(logged.length).toBeGreaterThan(0);
+    const out = logged.join("\n");
+    for (const pii of ["Ana", "ana@example.com", "s1", "params"]) expect(out).not.toContain(pii);
   });
 });

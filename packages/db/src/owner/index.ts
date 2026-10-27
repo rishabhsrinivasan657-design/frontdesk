@@ -5,6 +5,7 @@ export {
   getConversation,
   listConversations,
 } from "./conversations.js";
+export { type FeedbackRow, listFeedback } from "./feedback.js";
 export { type HandoffRow, listHandoffs } from "./handoffs.js";
 export {
   type DailyMetrics,

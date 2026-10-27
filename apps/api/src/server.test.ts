@@ -3,7 +3,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { type ChatContext } from "./chat/connection.js";
 import { InMemoryConversationLog } from "./chat/conversation-log.js";
 import { SessionHub } from "./chat/hub.js";
-import { buildServer } from "./server.js";
+import type { ChatGuard, ConnectVerdict, TurnVerdict } from "./abuse/chat-limits.js";
+import { type ServerOptions, buildServer } from "./server.js";
 import { BOOK, DETAILS, memoryDeps } from "./test-deps.js";
 import { TestClient } from "./ws-client.js";
 
@@ -12,7 +13,7 @@ let app: FastifyInstance | undefined;
 const clients: TestClient[] = [];
 
 let n = 0;
-async function start() {
+async function start(extra: Partial<ServerOptions> = {}) {
   const deps = memoryDeps();
   const chat: ChatContext = {
     deps,
@@ -22,7 +23,7 @@ async function start() {
     logger: { error: vi.fn() },
     hub: new SessionHub(),
   };
-  app = buildServer({ chat, webOrigins: [ORIGIN], logger: false });
+  app = buildServer({ chat, webOrigins: [ORIGIN], logger: false, ...extra });
   const address = await app.listen({ port: 0, host: "127.0.0.1" });
   return { deps, url: address.replace("http", "ws") + "/ws", http: address };
 }
@@ -128,8 +129,216 @@ describe("api server", () => {
     expect(lines.join("\n")).not.toContain(sessionId);
   });
 
+  it("ready answers 200 when ready and 503 with the failing check otherwise", async () => {
+    let up = true;
+    const ready = () =>
+      Promise.resolve({
+        ok: up,
+        checks: { redis: "ok", postgres: "ok", google: up ? "ok" : "fail", worker: "ok" } as const,
+      });
+    const { http } = await start({ ready });
+    const first = await fetch(`${http}/health/ready`);
+    expect(first.status).toBe(200);
+    up = false;
+    const second = await fetch(`${http}/health/ready`);
+    expect(second.status).toBe(503);
+    expect(await second.json()).toMatchObject({ ok: false, checks: { google: "fail" } });
+  });
+
   it("health is ok", async () => {
     const { http } = await start();
     expect(await (await fetch(`${http}/health`)).json()).toEqual({ ok: true });
+  });
+});
+
+/** Records what the server asked and answers with the given verdicts. */
+function spyGuard(o: { connect?: ConnectVerdict; turn?: TurnVerdict } = {}) {
+  const seen = { connect: [] as string[], release: [] as string[], turn: [] as string[] };
+  const guard: ChatGuard = {
+    connect: (ip) => (seen.connect.push(ip), Promise.resolve(o.connect ?? "ok")),
+    release: (ip) => void seen.release.push(ip),
+    turn: (ip) => (seen.turn.push(ip), Promise.resolve(o.turn ?? "ok")),
+  };
+  return { guard, seen };
+}
+
+describe("chat limits (M10)", () => {
+  it("closes with 4429 when connect is refused", async () => {
+    const { guard } = spyGuard({ connect: "too_many_sessions" });
+    const { url } = await start({ chatGuard: guard });
+    const client = await connect(url);
+    expect(await client.closed).toBe(4429);
+    expect(client.received).toEqual([]);
+  });
+
+  it("releases the socket slot when it closes", async () => {
+    const { guard, seen } = spyGuard();
+    const { url } = await start({ chatGuard: guard });
+    const client = await connect(url);
+    await client.next("session");
+    client.close();
+    await client.closed;
+    await expect.poll(() => seen.release).toEqual(["127.0.0.1"]);
+  });
+
+  it("a socket that closes while the limits are checked still frees its slot", async () => {
+    const { guard, seen } = spyGuard();
+    let admit!: () => void;
+    guard.connect = (ip) => {
+      seen.connect.push(ip);
+      return new Promise((r) => (admit = () => r("ok")));
+    };
+    const { url } = await start({ chatGuard: guard });
+    const client = await connect(url);
+    await expect.poll(() => seen.connect).toHaveLength(1);
+    client.close();
+    await client.closed;
+    // Let the server finish its side of the close before the limits answer.
+    await new Promise((r) => setTimeout(r, 50));
+    admit();
+    await expect.poll(() => seen.release).toEqual(["127.0.0.1"]);
+  });
+
+  it("a refused connect is not released again", async () => {
+    const { guard, seen } = spyGuard({ connect: "too_many_sockets" });
+    const { url } = await start({ chatGuard: guard });
+    const client = await connect(url);
+    await client.closed;
+    await new Promise((r) => setTimeout(r, 20));
+    expect(seen.release).toEqual([]);
+  });
+
+  it("a refused turn gets an error and runs nothing", async () => {
+    const { guard } = spyGuard({ turn: "slow_down" });
+    const { url, deps } = await start({ chatGuard: guard });
+    const client = await connect(url);
+    await client.next("session");
+    client.say(BOOK);
+    expect(await client.next("error")).toEqual({
+      type: "error",
+      code: "rate_limited",
+      message: "You're sending messages quickly. Please wait a moment.",
+    });
+    expect(client.received.some((m) => m.type === "turn_metrics")).toBe(false);
+    expect(await deps.sessions.load((await client.next("session")).sessionId)).toBeUndefined();
+  });
+
+  it.each([
+    [
+      "session_full",
+      "session_full",
+      "This chat has reached its limit. Please start a new one or call us.",
+    ],
+    [
+      "daily_limit",
+      "rate_limited",
+      "We've had a lot of chats from your network today. Please call the restaurant.",
+    ],
+  ] as const)("%s is told to the caller", async (verdict, code, message) => {
+    const { guard } = spyGuard({ turn: verdict });
+    const { url } = await start({ chatGuard: guard });
+    const client = await connect(url);
+    await client.next("session");
+    client.say(BOOK);
+    expect(await client.next("error")).toEqual({ type: "error", code, message });
+  });
+
+  it("ignores X-Forwarded-For from an untrusted peer", async () => {
+    const { guard, seen } = spyGuard();
+    const { url } = await start({ chatGuard: guard, trustProxy: ["10.0.0.0/8"] });
+    const client = await connect(url, { origin: ORIGIN, "x-forwarded-for": "1.2.3.4" });
+    await client.next("session");
+    client.say(BOOK);
+    await client.next("turn_metrics");
+    expect(seen.connect).toEqual(["127.0.0.1"]);
+    expect(seen.turn).toEqual(["127.0.0.1"]);
+  });
+
+  it("uses X-Forwarded-For from a trusted proxy", async () => {
+    const { guard, seen } = spyGuard();
+    const { url } = await start({ chatGuard: guard });
+    const client = await connect(url, { origin: ORIGIN, "x-forwarded-for": "1.2.3.4" });
+    await client.next("session");
+    expect(seen.connect).toEqual(["1.2.3.4"]);
+  });
+});
+
+describe("bot check (M10)", () => {
+  const botCheck = (valid = "good-token") => {
+    const calls: [string, string][] = [];
+    return {
+      calls,
+      check: {
+        verify: (token: string, ip: string) => {
+          calls.push([token, ip]);
+          return Promise.resolve(token === valid);
+        },
+      },
+    };
+  };
+
+  it("new session without a token closes 4403", async () => {
+    const { check } = botCheck();
+    const { url } = await start({ botCheck: check });
+    const client = await connect(url);
+    expect(await client.closed).toBe(4403);
+    expect(client.received).toEqual([]);
+  });
+
+  it("new session with a bad token closes 4403", async () => {
+    const { check, calls } = botCheck();
+    const { url } = await start({ botCheck: check });
+    const client = await connect(`${url}?ts=forged`);
+    expect(await client.closed).toBe(4403);
+    expect(calls).toEqual([["forged", "127.0.0.1"]]);
+  });
+
+  it("new session with a valid token opens", async () => {
+    const { check } = botCheck();
+    const { url } = await start({ botCheck: check });
+    const client = await connect(`${url}?ts=good-token`);
+    expect((await client.next("session")).resumed).toBe(false);
+  });
+
+  it("unknown sessionId without a token is refused", async () => {
+    const { check } = botCheck();
+    const { url } = await start({ botCheck: check });
+    const client = await connect(`${url}?sessionId=sess_made_up`);
+    expect(await client.closed).toBe(4403);
+  });
+
+  it("resume of an existing session needs no token", async () => {
+    const { check, calls } = botCheck();
+    const { url } = await start({ botCheck: check });
+    const first = await connect(`${url}?ts=good-token`);
+    const { sessionId } = await first.next("session");
+    await first.turn(BOOK);
+    first.close();
+    await first.closed;
+    const again = await connect(`${url}?sessionId=${sessionId}`);
+    expect(await again.next("session")).toMatchObject({ sessionId, resumed: true });
+    expect(calls).toHaveLength(1);
+  });
+
+  it("a verified session reconnects once before its first turn, then needs a token", async () => {
+    const { check } = botCheck();
+    const { url } = await start({ botCheck: check });
+    const first = await connect(`${url}?ts=good-token`);
+    const { sessionId } = await first.next("session");
+    first.close();
+    await first.closed;
+    // Nothing was stored yet, so the server issues a fresh id (it never adopts unknown ids).
+    const again = await connect(`${url}?sessionId=${sessionId}`);
+    const second = await again.next("session");
+    again.close();
+    await again.closed;
+    const third = await connect(`${url}?sessionId=${second.sessionId}`);
+    expect(await third.closed).toBe(4403);
+  });
+
+  it("no botCheck configured keeps the old behavior", async () => {
+    const { url } = await start();
+    const client = await connect(url);
+    expect((await client.next("session")).resumed).toBe(false);
   });
 });

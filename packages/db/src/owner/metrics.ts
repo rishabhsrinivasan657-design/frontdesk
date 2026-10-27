@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import type { Db } from "../client.js";
+import { HANDOFF_OUTCOMES, type HandoffOutcome } from "../schema.js";
 import { type OwnerSource, rows, sourceIs } from "./shared.js";
 
 /** The latency stages charted against the spec §8 budget. */
@@ -30,6 +31,10 @@ export interface MetricsReport {
     avgTokens: number | null;
     avgCostUsd: number | null;
     latency: Record<Stage, Percentiles>;
+    /** Post-conversation ratings in the window (spec §12). */
+    feedback: { avgRating: number | null; count: number };
+    /** Resolved handoffs by what came of them; `not_needed` = an unnecessary handoff (§12). */
+    handoffOutcomes: Record<HandoffOutcome, number>;
   };
   /** One entry per day of the window, oldest first, days without conversations included. */
   daily: DailyMetrics[];
@@ -123,6 +128,20 @@ export async function metrics(
     from turns t join conversations c on c.id = t.conversation_id, unnest(t.tool_ms) as ms
     where ${window}`,
   );
+  const [rated] = await rows<{ avg: number | null; count: number }>(
+    db,
+    sql`select avg(f.rating)::float8 as avg, count(f.rating)::int as count
+    from feedback f join conversations c on c.id = f.conversation_id where ${window}`,
+  );
+  const outcomeRows = await rows<{ outcome: HandoffOutcome; count: number }>(
+    db,
+    sql`select h.outcome, count(*)::int as count
+    from handoffs h join conversations c on c.id = h.session_id
+    where ${window} and h.outcome is not null group by 1`,
+  );
+  const handoffOutcomes = Object.fromEntries(
+    HANDOFF_OUTCOMES.map((o) => [o, outcomeRows.find((r) => r.outcome === o)?.count ?? 0]),
+  ) as Record<HandoffOutcome, number>;
   const firstOutputByDay = await rows<{ day: string; p50: number | null; p95: number | null }>(
     db,
     sql`select to_char(c.started_at at time zone ${tz}, 'YYYY-MM-DD') as day,
@@ -165,6 +184,8 @@ export async function metrics(
       handoffRate: rate(sum("handoffs"), conversations),
       avgTokens: conversations ? sum("tokens") / conversations : null,
       avgCostUsd: conversations ? sum("cost") / conversations : null,
+      feedback: { avgRating: rated?.avg ?? null, count: rated?.count ?? 0 },
+      handoffOutcomes,
       latency: {
         stt: p("stt"),
         llmTtft: p("llmTtft"),

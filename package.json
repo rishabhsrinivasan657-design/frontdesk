@@ -7,7 +7,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "typecheck": "tsc -b && tsc -p tests && tsc -p e2e",
+    "typecheck": "tsc -b && tsc -p tests && tsc -p e2e && tsc -p scripts",
     "test": "vitest run --project unit",
     "test:infra": "vitest run --project infra",
     "test:live": "LLM_LIVE=1 vitest run --project live --exclude \"packages/integrations/**\"",
@@ -27,7 +27,8 @@
     "api": "pnpm --filter @frontdesk/api start",
     "owner:hash": "pnpm --silent --filter @frontdesk/api owner:hash",
     "e2e": "playwright test -c e2e",
-    "web": "pnpm --filter @frontdesk/web dev"
+    "web": "pnpm --filter @frontdesk/web dev",
+    "release": "tsx scripts/release.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",
@@ -39,6 +40,7 @@
     "ioredis": "^6.0.0",
     "pg": "^8.23.1",
     "prettier": "^3.9.10",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.72.0",
     "vitest": "^5.0.5"

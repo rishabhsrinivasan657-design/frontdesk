@@ -3,7 +3,7 @@ import type { TurnRecord } from "@frontdesk/db";
 
 export interface ConversationStart {
   id: string;
-  source: "live";
+  source: "live" | "pilot";
   startedAt: string;
 }
 
@@ -21,12 +21,23 @@ export interface ConversationLog {
   /** Fills a stored turn's tts_start_ms (and adds flags) unless it already has one. */
   setTtsStart(conversationId: string, turnId: string, ms: number, flags: string[]): Promise<void>;
   end(id: string, e: ConversationEnd): Promise<void>;
+  /** One rating per conversation (spec §12); a conversation with no stored turn can't be rated. */
+  saveFeedback(f: Feedback): Promise<"saved" | "duplicate" | "no_conversation">;
+}
+
+export interface Feedback {
+  id: string;
+  conversationId: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
 }
 
 export class InMemoryConversationLog implements ConversationLog {
   readonly started: ConversationStart[] = [];
   readonly turns: TurnRecord[] = [];
   readonly ended: (ConversationEnd & { id: string })[] = [];
+  readonly feedback: Feedback[] = [];
   readonly ttsStarts: { conversationId: string; turnId: string; ms: number; flags: string[] }[] =
     [];
 
@@ -53,5 +64,16 @@ export class InMemoryConversationLog implements ConversationLog {
   end(id: string, e: ConversationEnd): Promise<void> {
     this.ended.push({ id, ...e });
     return Promise.resolve();
+  }
+
+  saveFeedback(f: Feedback): Promise<"saved" | "duplicate" | "no_conversation"> {
+    if (!this.started.some((s) => s.id === f.conversationId)) {
+      return Promise.resolve("no_conversation");
+    }
+    if (this.feedback.some((x) => x.conversationId === f.conversationId)) {
+      return Promise.resolve("duplicate");
+    }
+    this.feedback.push(f);
+    return Promise.resolve("saved");
   }
 }

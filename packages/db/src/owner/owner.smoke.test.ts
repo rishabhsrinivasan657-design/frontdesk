@@ -2,12 +2,13 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createDb } from "../client.js";
 import { PgHandoffQueue } from "../handoff-queue.js";
-import { auditLog, conversations, handoffs, turns } from "../schema.js";
+import { auditLog, conversations, feedback, handoffs, turns } from "../schema.js";
 import { scratchDatabase } from "../test-db.js";
 import {
   getConversation,
   listBookings,
   listConversations,
+  listFeedback,
   listHandoffs,
   metrics,
 } from "./index.js";
@@ -266,18 +267,60 @@ describe("handoffs", () => {
     });
     const queue = new PgHandoffQueue(db);
     expect(
-      await queue.resolve(ticketId, "Called back, booked the room", "2031-02-03T09:00:00.000Z"),
+      await queue.resolve(
+        ticketId,
+        "Called back, booked the room",
+        "2031-02-03T09:00:00.000Z",
+        "booked_by_staff",
+      ),
     ).toBe("resolved");
-    expect(await queue.resolve(ticketId, "again", "2031-02-03T10:00:00.000Z")).toBe(
+    expect(await queue.resolve(ticketId, "again", "2031-02-03T10:00:00.000Z", "not_needed")).toBe(
       "already_resolved",
     );
-    expect(await queue.resolve("ho_missing", "x", "2031-02-03T10:00:00.000Z")).toBe("not_found");
+    expect(await queue.resolve("ho_missing", "x", "2031-02-03T10:00:00.000Z", "not_needed")).toBe(
+      "not_found",
+    );
     const resolved = await listHandoffs(db, { source: "live", status: "resolved" });
     expect(resolved.find((h) => h.id === ticketId)).toMatchObject({
       notes: "Called back, booked the room",
+      outcome: "booked_by_staff",
       resolvedAt: "2031-02-03T09:00:00.000Z",
     });
     expect((await getConversation(db, sessionId))!.handoff!.id).toBe(ticketId);
+  });
+});
+
+async function rate(conversationId: string, rating: number, comment: string, createdAt: string) {
+  await db
+    .insert(feedback)
+    .values({ id: `fb_${uid()}`, conversationId, rating, comment, createdAt });
+}
+
+describe("feedback", () => {
+  it("lists feedback for one source, newest first", async () => {
+    const tag = uid();
+    const pilotA = await conversation({
+      tag,
+      source: "pilot",
+      startedAt: "2031-03-01T10:00:00.000Z",
+    });
+    const pilotB = await conversation({
+      tag,
+      source: "pilot",
+      startedAt: "2031-03-02T10:00:00.000Z",
+    });
+    const live = await conversation({ tag, source: "live", startedAt: "2031-03-02T10:00:00.000Z" });
+    await rate(pilotA, 2, `slow ${tag}`, "2031-03-01T10:10:00.000Z");
+    await rate(pilotB, 5, `great ${tag}`, "2031-03-02T10:10:00.000Z");
+    await rate(live, 4, `live ${tag}`, "2031-03-02T10:10:00.000Z");
+    const pilot = (await listFeedback(db, { source: "pilot", limit: 100 })).filter((f) =>
+      f.comment.includes(tag),
+    );
+    expect(pilot.map((f) => [f.conversationId, f.rating, f.comment])).toEqual([
+      [pilotB, 5, `great ${tag}`],
+      [pilotA, 2, `slow ${tag}`],
+    ]);
+    expect(pilot[0]).toMatchObject({ createdAt: "2031-03-02T10:10:00.000Z", seeded: false });
   });
 });
 
@@ -350,6 +393,61 @@ describe("metrics", () => {
     const pilot = await metrics(db, { source: "pilot", days: 7, now, timezone: TZ });
     expect(pilot.summary.conversations).toBe(1);
     expect(pilot.summary.latency.firstOutput.p50).toBe(9000);
+  });
+
+  it("counts handoff outcomes per source", async () => {
+    const { now, at } = freshWindow();
+    const queue = new PgHandoffQueue(db);
+    const ticket = async (source: "live" | "pilot", outcome?: "not_needed" | "booked_by_staff") => {
+      const sessionId = await conversation({
+        tag: uid(),
+        startedAt: at,
+        source,
+        outcome: "handoff",
+      });
+      const id = `ho_${uid()}`;
+      await db.insert(handoffs).values({
+        id,
+        sessionId,
+        reason: "human_requested",
+        summary: "s",
+        transcript: [],
+        createdAt: at,
+      });
+      if (outcome) await queue.resolve(id, "n", at, outcome);
+    };
+    await ticket("pilot", "not_needed");
+    await ticket("pilot", "not_needed");
+    await ticket("pilot", "booked_by_staff");
+    await ticket("pilot");
+    await ticket("live", "booked_by_staff");
+    const pilot = await metrics(db, { source: "pilot", days: 7, now, timezone: TZ });
+    expect(pilot.summary.handoffOutcomes).toEqual({
+      booked_by_staff: 1,
+      resolved_no_booking: 0,
+      caller_unreachable: 0,
+      not_needed: 2,
+    });
+  });
+
+  it("averages feedback ratings per source", async () => {
+    const { now, at } = freshWindow();
+    const a = await conversation({ tag: uid(), startedAt: at, source: "pilot" });
+    const b = await conversation({ tag: uid(), startedAt: at, source: "pilot" });
+    await conversation({ tag: uid(), startedAt: at, source: "pilot" });
+    const l = await conversation({ tag: uid(), startedAt: at, source: "live" });
+    await rate(a, 5, "", at);
+    await rate(b, 2, "", at);
+    await rate(l, 1, "", at);
+    const pilot = await metrics(db, { source: "pilot", days: 7, now, timezone: TZ });
+    expect(pilot.summary.feedback).toEqual({ avgRating: 3.5, count: 2 });
+    const empty = await metrics(db, {
+      source: "pilot",
+      days: 7,
+      now: new Date("2031-01-01"),
+      timezone: TZ,
+    });
+    expect(empty.summary.feedback).toEqual({ avgRating: null, count: 0 });
   });
 
   it("pilot excludes seeded rows; live flags them", async () => {

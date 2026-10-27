@@ -4,6 +4,9 @@ import type { ChatEvent } from "./state";
 export const SESSION_KEY = "frontdesk.sessionId";
 /** Close code the api uses when another tab or socket takes over this session. */
 export const REPLACED = 4000;
+/** Close codes for a socket the api refused (M10): over the chat limits, or the bot check failed. */
+export const RATE_LIMITED = 4429;
+export const BOT_CHECK_FAILED = 4403;
 const BACKOFF_MS = [250, 500, 1000, 2000, 4000];
 
 export interface ChatConnection {
@@ -13,12 +16,16 @@ export interface ChatConnection {
   sendInterrupt(): boolean;
   /** The first sentence of `turnId` started playing. */
   sendTtsStarted(turnId: string, at: number): boolean;
+  /** The post-conversation rating (spec §12). */
+  sendFeedback(rating: number, comment: string): boolean;
   close(): void;
 }
 
 export interface ConnectOptions {
   url: string;
-  storage: Pick<Storage, "getItem" | "setItem">;
+  storage: Pick<Storage, "getItem" | "setItem" | "removeItem">;
+  /** A fresh bot-check token (Turnstile, M10) for opening a new session; none when unset. */
+  botToken?: () => Promise<string>;
   onEvent(event: ChatEvent): void;
   WebSocketImpl?: typeof WebSocket;
   now?: () => number;
@@ -38,7 +45,19 @@ export function connectChat(opts: ConnectOptions): ChatConnection {
 
   function open() {
     const sessionId = opts.storage.getItem(SESSION_KEY);
-    const url = sessionId ? `${opts.url}?sessionId=${encodeURIComponent(sessionId)}` : opts.url;
+    if (sessionId) {
+      openUrl(`${opts.url}?sessionId=${encodeURIComponent(sessionId)}`);
+    } else if (opts.botToken) {
+      // A token is single-use, so each new session asks for its own.
+      void opts.botToken().then((token) => {
+        if (!stopped) openUrl(`${opts.url}?ts=${encodeURIComponent(token)}`);
+      });
+    } else {
+      openUrl(opts.url);
+    }
+  }
+
+  function openUrl(url: string) {
     const ws = new Impl(url);
     socket = ws;
     ws.onmessage = (e: MessageEvent<string>) => {
@@ -54,6 +73,17 @@ export function connectChat(opts: ConnectOptions): ChatConnection {
       if (e.code === REPLACED) {
         // Another tab has this conversation now; reconnecting would take it back and forth.
         opts.onEvent({ type: "socket", status: "replaced" });
+        return;
+      }
+      // Retrying would only count against the limits again, or fail the same check.
+      if (e.code === RATE_LIMITED) {
+        opts.onEvent({ type: "socket", status: "limited" });
+        return;
+      }
+      if (e.code === BOT_CHECK_FAILED) {
+        // The stored session can't be resumed; a reload starts a new one with a new token.
+        opts.storage.removeItem(SESSION_KEY);
+        opts.onEvent({ type: "socket", status: "bot_check_failed" });
         return;
       }
       opts.onEvent({ type: "socket", status: "reconnecting" });
@@ -75,6 +105,7 @@ export function connectChat(opts: ConnectOptions): ChatConnection {
     sendText: (text, timings = {}) => send({ type: "user_text", text, timings }),
     sendInterrupt: () => send({ type: "interrupt" }),
     sendTtsStarted: (turnId, at) => send({ type: "tts_started", turnId, at }),
+    sendFeedback: (rating, comment) => send({ type: "feedback", rating, comment }),
     close() {
       stopped = true;
       clearTimeout(timer);

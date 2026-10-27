@@ -1,26 +1,14 @@
-import { type Page, expect, test } from "@playwright/test";
-import { details, OWNER, bookAt, demoBookingSession, say } from "./helpers";
+import { expect, test } from "@playwright/test";
+import { details, bookAt, demoBookingSession, logIn, openDashboard, say } from "./helpers";
 
 /** The owner dashboard (spec §10) on seeded demo data (global-setup.ts runs pnpm db:seed). */
-
-async function logIn(page: Page, password: string = OWNER.password): Promise<void> {
-  await page.getByLabel("Email").fill(OWNER.email);
-  await page.getByLabel("Password").fill(password);
-  await page.getByRole("button", { name: "Sign in" }).click();
-}
-
-async function openDashboard(page: Page, path = "/dashboard"): Promise<void> {
-  await page.goto(path);
-  await expect(page).toHaveURL(/\/login\?next=/);
-  await logIn(page);
-  await expect(page).toHaveURL(new RegExp(`${path.replace(/[?]/g, "\\?")}$`));
-}
 
 const VIEWS = [
   "/dashboard",
   "/dashboard/conversations",
   "/dashboard/bookings",
   "/dashboard/handoffs",
+  "/dashboard/feedback",
   "/dashboard/metrics",
 ];
 
@@ -117,26 +105,30 @@ test("bookings list seeded reservations", async ({ page }) => {
   await expect(page.getByText("Guests expected")).toBeVisible();
 });
 
-test("handoff resolve with a note moves it to Resolved", async ({ page }) => {
+test("handoff resolve with a note and outcome moves it to Resolved", async ({ page }) => {
   await openDashboard(page, "/dashboard/handoffs");
   const card = page.getByTestId("handoff-card").first();
   const id = await card.getAttribute("id");
   const note = `Called back at ${Date.now()}; all sorted.`;
   await card.getByLabel("What did you do?").fill(note);
+  await expect(card.getByRole("button", { name: "Mark resolved" })).toBeDisabled();
+  await card.getByLabel("Outcome").selectOption({ label: "Staff booked it" });
   await card.getByRole("button", { name: "Mark resolved" }).click();
   await expect(page.locator(`[id="${id}"]`)).toHaveCount(0);
 
   await page.getByRole("tab", { name: "Resolved" }).click();
   await expect(page.locator(`[id="${id}"]`)).toContainText(note);
+  await expect(page.locator(`[id="${id}"]`)).toContainText("Staff booked it");
 });
 
 test("metrics show KPIs and charts against the budget", async ({ page }) => {
   await openDashboard(page, "/dashboard/metrics");
-  await expect(page.getByTestId("kpi")).toHaveCount(4);
+  await expect(page.getByTestId("kpi")).toHaveCount(5);
   await expect(page.getByTestId("demo-pill")).toBeVisible();
   await expect(page.locator("svg.recharts-surface")).toHaveCount(4);
   await expect(page.getByText("p95 budget").first()).toBeVisible();
   await expect(page.getByTestId("stage-row")).toHaveCount(5);
+  await expect(page.getByTestId("handoff-outcome-count")).toHaveCount(4);
 });
 
 test("pilot shows no demo data", async ({ page }) => {

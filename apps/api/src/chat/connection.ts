@@ -9,6 +9,7 @@ import {
   runTurn,
 } from "@frontdesk/core";
 import type { Price } from "@frontdesk/llm";
+import type { TurnVerdict } from "../abuse/chat-limits.js";
 import { overBudgetFlags } from "../metrics/latency.js";
 import { toTurnRecord } from "../metrics/turn-record.js";
 import type { OwnerFeed } from "../owner/feed.js";
@@ -29,6 +30,8 @@ export interface ChatContext {
   monotonicMs?: () => number;
   /** The owner's Live view hears about sessions, turns and read-backs here. */
   feed?: OwnerFeed;
+  /** Where conversations are counted (spec §10); `pilot` in production. Defaults to `live`. */
+  source?: "live" | "pilot";
 }
 
 export interface ChatSocket {
@@ -44,6 +47,31 @@ export interface Chat {
 }
 
 export const SERVER_ERROR_MESSAGE = "Sorry, something went wrong. Please try again.";
+
+/** What the caller is told when a turn is over a chat limit (M10). */
+const LIMIT_ERRORS = {
+  slow_down: {
+    code: "rate_limited",
+    message: "You're sending messages quickly. Please wait a moment.",
+  },
+  session_full: {
+    code: "session_full",
+    message: "This chat has reached its limit. Please start a new one or call us.",
+  },
+  daily_limit: {
+    code: "rate_limited",
+    message: "We've had a lot of chats from your network today. Please call the restaurant.",
+  },
+  busy_today: {
+    code: "rate_limited",
+    message: "Our online receptionist is fully booked for today. Please call the restaurant.",
+  },
+} as const;
+
+export interface ChatOptions {
+  /** Asked before each caller turn; anything but "ok" refuses it (M10 limits). */
+  allowTurn?: (sessionId: string) => Promise<TurnVerdict>;
+}
 const FIRST_OUTPUT = new Set<ServerMessage["type"]>([
   "agent_delta",
   "agent_sentence",
@@ -60,6 +88,7 @@ export async function openChat(
   socket: ChatSocket,
   ctx: ChatContext,
   requestedSessionId?: string,
+  options: ChatOptions = {},
 ): Promise<Chat> {
   const { deps } = ctx;
   const send = (m: ServerMessage) => socket.send(JSON.stringify(m));
@@ -104,6 +133,34 @@ export async function openChat(
     const ms = Math.max(0, now() - sentAt);
     ttsStartMs.set(turnId, ms);
     if (recorded.has(turnId)) await storeTtsStart(turnId, ms);
+  }
+
+  /** The caller's rating for this session only; a repeat is acknowledged but not stored. */
+  async function onFeedback(rating: number, comment: string): Promise<void> {
+    const saved = await ctx.log
+      .saveFeedback({
+        id: deps.ids("fb"),
+        conversationId: sessionId,
+        rating,
+        comment: comment.trim(),
+        createdAt: at(),
+      })
+      .catch((error: unknown) => {
+        ctx.logger.error(
+          { err: safeError(error), session: sessionTag(sessionId) },
+          "storing feedback failed",
+        );
+        return "failed" as const;
+      });
+    if (saved === "no_conversation") {
+      send({ type: "error", code: "bad_message", message: "There's no conversation to rate yet." });
+      return;
+    }
+    if (saved === "failed") {
+      send({ type: "error", code: "server_error", message: SERVER_ERROR_MESSAGE });
+      return;
+    }
+    send({ type: "feedback_saved" });
   }
 
   /** Runs one turn; resolves once its last message is sent, before the turn is stored. */
@@ -172,6 +229,18 @@ export async function openChat(
       if (message.type === "tts_started") {
         await onTtsStarted(message.turnId);
         return;
+      }
+      if (message.type === "feedback") {
+        await onFeedback(message.rating, message.comment);
+        return;
+      }
+      // Every attempt counts, busy or not: the limits are there to stop floods (M10).
+      if (options.allowTurn) {
+        const verdict = await options.allowTurn(sessionId);
+        if (verdict !== "ok") {
+          send({ type: "error", ...LIMIT_ERRORS[verdict] });
+          return;
+        }
       }
       // Speech that interrupted a turn waits for it to unwind instead of getting `busy`.
       if (claim.busy() && current?.controller.signal.aborted) await current.settled;
@@ -279,7 +348,7 @@ async function record(
   // Every turn (re)starts its conversation: one failed start must not orphan the later turns.
   await ctx.log.start({
     id: sessionId,
-    source: "live",
+    source: ctx.source ?? "live",
     startedAt: session?.createdAt ?? now.toISOString(),
   });
   await ctx.log.recordTurn(

@@ -9,17 +9,26 @@ const defaults = parse(readFileSync(resolve(REPO_ROOT, ".env.example")));
 // .env and the shell win; .env.example fills the gaps. Values are never printed.
 const env = { ...defaults, ...process.env };
 
+function list(value: string): string[] {
+  return value
+    .split(",")
+    .map((o) => o.trim())
+    .filter(Boolean);
+}
+
 const built = await buildDeps(env);
 const app = buildServer({
   chat: built.chat,
   ...(built.owner ? { owner: built.owner } : {}),
   ownerRoutes: built.ownerRoutes,
-  webOrigins: (env.WEB_ORIGINS ?? "")
-    .split(",")
-    .map((o) => o.trim())
-    .filter(Boolean),
+  ...(built.chatGuard ? { chatGuard: built.chatGuard } : {}),
+  ...(built.botCheck ? { botCheck: built.botCheck } : {}),
+  ready: built.ready,
+  webOrigins: list(env.WEB_ORIGINS ?? ""),
+  trustProxy: list(env.TRUST_PROXY ?? "127.0.0.1,::1"),
 });
-await app.listen({ port: Number(env.API_PORT || 4000), host: "127.0.0.1" });
+// 0.0.0.0 only inside a container, where Caddy is the one door in (docs/deploy.md).
+await app.listen({ port: Number(env.API_PORT || 4000), host: env.API_HOST || "127.0.0.1" });
 app.log.info(`front desk api ready (${built.summary})`);
 
 for (const signal of ["SIGINT", "SIGTERM"] as const) {

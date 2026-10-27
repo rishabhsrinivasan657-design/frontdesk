@@ -100,6 +100,27 @@ export class GoogleCalendar implements Calendar {
     }
   }
 
+  /**
+   * Pilot retention (M10): bookings that ended before `before` (looking back 60 days) keep their
+   * time, table and party but lose the guest's name, contact and notes. Returns how many changed.
+   */
+  async redactReservationsBefore(before: Date): Promise<number> {
+    const from = new Date(before.getTime() - 60 * 86_400_000);
+    const ended = (await this.listReservations({ from, to: before })).filter(
+      (b) => b.end.getTime() <= before.getTime() && !(b.name === "Guest" && b.contact === ""),
+    );
+    for (const b of ended) {
+      await this.call("events.patch", () =>
+        this.events.patch({
+          calendarId: this.calendarId,
+          eventId: b.id,
+          requestBody: toEvent({ ...b, name: "Guest", contact: "", notes: "" }, this.tag),
+        }),
+      );
+    }
+    return ended.length;
+  }
+
   private async listAll(
     window: { timeMin?: string; timeMax?: string },
     filters: string[],

@@ -1,3 +1,4 @@
+import { HANDOFF_OUTCOMES } from "@frontdesk/db";
 import type { FastifyReply } from "fastify";
 import { z } from "zod";
 import { LATENCY_P50_MS, LATENCY_P95_MS } from "../metrics/latency.js";
@@ -31,7 +32,14 @@ const MetricsQuery = z.strictObject({
   source,
   days: z.coerce.number().int().min(7).max(90).default(30),
 });
-const ResolveBody = z.strictObject({ notes: z.string().trim().min(1).max(2000) });
+const FeedbackQuery = z.strictObject({
+  source,
+  limit: z.coerce.number().int().min(1).max(200).default(100),
+});
+const ResolveBody = z.strictObject({
+  notes: z.string().trim().min(1).max(2000),
+  outcome: z.enum(HANDOFF_OUTCOMES),
+});
 const IdParams = z.strictObject({ id });
 
 /** The spec §8 budget per charted stage, in ms. */
@@ -92,10 +100,17 @@ export function ownerRestRoutes(deps: OwnerRestDeps): OwnerRouteSet {
         p.data.id,
         body.data.notes,
         deps.now().toISOString(),
+        body.data.outcome,
       );
       if (result === "not_found") return reply.code(404).send({ error: "not_found" });
       if (result === "already_resolved") return reply.code(409).send({ error: "already_resolved" });
       return reply.code(204).send();
+    });
+
+    app.get("/feedback", async (req, reply) => {
+      const q = FeedbackQuery.safeParse(req.query);
+      if (!q.success) return badRequest(reply);
+      return deps.reads.listFeedback(q.data);
     });
 
     app.get("/metrics", async (req, reply) => {

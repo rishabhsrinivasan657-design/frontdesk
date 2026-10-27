@@ -14,6 +14,12 @@ export const ClientMessageSchema = z.discriminatedUnion("type", [
   }),
   z.strictObject({ type: z.literal("interrupt") }),
   z.strictObject({ type: z.literal("tts_started"), turnId: z.string(), at: ms }),
+  /** The post-conversation rating (spec §12). One per session; later ones are ignored. */
+  z.strictObject({
+    type: z.literal("feedback"),
+    rating: z.number().int().min(1).max(5),
+    comment: z.string().max(1000),
+  }),
 ]);
 export type ClientMessage = z.infer<typeof ClientMessageSchema>;
 
@@ -76,9 +82,10 @@ export const ServerMessageSchema = z.discriminatedUnion("type", [
   }),
   /** The in-flight turn was cancelled by `interrupt`: nothing from it will follow. */
   z.strictObject({ type: z.literal("interrupted") }),
+  z.strictObject({ type: z.literal("feedback_saved") }),
   z.strictObject({
     type: z.literal("error"),
-    code: z.enum(["bad_message", "busy", "server_error"]),
+    code: z.enum(["bad_message", "busy", "server_error", "rate_limited", "session_full"]),
     message: z.string(),
   }),
 ]);

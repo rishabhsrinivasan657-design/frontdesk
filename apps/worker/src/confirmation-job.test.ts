@@ -28,7 +28,7 @@ describe("enqueueConfirmation", () => {
           attempts: 5,
           backoff: { type: "exponential", delay: 2000 },
           removeOnComplete: { age: 86_400 },
-          removeOnFail: false,
+          removeOnFail: { age: 30 * 24 * 3600 },
         },
       },
     ]);

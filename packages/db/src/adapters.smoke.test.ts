@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { AuditEvent, HandoffTicket } from "@frontdesk/core";
+import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { PgAuditLog } from "./audit-log.js";
 import { createDb } from "./client.js";
@@ -179,14 +180,36 @@ describe("PgConversations", () => {
       endedAt: "2026-11-06T23:05:00.000Z",
       outcome: "booked",
     });
-    await conversations.addFeedback({
-      id: id("fb"),
-      conversationId,
-      rating: 5,
-      comment: "Easy!",
-      createdAt: "2026-11-06T23:06:00.000Z",
-    });
     expect(await conversations.turns(conversationId)).toEqual([t]);
+  });
+
+  const fb = (conversationId: string) => ({
+    id: id("fb"),
+    conversationId,
+    rating: 5,
+    comment: "Easy!",
+    createdAt: "2026-11-06T23:06:00.000Z",
+  });
+
+  it("saves one feedback per conversation", async () => {
+    const conversationId = id("s");
+    await conversations.start({
+      id: conversationId,
+      source: "pilot",
+      startedAt: "2026-11-06T23:00:00.000Z",
+    });
+    expect(await conversations.saveFeedback(fb(conversationId))).toBe("saved");
+    expect(await conversations.saveFeedback({ ...fb(conversationId), rating: 1 })).toBe(
+      "duplicate",
+    );
+    const rows = await conn.db.execute<{ rating: number }>(
+      sql`select rating from feedback where conversation_id = ${conversationId}`,
+    );
+    expect(rows.rows.map((r) => r.rating)).toEqual([5]);
+  });
+
+  it("refuses feedback for a conversation that doesn't exist", async () => {
+    expect(await conversations.saveFeedback(fb(id("s")))).toBe("no_conversation");
   });
 
   it("rejects an unknown source", async () => {

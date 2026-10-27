@@ -3,7 +3,8 @@ import type { FastifyInstance, FastifyPluginCallback, FastifyReply, FastifyReque
 import { z } from "zod";
 import { COOKIE, checkCredentials } from "./auth.js";
 import type { OwnerContext } from "./context.js";
-import { MAX_LOGIN_FAILURES } from "./session-store.js";
+import { clientKey } from "../abuse/chat-limits.js";
+import { MAX_LOGIN_ATTEMPTS_PER_HOUR, MAX_LOGIN_FAILURES } from "./session-store.js";
 
 declare module "fastify" {
   interface FastifyContextConfig {
@@ -59,13 +60,18 @@ export function ownerPlugin(
       const body = LoginBody.safeParse(req.body);
       if (!body.success) return reply.code(400).send({ error: "bad_request" });
       // Counted before bcrypt runs, so parallel guesses can't all read "0 failures so far".
-      if ((await owner.sessions.attempt(req.ip)) > MAX_LOGIN_FAILURES) {
+      // An IPv6 /64 is one address; the hourly ceiling catches guessing spread over many.
+      const who = clientKey(req.ip);
+      if (
+        (await owner.sessions.attempt(who)) > MAX_LOGIN_FAILURES ||
+        (await owner.sessions.attemptAnywhere()) > MAX_LOGIN_ATTEMPTS_PER_HOUR
+      ) {
         return reply.code(429).send({ error: "too_many_attempts" });
       }
       if (!(await checkCredentials(owner, body.data.email, body.data.password))) {
         return reply.code(401).send({ error: "invalid_credentials" });
       }
-      await owner.sessions.clearAttempts(req.ip);
+      await owner.sessions.clearAttempts(who);
       const id = await owner.sessions.create();
       setSessionCookie(reply, owner, id);
       return reply.code(204).send();

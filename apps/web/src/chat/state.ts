@@ -28,7 +28,7 @@ export interface Latency {
 }
 
 export interface ChatState {
-  status: "connecting" | "open" | "reconnecting" | "replaced";
+  status: "connecting" | "open" | "reconnecting" | "replaced" | "limited" | "bot_check_failed";
   sessionId?: string;
   messages: ChatMessage[];
   pending?: PendingCard;
@@ -40,14 +40,26 @@ export interface ChatState {
   lastLatency?: Latency;
   /** A short message for the caller (an error the server reported). */
   notice?: string;
+  /** The post-conversation rating (spec §12): offered once the chat ends or is handed off. */
+  feedback?: "open" | "sending" | "saved" | "skipped";
 }
 
 export type ChatEvent =
   | { type: "server"; message: ServerMessage; at: number }
   | { type: "local_send"; text: string; at: number }
-  | { type: "socket"; status: "reconnecting" | "replaced" };
+  | { type: "socket"; status: "reconnecting" | "replaced" | "limited" | "bot_check_failed" }
+  | { type: "end_chat" }
+  | { type: "feedback_sent" }
+  | { type: "feedback_skipped" };
 
 export const initialChatState: ChatState = { status: "connecting", messages: [], busy: false };
+
+/** What the caller reads when the api refused the socket (M10). */
+const SOCKET_NOTICES: Partial<Record<ChatState["status"], string>> = {
+  limited:
+    "Too many chats from your network right now. Please try again later or call the restaurant.",
+  bot_check_failed: "We couldn't verify you're not a bot. Please reload the page.",
+};
 
 let localIds = 0;
 
@@ -66,10 +78,26 @@ export function chatReducer(state: ChatState, event: ChatEvent): ChatState {
       };
     }
     case "socket":
-      return { ...state, status: event.status, busy: false };
+      return {
+        ...state,
+        status: event.status,
+        busy: false,
+        ...(SOCKET_NOTICES[event.status] ? { notice: SOCKET_NOTICES[event.status] } : {}),
+      };
     case "server":
       return onServer(state, event.message, event.at);
+    case "end_chat":
+      return offerFeedback(state);
+    case "feedback_sent":
+      return { ...state, feedback: "sending" };
+    case "feedback_skipped":
+      return { ...state, feedback: "skipped" };
   }
+}
+
+/** Offered once: a form already sent, saved or skipped stays that way. */
+function offerFeedback(state: ChatState): ChatState {
+  return state.feedback === undefined ? { ...state, feedback: "open" } : state;
 }
 
 function onServer(state: ChatState, m: ServerMessage, at: number): ChatState {
@@ -116,7 +144,12 @@ function onServer(state: ChatState, m: ServerMessage, at: number): ChatState {
         },
       };
     case "handoff":
-      return { ...firstReply(state, at), handoff: { reason: m.reason, message: m.message } };
+      return offerFeedback({
+        ...firstReply(state, at),
+        handoff: { reason: m.reason, message: m.message },
+      });
+    case "feedback_saved":
+      return { ...state, feedback: "saved" };
     case "turn_metrics": {
       const firstReplyMs =
         state.sentAt !== undefined && state.firstReplyAt !== undefined

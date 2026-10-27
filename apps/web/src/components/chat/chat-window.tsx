@@ -2,11 +2,14 @@
 
 import { useEffect, useRef } from "react";
 import { useChat } from "@/chat/use-chat";
+import { useTurnstile } from "@/chat/use-turnstile";
 import { useVoice } from "@/voice/use-voice";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Composer } from "./composer";
+import { Button } from "@/components/ui/button";
 import { ConfirmationCard } from "./confirmation-card";
+import { FeedbackForm } from "./feedback-form";
 import { HandoffBanner } from "./handoff-banner";
 import { LatencyBadge } from "./latency-badge";
 import { MessageList } from "./message-list";
@@ -17,13 +20,29 @@ const STATUS = {
   open: "Connected",
   reconnecting: "Reconnecting…",
   replaced: "Open in another tab",
+  limited: "Unavailable",
+  bot_check_failed: "Unavailable",
 } as const;
 
-export function ChatWindow({ url, businessName }: { url: string; businessName: string }) {
-  const chat = useChat(url);
+export function ChatWindow({
+  url,
+  businessName,
+  turnstileSiteKey,
+}: {
+  url: string;
+  businessName: string;
+  /** Cloudflare Turnstile's public site key (M10); no bot check when empty. */
+  turnstileSiteKey?: string;
+}) {
+  const turnstile = useTurnstile(turnstileSiteKey || undefined);
+  const chat = useChat(url, turnstile.botToken);
   const { state } = chat;
   const voice = useVoice(chat);
-  const closed = state.status !== "open" || state.handoff !== undefined;
+  const ended = state.feedback !== undefined;
+  const closed = state.status !== "open" || state.handoff !== undefined || ended;
+  // Ending is offered once the receptionist has said something and nothing is mid-flight.
+  const canEnd =
+    !ended && !state.busy && state.messages.some((m) => m.role === "agent") && !state.handoff;
   // Typed text and card buttons: same path as before; voice hears that turn's reply too.
   const send = (text: string) => {
     const ok = chat.send(text);
@@ -39,7 +58,7 @@ export function ChatWindow({ url, businessName }: { url: string; businessName: s
   // return a cleanup function.
   useEffect(() => {
     end.current?.scrollIntoView({ block: "end" });
-  }, [state.messages.length, last?.text, state.busy, state.pending, state.handoff]);
+  }, [state.messages.length, last?.text, state.busy, state.pending, state.handoff, state.feedback]);
 
   return (
     <Card className="mx-auto flex h-[min(720px,calc(100dvh-2rem))] w-full max-w-xl flex-col">
@@ -58,9 +77,22 @@ export function ChatWindow({ url, businessName }: { url: string; businessName: s
           <ConfirmationCard card={state.pending} disabled={closed || state.busy} onReply={reply} />
         )}
         {state.handoff && <HandoffBanner message={state.handoff.message} />}
+        {state.feedback && state.feedback !== "skipped" && (
+          <FeedbackForm
+            status={state.feedback}
+            onSend={chat.sendFeedback}
+            onSkip={chat.skipFeedback}
+          />
+        )}
         <div ref={end} />
       </CardContent>
       <div className="flex flex-col gap-2 px-4">
+        {turnstileSiteKey && <div ref={turnstile.el} data-testid="turnstile" />}
+        {turnstile.failed && (
+          <p role="alert" className="text-xs text-destructive">
+            The security check couldn&apos;t load. Please disable blockers for this site and reload.
+          </p>
+        )}
         {state.notice && (
           <p role="alert" className="text-xs text-destructive">
             {state.notice}
@@ -83,7 +115,14 @@ export function ChatWindow({ url, businessName }: { url: string; businessName: s
           {/* Usable while we answer: pressing it then is barge-in. */}
           <MicButton status={voice.status} disabled={closed} onPress={voice.press} />
         </div>
-        <div className="flex h-4 justify-end">
+        <div className="flex min-h-8 items-center justify-between">
+          {canEnd ? (
+            <Button type="button" variant="ghost" size="sm" onClick={chat.endChat}>
+              End chat
+            </Button>
+          ) : (
+            <span />
+          )}
           {state.lastLatency && <LatencyBadge latency={state.lastLatency} voice={voice.latency} />}
         </div>
       </div>

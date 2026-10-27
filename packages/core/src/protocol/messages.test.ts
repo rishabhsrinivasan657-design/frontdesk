@@ -79,6 +79,25 @@ describe("ClientMessageSchema", () => {
   });
 });
 
+describe("feedback (M10)", () => {
+  const feedback = (rating: number, comment = "") => ({ type: "feedback", rating, comment });
+
+  it("accepts a 1 to 5 rating with an optional comment", () => {
+    expect(ClientMessageSchema.safeParse(feedback(1)).success).toBe(true);
+    expect(ClientMessageSchema.safeParse(feedback(5, "x".repeat(1000))).success).toBe(true);
+  });
+
+  it("rejects ratings outside 1 to 5, fractions and long comments", () => {
+    for (const bad of [feedback(0), feedback(6), feedback(2.5), feedback(3, "x".repeat(1001))]) {
+      expect(ClientMessageSchema.safeParse(bad).success).toBe(false);
+    }
+  });
+
+  it("acknowledges with feedback_saved", () => {
+    expect(ServerMessageSchema.safeParse({ type: "feedback_saved" }).success).toBe(true);
+  });
+});
+
 describe("session and error messages (M6)", () => {
   const session = {
     type: "session",

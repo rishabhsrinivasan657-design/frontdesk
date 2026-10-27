@@ -194,3 +194,53 @@ describe("chatReducer", () => {
     expect(state.busy).toBe(false);
   });
 });
+
+describe("feedback (M10)", () => {
+  const session = server({ type: "session", sessionId: "s1", resumed: false, transcript: [] });
+  const said = server({ type: "agent_sentence", turnId: "t1", text: "Hello." });
+
+  it("ending the chat opens the feedback form", () => {
+    const s = run([session, said, { type: "end_chat" }]);
+    expect(s.feedback).toBe("open");
+  });
+
+  it("a handoff opens the feedback form", () => {
+    const s = run([
+      session,
+      server({
+        type: "handoff",
+        turnId: "t1",
+        reason: "human_requested",
+        message: "Passing you on.",
+      }),
+    ]);
+    expect(s.feedback).toBe("open");
+  });
+
+  it("sending then feedback_saved shows thanks", () => {
+    const sending = run([session, said, { type: "end_chat" }, { type: "feedback_sent" }]);
+    expect(sending.feedback).toBe("sending");
+    expect(chatReducer(sending, server({ type: "feedback_saved" })).feedback).toBe("saved");
+  });
+
+  it("skipping closes the form for good", () => {
+    const s = run([session, said, { type: "end_chat" }, { type: "feedback_skipped" }]);
+    expect(s.feedback).toBe("skipped");
+    expect(chatReducer(s, { type: "end_chat" }).feedback).toBe("skipped");
+  });
+});
+
+describe("refused sockets (M10)", () => {
+  it("limited shows a notice and stops the composer", () => {
+    const s = run([{ type: "socket", status: "limited" }]);
+    expect(s.status).toBe("limited");
+    expect(s.notice).toBe(
+      "Too many chats from your network right now. Please try again later or call the restaurant.",
+    );
+  });
+
+  it("a failed bot check asks to reload", () => {
+    const s = run([{ type: "socket", status: "bot_check_failed" }]);
+    expect(s.notice).toBe("We couldn't verify you're not a bot. Please reload the page.");
+  });
+});

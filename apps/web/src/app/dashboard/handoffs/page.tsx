@@ -5,6 +5,7 @@ import { EmptyState, PageHeader } from "@/components/dashboard/page";
 import { ResolveForm } from "@/components/dashboard/resolve-form";
 import { Icon } from "@/components/icons";
 import { formatTime, relativeTime } from "@/dashboard/format";
+import { outcomeLabel } from "@/dashboard/handoff-outcomes";
 import { type HandoffRow, sourceParam } from "@/dashboard/types";
 import { ownerFetch } from "@/lib/owner-api";
 import { cn } from "@/lib/utils";
@@ -129,6 +130,9 @@ export default async function HandoffsPage({
                   <div className="rounded-lg bg-success-soft/60 px-4 py-3 text-sm">
                     <p className="flex items-center gap-2 font-medium text-success">
                       <Icon name="check" /> Resolved {formatTime(h.resolvedAt)}
+                      {outcomeLabel(h.outcome) && (
+                        <span data-testid="handoff-outcome">· {outcomeLabel(h.outcome)}</span>
+                      )}
                     </p>
                     {h.notes && <p className="mt-1 text-foreground/80">{h.notes}</p>}
                   </div>

@@ -41,11 +41,12 @@ const session = (sessionId: string): ServerMessage => ({
   transcript: [],
 });
 
-function setup(stored?: string) {
+function setup(stored?: string, botToken?: () => Promise<string>) {
   const items = new Map<string, string>(stored ? [[SESSION_KEY, stored]] : []);
   const storage = {
     getItem: (k: string) => items.get(k) ?? null,
     setItem: (k: string, v: string) => void items.set(k, v),
+    removeItem: (k: string) => void items.delete(k),
   };
   const events: ChatEvent[] = [];
   const chat = connectChat({
@@ -54,6 +55,7 @@ function setup(stored?: string) {
     WebSocketImpl: FakeWebSocket as unknown as typeof WebSocket,
     onEvent: (e) => events.push(e),
     now: () => 0,
+    ...(botToken ? { botToken } : {}),
   });
   return { chat, items, events };
 }
@@ -124,6 +126,40 @@ describe("connectChat", () => {
     expect(events.at(-1)).toEqual({ type: "socket", status: "replaced" });
   });
 
+  it.each([
+    [4429, "limited"],
+    [4403, "bot_check_failed"],
+  ] as const)("stops on close code %i without reconnecting", (code, status) => {
+    const { events } = setup();
+    latest().open();
+    latest().drop(code);
+    vi.advanceTimersByTime(10_000);
+    expect(FakeWebSocket.instances).toHaveLength(1);
+    expect(events.at(-1)).toEqual({ type: "socket", status });
+  });
+
+  it("a new session waits for a bot token and sends it as ts", async () => {
+    let give!: (t: string) => void;
+    setup(undefined, () => new Promise((r) => (give = r)));
+    expect(FakeWebSocket.instances).toHaveLength(0);
+    give("tok en");
+    await vi.waitFor(() => expect(FakeWebSocket.instances).toHaveLength(1));
+    expect(latest().url).toBe("ws://api/ws?ts=tok%20en");
+  });
+
+  it("a stored session reconnects without asking for a token", () => {
+    const botToken = vi.fn(() => Promise.resolve("t"));
+    setup("sess_9", botToken);
+    expect(latest().url).toBe("ws://api/ws?sessionId=sess_9");
+    expect(botToken).not.toHaveBeenCalled();
+  });
+
+  it("4403 forgets the stored session so a reload starts fresh", () => {
+    const { items } = setup("sess_9");
+    latest().drop(4403);
+    expect(items.has(SESSION_KEY)).toBe(false);
+  });
+
   it("doesn't reconnect after close()", () => {
     const { chat } = setup();
     latest().open();
@@ -152,6 +188,16 @@ describe("connectChat", () => {
       text: "a table for 4",
       timings: { speechEnd: 1000, sttFinal: 1300 },
     });
+  });
+
+  it("sendFeedback sends the rating and comment, only while open", () => {
+    const { chat } = setup();
+    expect(chat.sendFeedback(4, "Nice")).toBe(false);
+    latest().open();
+    expect(chat.sendFeedback(4, "Nice")).toBe(true);
+    expect(latest().sent.map((m) => JSON.parse(m) as unknown)).toEqual([
+      { type: "feedback", rating: 4, comment: "Nice" },
+    ]);
   });
 
   it("sendInterrupt and sendTtsStarted send their messages, only while open", () => {
