@@ -1,9 +1,16 @@
 import { randomBytes } from "node:crypto";
+import { createKeyTag, type KeyTag } from "@frontdesk/worker";
 import type { Redis } from "ioredis";
 
 /** Failed logins allowed per IP in one window before 429. */
 export const MAX_LOGIN_FAILURES = 5;
 export const LOGIN_FAILURE_WINDOW_MS = 15 * 60_000;
+/**
+ * Login attempts allowed from everywhere together per hour (M10): a backstop for guessing
+ * spread across many addresses, which a per-address limit can't see.
+ */
+export const MAX_LOGIN_ATTEMPTS_PER_HOUR = 50;
+const GLOBAL_WINDOW_MS = 3_600_000;
 
 /** Owner sessions: random ids the server remembers, so logout and expiry are real. */
 export interface OwnerSessionStore {
@@ -17,6 +24,8 @@ export interface OwnerSessionStore {
   attempt(ip: string): Promise<number>;
   /** A correct password: earlier mistakes no longer count. */
   clearAttempts(ip: string): Promise<void>;
+  /** Counts a login attempt from anywhere and returns the count in the current hour. */
+  attemptAnywhere(): Promise<number>;
 }
 
 /** 32 random bytes, base64url: 43 characters, unguessable. */
@@ -30,6 +39,8 @@ export class RedisOwnerSessionStore implements OwnerSessionStore {
   constructor(
     private readonly redis: Redis,
     private readonly ttlMs: number,
+    /** Failure keys hold a keyed hash of the address, never the address (M10). */
+    private readonly tag: KeyTag = createKeyTag("dev"),
   ) {}
 
   async create(): Promise<string> {
@@ -47,15 +58,22 @@ export class RedisOwnerSessionStore implements OwnerSessionStore {
     if (isSessionIdShape(id)) await this.redis.del(`owner:sess:${id}`);
   }
 
-  async attempt(ip: string): Promise<number> {
-    const key = `owner:fail:${ip}`;
+  private async count(key: string, windowMs: number): Promise<number> {
     const n = await this.redis.incr(key);
-    if (n === 1) await this.redis.pexpire(key, LOGIN_FAILURE_WINDOW_MS);
+    if (n === 1) await this.redis.pexpire(key, windowMs);
     return n;
   }
 
+  attempt(ip: string): Promise<number> {
+    return this.count(`owner:fail:${this.tag(ip)}`, LOGIN_FAILURE_WINDOW_MS);
+  }
+
   async clearAttempts(ip: string): Promise<void> {
-    await this.redis.del(`owner:fail:${ip}`);
+    await this.redis.del(`owner:fail:${this.tag(ip)}`);
+  }
+
+  attemptAnywhere(): Promise<number> {
+    return this.count("owner:attempts:all", GLOBAL_WINDOW_MS);
   }
 }
 
@@ -63,6 +81,7 @@ export class RedisOwnerSessionStore implements OwnerSessionStore {
 export class InMemoryOwnerSessionStore implements OwnerSessionStore {
   private readonly sessions = new Map<string, number>();
   private readonly fails = new Map<string, { n: number; until: number }>();
+  private anywhere = { n: 0, until: 0 };
 
   constructor(
     private readonly ttlMs = 12 * 3_600_000,
@@ -97,5 +116,13 @@ export class InMemoryOwnerSessionStore implements OwnerSessionStore {
   clearAttempts(ip: string): Promise<void> {
     this.fails.delete(ip);
     return Promise.resolve();
+  }
+
+  attemptAnywhere(): Promise<number> {
+    if (this.anywhere.until <= this.now()) {
+      this.anywhere = { n: 0, until: this.now() + GLOBAL_WINDOW_MS };
+    }
+    this.anywhere.n += 1;
+    return Promise.resolve(this.anywhere.n);
   }
 }

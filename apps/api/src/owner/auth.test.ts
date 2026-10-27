@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import type { FastifyInstance, InjectOptions } from "fastify";
+import { MAX_LOGIN_ATTEMPTS_PER_HOUR } from "./session-store.js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ChatContext } from "../chat/connection.js";
 import { InMemoryConversationLog } from "../chat/conversation-log.js";
@@ -130,6 +131,29 @@ describe("owner auth", () => {
     expect((await login(app, { email: EMAIL, password: PASSWORD }, "10.0.0.2")).statusCode).toBe(
       204,
     );
+  });
+
+  it("an IPv6 /64 counts as one address", async () => {
+    const { app } = await start();
+    for (let i = 1; i <= 5; i++) {
+      const res = await login(app, { email: EMAIL, password: "nope" }, `2001:db8:0:1::${i}`);
+      expect(res.statusCode).toBe(401);
+    }
+    const next = await login(app, { email: EMAIL, password: PASSWORD }, "2001:db8:0:1::99");
+    expect(next.statusCode).toBe(429);
+  });
+
+  it("a global ceiling stops guessing spread across many addresses", async () => {
+    const { app } = await start();
+    for (let i = 0; i < MAX_LOGIN_ATTEMPTS_PER_HOUR; i++) {
+      await login(
+        app,
+        { email: EMAIL, password: "nope" },
+        `10.1.${Math.floor(i / 250)}.${i % 250}`,
+      );
+    }
+    const next = await login(app, { email: EMAIL, password: PASSWORD }, "10.9.9.9");
+    expect(next.statusCode).toBe(429);
   });
 
   it("parallel guesses can't beat the rate limit", async () => {

@@ -21,8 +21,8 @@ export default function PrivacyPage() {
         <li>The name, phone number or email you give for a booking.</li>
         <li>Your rating and comment, if you leave one.</li>
         <li>
-          Your IP address, only to limit how many chats one network can start. It is kept in memory
-          and expires within a day, and only a one-way hash of it is stored.
+          Your IP address, only to limit how many chats one network can start. Only a keyed one-way
+          hash of it is stored, and it expires within a day.
         </li>
       </ul>
       <h2 className="font-heading text-lg">Why</h2>
@@ -36,6 +36,16 @@ export default function PrivacyPage() {
         automatically. Only counts and timings (for example, how many chats ended in a booking) are
         kept.
       </p>
+      <ul data-testid="privacy-exceptions" className="list-disc pl-5">
+        <li>
+          A booking keeps your name and contact on the demo calendar until 30 days after the
+          reservation date, so a table booked months ahead keeps them longer.
+        </li>
+        <li>
+          Copies of sent confirmation emails in the demo Gmail account are deleted by hand once a
+          month, so they can stay up to about 60 days.
+        </li>
+      </ul>
       <h2 className="font-heading text-lg">Who else is involved</h2>
       <ul className="list-disc pl-5">
         <li>Cloudflare Turnstile checks that you&apos;re not a bot before a chat starts.</li>

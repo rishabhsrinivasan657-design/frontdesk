@@ -22,7 +22,7 @@ import { Redis } from "ioredis";
 import { type BotCheck, TurnstileBotCheck } from "./abuse/bot-check.js";
 import { RedisBookingQuota } from "./abuse/booking-quota.js";
 import { type ChatGuard, ChatLimits, DEFAULT_CHAT_LIMITS } from "./abuse/chat-limits.js";
-import { RedisWindowCounter } from "./abuse/window-counter.js";
+import { RedisWindowCounter, type WindowCounter } from "./abuse/window-counter.js";
 import { loadBusinessConfig } from "./business-config.js";
 import { type Readiness, readiness } from "./health.js";
 import type { ChatContext } from "./chat/connection.js";
@@ -133,7 +133,7 @@ export async function buildDeps(env: Env): Promise<{
     }),
   ];
 
-  const chatGuard = limits ? new ChatLimits(new RedisWindowCounter(redis)) : undefined;
+  const chatGuard = buildChatGuard(env, new RedisWindowCounter(redis));
 
   const botCheck = readBotCheck(env);
   const ready = readiness({
@@ -194,6 +194,13 @@ export function chatLimitsEnabled(env: Env): boolean {
   return env.NODE_ENV === "production" || env.CHAT_LIMITS?.trim() === "on";
 }
 
+/** The chat limits (M10) when enabled, keyed with KEY_HASH_SECRET. */
+export function buildChatGuard(env: Env, counter: WindowCounter): ChatGuard | undefined {
+  return chatLimitsEnabled(env)
+    ? new ChatLimits(counter, DEFAULT_CHAT_LIMITS, readKeyTag(env))
+    : undefined;
+}
+
 /** The dashboard login (spec §10). Both values unset → the owner api is off (503). */
 export function readOwnerEnv(env: Env, redis: Redis): OwnerContext | undefined {
   const email = env.OWNER_EMAIL?.trim();
@@ -211,7 +218,7 @@ export function readOwnerEnv(env: Env, redis: Redis): OwnerContext | undefined {
   return {
     email,
     passwordHash,
-    sessions: new RedisOwnerSessionStore(redis, sessionTtlMs),
+    sessions: new RedisOwnerSessionStore(redis, sessionTtlMs, readKeyTag(env)),
     sessionTtlMs,
     secureCookie: env.NODE_ENV === "production",
   };

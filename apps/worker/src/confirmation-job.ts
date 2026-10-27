@@ -67,8 +67,9 @@ export async function enqueueConfirmation(
       attempts: EMAIL_ATTEMPTS,
       backoff: { ...EMAIL_BACKOFF, delay: opts.backoffDelayMs ?? EMAIL_BACKOFF.delay },
       removeOnComplete: { age: DEDUPE_WINDOW_S },
-      // Failed jobs stay for inspection; their handoff ticket is the follow-up.
-      removeOnFail: false,
+      // Failed jobs stay for inspection (their handoff ticket is the follow-up), but they hold
+      // the guest's name and address, so only for the 30-day retention period (M10).
+      removeOnFail: { age: 30 * 24 * 3600 },
     },
   );
 }

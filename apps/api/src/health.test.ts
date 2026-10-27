@@ -58,3 +58,21 @@ describe("readiness", () => {
     expect((await check()).checks.redis).toBe("fail");
   });
 });
+
+describe("readiness under load (M10 review)", () => {
+  it("many concurrent requests share one Google check", async () => {
+    let calls = 0;
+    let finish!: (ok: boolean) => void;
+    const check = readiness({
+      redis: ok,
+      postgres: ok,
+      google: () => (calls++, new Promise<boolean>((r) => (finish = r))),
+      worker: ok,
+    });
+    const all = Promise.all(Array.from({ length: 50 }, () => check()));
+    await new Promise((r) => setTimeout(r, 0));
+    finish(true);
+    expect((await all).every((r) => r.ok)).toBe(true);
+    expect(calls).toBe(1);
+  });
+});

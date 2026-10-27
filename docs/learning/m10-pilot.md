@@ -40,16 +40,17 @@ M10 puts Front Desk in front of strangers. **Part A** (this PR) makes the code s
 - **Deployment.** Running the same code on a machine the public can reach, with production settings (`NODE_ENV=production`), real secrets in a locked-down env file, and the database and Redis hidden from the internet. Here that machine is an Oracle Always Free VM (Part B).
 - **Reverse proxy + HTTPS.** Caddy is the only thing listening on ports 80/443. It gets a free Let's Encrypt certificate for the DuckDNS name, decrypts HTTPS and forwards `/ws` and `/health` to the api and everything else to the web app. It also sets `X-Forwarded-For` to the real visitor address, which is why the api trusts that header only from the proxy's network (`TRUST_PROXY`).
 - **Rate limiting.** A fixed window counts hits per key: the first hit sets a TTL, so the count resets when the window ends. The pilot limits:
-  - **per IP:** 10 new chats an hour, 3 open at once, 300 turns a day
-  - **per chat:** 8 turns a minute, 40 in total
+  - **per IP:** 10 new chats an hour, 3 open at once, 60 turns a day
+  - **per chat:** 8 turns a minute, 40 in total for its whole life
+  - **for everyone together:** 200 turns a day
 
-  One person can't use up the free Gemini quota everyone shares. Keys are hashes, so Redis never holds an IP.
+  A turn can make 2 model calls, so one IP stays under a quarter of the free tier's 500 requests a day and everyone together stays under all of it. An IPv6 address counts by its /64, because one machine can own a whole /64. Keys are HMACs with a server secret (`KEY_HASH_SECRET`): a plain hash of an IPv4 address can be reversed by hashing all 4 billion of them.
 
 - **Abuse vectors.** Things a stranger could do with a public endpoint:
-  - burn the LLM quota (blocked by the rate limits and Turnstile)
-  - use the confirmation email to spam someone (blocked by the per-address and global email caps)
-  - fill the calendar (blocked by 2 bookings per contact per day)
-  - guess the owner password (the existing per-IP login limit, now fed the real IP)
+  - burn the LLM quota (blocked by the rate limits, the daily budget and Turnstile)
+  - use the confirmation email to spam someone (blocked by the email caps, which count `a+1@` and `a+2@` as one inbox)
+  - fill the calendar (blocked by 2 bookings per contact per day and 2 per chat)
+  - guess the owner password (the per-IP login limit, now fed the real IP, plus a ceiling of 50 attempts an hour from everywhere)
 - **Bot check.** Turnstile gives the browser a one-time token. The api asks Cloudflare whether it's genuine before opening a new session. Resuming a stored session needs no token, because its id is already an unguessable credential.
 - **PII and retention.** PII is anything that identifies a person: names, phones, emails, and what they typed. Logs never carry it (tested). After 30 days the pilot's PII is _redacted_, not deleted: counts, outcomes, ratings and latencies survive, so the metrics still add up. The audit log stays append-only, except for one flag-guarded UPDATE that may only touch `args`, `result` and `reason`.
 - **OAuth publishing.** In Google's "Testing" mode a refresh token dies after 7 days. Publishing the app to "In production" (unverified, used by one account) keeps it alive. `/health/ready` checks it with a fresh client every 5 minutes, so a dead token fails loudly.

@@ -20,6 +20,8 @@ export function readiness(
   const now = o.now ?? Date.now;
   const timeoutMs = o.timeoutMs ?? TIMEOUT_MS;
   let google: { at: number; ok: boolean } | undefined;
+  // One check in flight at a time: concurrent requests wait for it instead of each refreshing.
+  let inFlight: Promise<boolean> | undefined;
 
   const run = async (check: () => Promise<boolean>): Promise<boolean> => {
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -35,9 +37,12 @@ export function readiness(
 
   const googleCached = async (): Promise<boolean> => {
     if (google && now() - google.at < GOOGLE_TTL_MS) return google.ok;
-    const result = await run(checks.google);
-    google = { at: now(), ok: result };
-    return result;
+    inFlight ??= run(checks.google).then((result) => {
+      google = { at: now(), ok: result };
+      inFlight = undefined;
+      return result;
+    });
+    return inFlight;
   };
 
   return async () => {
