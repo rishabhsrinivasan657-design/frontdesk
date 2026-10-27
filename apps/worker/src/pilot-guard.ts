@@ -16,6 +16,18 @@ const RULES: { key: string; ok: (v: string) => boolean; why: string }[] = [
   { key: "OWNER_PASSWORD_HASH", ok: (v) => v !== "", why: "must be set" },
   { key: "KEY_HASH_SECRET", ok: (v) => v.length >= 32, why: "must be at least 32 characters" },
   {
+    // Whoever is trusted may claim any visitor address: single proxy addresses only, never a
+    // range (a range can include the Docker gateway every published-port connection comes from).
+    key: "TRUST_PROXY",
+    ok: (v) =>
+      v === "" ||
+      v
+        .split(",")
+        .map((p) => p.trim())
+        .every((p) => p !== "" && !p.includes("/") && p !== "0.0.0.0" && p !== "::"),
+    why: "must list single proxy addresses, not ranges",
+  },
+  {
     key: "WEB_ORIGINS",
     ok: (v) => {
       const origins = v

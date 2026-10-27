@@ -1,0 +1,144 @@
+# The public pilot (M10, docs/deploy.md). Run on the VM with:
+#   docker compose -f deploy/compose.prod.yml --env-file /opt/frontdesk/.env.production up -d
+# Never run `config` with the real env file: it prints every secret.
+name: frontdesk
+
+x-env: &env
+  env_file:
+    - path: ${FRONTDESK_ENV_FILE:-/opt/frontdesk/.env.production}
+      required: true
+
+x-app-env: &app-env
+  NODE_ENV: production
+  CONVERSATION_SOURCE: pilot
+  DATABASE_URL: postgres://frontdesk:${POSTGRES_PASSWORD}@postgres:5432/frontdesk
+  EVAL_DATABASE_URL: postgres://frontdesk:${POSTGRES_PASSWORD}@postgres:5432/frontdesk_eval
+  REDIS_URL: redis://redis:6379
+
+services:
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SITE_HOST: ${SITE_HOST}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on: [web, api]
+    networks:
+      frontdesk:
+        ipv4_address: 172.30.0.10
+
+  web:
+    build:
+      context: ..
+      target: web
+      args:
+        NEXT_PUBLIC_API_WS_URL: wss://${SITE_HOST}/ws
+        NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${NEXT_PUBLIC_TURNSTILE_SITE_KEY}
+        NEXT_PUBLIC_PRIVACY_CONTACT: ${NEXT_PUBLIC_PRIVACY_CONTACT:-}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      API_URL: http://api:4000
+      # Caddy sets X-Forwarded-For; the owner proxy passes its last entry to the api.
+      TRUST_FORWARDED_FOR: "1"
+    depends_on: [api]
+    networks:
+      frontdesk:
+        ipv4_address: 172.30.0.11
+
+  api:
+    build: { context: .., target: app }
+    command: ["pnpm", "--filter", "@frontdesk/api", "start"]
+    restart: unless-stopped
+    <<: *env
+    environment:
+      <<: *app-env
+      API_HOST: 0.0.0.0
+      API_PORT: "4000"
+      # Only Caddy (/ws) and the web app (owner proxy) may say who the visitor is.
+      TRUST_PROXY: 172.30.0.10,172.30.0.11
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:4000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    networks: [frontdesk]
+
+  worker:
+    build: { context: .., target: app }
+    command: ["pnpm", "--filter", "@frontdesk/worker", "start"]
+    restart: unless-stopped
+    <<: *env
+    environment:
+      <<: *app-env
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    networks: [frontdesk]
+
+  migrate:
+    build: { context: .., target: app }
+    command: ["pnpm", "db:migrate"]
+    restart: "no"
+    <<: *env
+    environment:
+      <<: *app-env
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [frontdesk]
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: frontdesk
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: frontdesk
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ../docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U frontdesk -d frontdesk"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [frontdesk]
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # Append-only, so queued confirmation emails survive a restart.
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [frontdesk]
+
+networks:
+  frontdesk:
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+
+volumes:
+  postgres-data:
+  redis-data:
+  caddy-data:
+  caddy-config:
