@@ -33,7 +33,7 @@ Front Desk books into a Google Calendar and sends confirmations from your Gmail.
 3. **Audience:** choose **External** and click **Next**.
 4. **Contact information:** enter your email and click **Next**.
 5. Tick the agreement and click **Create**.
-6. In the left menu, click **Audience**. Under **Test users**, click **Add users**, enter your own Gmail address and click **Save**. Leave the publishing status as **Testing**.
+6. In the left menu, click **Audience**. Under **Test users**, click **Add users**, enter your own Gmail address and click **Save**. Leave the publishing status as **Testing** for local development. For the public pilot, publish it (`docs/deploy.md` step 5), or refresh tokens expire every 7 days.
 7. In the left menu, click **Data Access** → **Add or remove scopes**. Tick exactly these two, then click **Update** and **Save**:
    - `https://www.googleapis.com/auth/calendar.events`
    - `https://www.googleapis.com/auth/gmail.send`
@@ -94,12 +94,12 @@ Front Desk books into a Google Calendar and sends confirmations from your Gmail.
 
 ## If something goes wrong
 
-| You see                                     | Do this                                                                                          |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `invalid_grant`                             | In Testing mode the token expires after 7 days. Run `pnpm google:auth` again.                    |
-| "Access blocked" / `access_denied`          | Your account isn't a test user. Redo step 4.6.                                                   |
-| "Some permissions were not granted"         | Run `pnpm google:auth` again and tick every box.                                                 |
-| "Google sent no refresh token"              | Remove the app at <https://myaccount.google.com/permissions>, then run `pnpm google:auth` again. |
-| `GOOGLE_CALENDAR_ID must be the … calendar` | You used `primary`. Use the demo calendar's ID from step 6.                                      |
+| You see                                     | Do this                                                                                                                     |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `invalid_grant`                             | In Testing mode the token expires after 7 days. Run `pnpm google:auth` again, or publish the app (`docs/deploy.md` step 5). |
+| "Access blocked" / `access_denied`          | Your account isn't a test user. Redo step 4.6.                                                                              |
+| "Some permissions were not granted"         | Run `pnpm google:auth` again and tick every box.                                                                            |
+| "Google sent no refresh token"              | Remove the app at <https://myaccount.google.com/permissions>, then run `pnpm google:auth` again.                            |
+| `GOOGLE_CALENDAR_ID must be the … calendar` | You used `primary`. Use the demo calendar's ID from step 6.                                                                 |
 
 To disconnect Front Desk at any time, remove it at <https://myaccount.google.com/permissions>.
