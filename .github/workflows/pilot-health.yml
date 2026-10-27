@@ -1,0 +1,31 @@
+name: pilot-health
+
+# Every 6 hours, ask the deployed pilot whether it's ready (M10, docs/pilot.md). A failed run
+# emails the repo owner: that is the alert for a dead Google token, a stopped worker, or a
+# down site. Set the repository variable PILOT_URL (e.g. https://casa-fiorella.duckdns.org).
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ready:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check /health/ready
+        env:
+          PILOT_URL: ${{ vars.PILOT_URL }}
+        run: |
+          if [ -z "$PILOT_URL" ]; then
+            echo "::notice::PILOT_URL is not set; nothing to check yet."
+            exit 0
+          fi
+          body="$(curl -sS --retry 2 --retry-delay 20 --max-time 30 "$PILOT_URL/health/ready" || true)"
+          echo "$body"
+          case "$body" in
+            *'"ok":true'*) echo "pilot is ready" ;;
+            *) echo "::error::pilot is not ready: $body"; exit 1 ;;
+          esac
