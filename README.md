@@ -1,8 +1,51 @@
 # Front Desk
 
-An AI receptionist for a small restaurant. It answers by voice or chat, checks availability, books, reschedules and cancels reservations in Google Calendar, sends confirmations, and hands off to a human when it's unsure. Every change needs the caller's explicit confirmation and is written to an append-only audit log.
+**An AI receptionist that books real restaurant tables, and never writes to the calendar without the guest's explicit "yes".**
 
-The demo business is **Casa Fiorella**, a fictional family Italian trattoria. Design: [docs/superpowers/specs/2026-10-22-frontdesk-design.md](docs/superpowers/specs/2026-10-22-frontdesk-design.md).
+Guests chat or talk to it in the browser. It checks availability, books, reschedules and cancels reservations in Google Calendar, emails a confirmation, and hands off to a human when it's unsure. The demo business is **Casa Fiorella**, a fictional family trattoria. Everything runs on free tiers ($0).
+
+![A real booking: the guest asks, the agent reads it back, the guest confirms, Calendar is written](docs/media/demo.gif)
+
+<sub>A real run: Gemini on the free tier, a real Google Calendar event, recorded with Playwright. [Full video (mp4)](docs/media/demo.mp4)</sub>
+
+## Highlights
+
+- **Code-enforced confirmation.** The model can only _propose_ a booking. A separate gate reads it back, waits for the guest's yes, re-checks the slot under a lock, and only then writes to Calendar. A test walks every 2-step message sequence, and no write is ever reachable without a confirm.
+- **Evaluated like a product:** 100 scripted-caller scenarios across 11 categories (bookings, reschedules, prompt injection, angry callers, policy edge cases).
+  - **95.0%** task success
+  - **97.0%** correct handoffs
+  - **0** unsafe actions
+
+  CI replays them with no API keys and fails on any regression.
+
+- **Owner dashboard.** Live conversations, transcripts with per-turn latency against a budget, an append-only audit trail, bookings, a handoff queue with outcomes, guest feedback and metrics. Real pilot data is kept apart from demo and eval data.
+- **Voice.** Browser speech-to-text and text-to-speech, sentence streaming and barge-in.
+- **Built for strangers:**
+  - per-IP and per-session rate limits, and a Cloudflare Turnstile bot check
+  - booking and email caps that `+tags` can't dodge
+  - a 30-day retention job that redacts personal data
+  - no personal data in logs (tested)
+  - a production guard that refuses any paid setting
+- **$0 to run:** Gemini free tier with a hard spend cap of 0, and an Oracle Always Free VM behind Caddy (automatic HTTPS).
+
+| Guest chat                                                    | Owner: one conversation, its latency and audit trail                              |
+| ------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| ![Chat with confirmation card](docs/media/02-talk-booked.png) | ![Conversation detail with audit trail](docs/media/04-dashboard-conversation.png) |
+| **Owner: metrics**                                            | **Owner: guest feedback**                                                         |
+| ![Metrics dashboard](docs/media/06-dashboard-metrics.png)     | ![Feedback page](docs/media/07-dashboard-feedback.png)                            |
+
+## How it's built
+
+```
+Browser (/talk: chat + voice) ──WebSocket──▶ api (Fastify) ──▶ core: agent loop, gate, guardrails
+Browser (/dashboard: owner) ──▶ web (Next.js) ──▶ api /owner/*        │
+                                                     Gemini (free) ◀───┤──▶ Google Calendar (source of truth)
+                                    Postgres: conversations, audit ◀───┤
+                                 Redis: sessions, limits, job queue ◀───┘──▶ worker ──▶ Gmail confirmations
+```
+
+- **Design:** [docs/superpowers/specs/2026-10-22-frontdesk-design.md](docs/superpowers/specs/2026-10-22-frontdesk-design.md).
+- **Learning notes:** one per milestone, with reading order, concepts and a quiz, in [docs/learning/](docs/learning/).
 
 ## Prerequisites
 
@@ -38,9 +81,9 @@ If `frontdesk_eval` is reported missing, your Postgres volume predates the init 
 
 `apps/web` is the Next.js caller widget (`/talk`) and owner dashboard (`/dashboard`).
 
-## Pilot
+## Pilot and deploy
 
-Front Desk runs as a public pilot on an Oracle Cloud Always Free VM behind Caddy (HTTPS), at $0. See:
+Front Desk is ready to run as a public pilot on an Oracle Cloud Always Free VM behind Caddy (automatic HTTPS), at $0. The production stack (`deploy/compose.prod.yml`) has been built and run end to end; going live is waiting on Oracle free-tier capacity. See:
 
 - [docs/deploy.md](docs/deploy.md): setup and deploys
 - [docs/pilot.md](docs/pilot.md): the weekly routine, and comparing real numbers with the evals
