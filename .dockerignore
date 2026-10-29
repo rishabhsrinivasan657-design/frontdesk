@@ -1,0 +1,14 @@
+.git
+.env*
+!.env.example
+deploy/.env.production
+**/node_modules
+**/.next
+**/dist-types
+**/*.tsbuildinfo
+.superpowers
+.claude
+test-results
+playwright-report
+coverage
+packages/evals/recordings

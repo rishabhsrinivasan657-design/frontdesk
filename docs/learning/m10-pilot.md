@@ -1,6 +1,6 @@
 # M10: The pilot (learning guide)
 
-M10 puts Front Desk in front of strangers. **Part A** (this PR) makes the code safe for that:
+M10 puts Front Desk in front of strangers. **Part A** (PR #24) makes the code safe for that:
 
 - a production guard that keeps it at $0
 - pilot tagging
@@ -11,7 +11,14 @@ M10 puts Front Desk in front of strangers. **Part A** (this PR) makes the code s
 - a privacy notice
 - `pnpm release`
 
-**Part B** adds the Docker/Caddy deploy on an Oracle Always Free VM and the runbooks (`docs/deploy.md`, `docs/pilot.md`). To try Part A locally:
+**Part B** puts it online:
+
+- a Dockerfile and a production Compose file with Caddy for HTTPS, on an Oracle Always Free VM
+- `pnpm smoke <url>`
+- a 6-hourly health check on GitHub
+- the runbooks `docs/deploy.md` (setup) and `docs/pilot.md` (the weekly routine)
+
+To try Part A locally:
 
 1. Run `pnpm infra:up && pnpm db:migrate`, `pnpm api` and `pnpm web`.
 2. Open http://localhost:3000/talk, chat, click **End chat** and rate it.
@@ -34,6 +41,11 @@ M10 puts Front Desk in front of strangers. **Part A** (this PR) makes the code s
 | 10  | `apps/web/src/app/talk/page.tsx`, `app/privacy/page.tsx`                    | The privacy notice and page.                                                                                        |
 | 11  | `apps/web/src/chat/turnstile.ts` + `use-turnstile.ts` + `socket.ts`         | One token per new session; reconnects reuse the session id; 4429/4403 stop the reconnect loop.                      |
 | 12  | `scripts/release-lib.ts` + `release.ts`                                     | `vYYYY.MM.DD` tags and the CHANGELOG section. Never pushes.                                                         |
+| 13  | `Dockerfile` + `.dockerignore`                                              | One image per role (app, web), built on the VM; env files never enter an image.                                     |
+| 14  | `deploy/compose.prod.yml` + `Caddyfile`                                     | The stack: only Caddy has ports; fixed addresses for Caddy and web, which the api trusts for `X-Forwarded-For`.     |
+| 15  | `deploy/deploy.sh`, `backup.sh`, `.env.production.example`                  | Deploy a tag (refuses an env file that isn't `chmod 600`), nightly backups, every setting explained.                |
+| 16  | `scripts/smoke-lib.ts` + `.github/workflows/pilot-health.yml`               | Outside checks without spending quota; the 6-hourly alert.                                                          |
+| 17  | `docs/deploy.md`, `docs/pilot.md`                                           | Click-by-click setup; the weekly routine and real-vs-simulated metrics.                                             |
 
 ## 2. Key concepts
 
@@ -57,9 +69,16 @@ M10 puts Front Desk in front of strangers. **Part A** (this PR) makes the code s
 - **Release tags + changelog.** A tag names one exact commit (`v2026.11.02`), so "what's deployed?" has a precise answer, and a rollback is "deploy the previous tag". The changelog is generated from conventional commit subjects since the last tag.
 - **Real vs simulated metrics.** Evals run scripted callers against recordings (`source=eval`, its own database). The pilot records real people under `source=pilot`. A handoff the owner marks "wasn't needed" is the real-world twin of the eval's "unnecessary handoff". Comparing the two shows where the simulator is too kind.
 
+- **Containers and Compose.** An image is the app plus everything it needs, frozen. A container is a running copy of it. Compose starts the whole set (Caddy, web, api, worker, Postgres, Redis) on a private network, in order: migrations must finish before the api and worker start.
+
 ## 3. Potential holes and the tests that guard them
 
-| What could go wrong                                     | Guarded by                                                                                                     |
+| What could go wrong | Guarded by |
+| Postgres or Redis exposed to the internet | `deploy-config.smoke.test.ts` › "publishes only Caddy's 80 and 443" |
+| A spoofable proxy range in production | `pilot-guard.test.ts` › "refuses TRUST_PROXY…"; `deploy-config.smoke.test.ts` › "the api trusts only Caddy's…" |
+| A secret baked into an image or the example env | `deploy-config.smoke.test.ts` › "the image never copies an env file", "the example env file has only placeholders" |
+
+| The site is down or half-broken after a deploy          | `smoke-lib.test.ts` (and `pnpm smoke <url>` after every deploy)                                                |
 | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | Production starts with a paid tier or the bot check off | `pilot-guard.test.ts` › "refuses %s, naming it but never its value"                                            |
 | A spoofed `X-Forwarded-For` dodges the per-IP limits    | `server.test.ts` › "ignores X-Forwarded-For from an untrusted peer"                                            |
@@ -87,6 +106,7 @@ M10 puts Front Desk in front of strangers. **Part A** (this PR) makes the code s
 9. What does publishing the OAuth app to "In production" fix?
 10. Why does `pnpm release` never push?
 11. What do "Handoff wasn't needed" outcomes tell you when you compare the pilot with the evals?
+12. Why does only Caddy publish ports, and why does the api trust two fixed addresses instead of the whole Docker network?
 
 <details>
 <summary>Answers</summary>
@@ -102,5 +122,6 @@ M10 puts Front Desk in front of strangers. **Part A** (this PR) makes the code s
 9. In Testing mode refresh tokens expire after 7 days, so the bot would stop booking weekly until someone re-authorised it.
 10. Pushing a tag is outward-facing and permanent. The script prepares it, and you decide when it goes public.
 11. They count unnecessary handoffs from real callers. If that share is much higher than the eval's "unnecessary handoff" count, the scenarios are missing something real callers do.
+12. Every other service stays unreachable from the internet. Connections that arrive through a published port can appear to come from the Docker gateway, so trusting the whole subnet would let anyone claim any address and dodge the limits.
 
 </details>

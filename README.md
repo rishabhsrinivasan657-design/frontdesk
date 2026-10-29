@@ -36,4 +36,13 @@ If `frontdesk_eval` is reported missing, your Postgres volume predates the init 
 | `packages/db`           | Drizzle schema and migrations                                                                                  |
 | `packages/evals`        | Scenario simulator, scorer, `pnpm eval` scoreboard                                                             |
 
-`apps/web` (Next.js caller widget and owner dashboard) arrives in milestone M6.
+`apps/web` is the Next.js caller widget (`/talk`) and owner dashboard (`/dashboard`).
+
+## Pilot
+
+Front Desk runs as a public pilot on an Oracle Cloud Always Free VM behind Caddy (HTTPS), at $0. See:
+
+- [docs/deploy.md](docs/deploy.md): setup and deploys
+- [docs/pilot.md](docs/pilot.md): the weekly routine, and comparing real numbers with the evals
+- `pnpm release`: tags the weekly `vYYYY.MM.DD` release
+- `pnpm smoke <url>`: checks a deployed site without spending any LLM quota

@@ -1,0 +1,25 @@
+# Caddy: the only door in (M10, docs/deploy.md). It gets a free Let's Encrypt certificate for
+# SITE_HOST, redirects http to https, and replaces any client-sent X-Forwarded-For with the real
+# visitor address. No access log: visitors' addresses and URLs are not written anywhere.
+{$SITE_HOST} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Frame-Options "DENY"
+		Permissions-Policy "camera=(), geolocation=(), microphone=(self)"
+		-Server
+	}
+
+	handle /ws* {
+		reverse_proxy api:4000
+	}
+	handle /health* {
+		reverse_proxy api:4000
+	}
+	handle {
+		reverse_proxy web:3000
+	}
+}
