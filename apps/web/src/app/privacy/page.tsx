@@ -45,6 +45,10 @@ export default function PrivacyPage() {
           Copies of sent confirmation emails in the demo Gmail account are deleted by hand once a
           month, so they can stay up to about 60 days.
         </li>
+        <li>
+          Nightly database backups are kept for 3 days, so a copy can outlast the 30 days by up to 3
+          days.
+        </li>
       </ul>
       <h2 className="font-heading text-lg">Who else is involved</h2>
       <ul className="list-disc pl-5">

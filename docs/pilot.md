@@ -93,7 +93,7 @@ Numbers under **Pilot** never include demo (seeded) or eval data, so the two are
 
   The app can only send mail, so it can't do this for you.
 
-- **Backups** on the VM delete themselves after 7 days.
+- **Backups** on the VM delete themselves after 3 days, so a copy outlasts the 30 days by at most 3 days (stated on `/privacy`).
 - **Deletion requests:** if someone asks, find their conversation on the dashboard and note its id. There's no one-click early delete yet, so ask Claude to add one. Until then their data is gone within 30 days anyway.
 
 ## Staying at $0

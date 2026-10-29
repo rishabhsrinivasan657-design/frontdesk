@@ -18,7 +18,11 @@ interface Service {
   depends_on?: Record<string, { condition: string }>;
 }
 
-function config(): { services: Record<string, Service> } {
+interface Network {
+  ipam?: { config?: { subnet?: string; ip_range?: string }[] };
+}
+
+function config(): { services: Record<string, Service>; networks: Record<string, Network> } {
   const out = execFileSync(
     "docker",
     [
@@ -33,11 +37,23 @@ function config(): { services: Record<string, Service> } {
     ],
     { encoding: "utf8", env: { ...process.env, FRONTDESK_ENV_FILE: example } },
   );
-  return JSON.parse(out) as { services: Record<string, Service> };
+  return JSON.parse(out) as {
+    services: Record<string, Service>;
+    networks: Record<string, Network>;
+  };
 }
 
 describe("deploy/compose.prod.yml", () => {
-  const { services } = config();
+  const { services, networks } = config();
+
+  it("hands out dynamic addresses only from the upper half, never Caddy's or web's", () => {
+    const ipam = networks.frontdesk?.ipam?.config?.[0];
+    expect(ipam).toMatchObject({ subnet: "172.30.0.0/24", ip_range: "172.30.0.128/25" });
+    for (const name of ["caddy", "web"]) {
+      const last = Number(services[name]!.networks?.frontdesk?.ipv4_address?.split(".")[3]);
+      expect(last, name).toBeLessThan(128);
+    }
+  });
 
   it("has the pilot's services", () => {
     expect(Object.keys(services).sort()).toEqual(
@@ -108,6 +124,15 @@ describe("deploy files hold no secrets and log no visitors", () => {
       expect(line!.slice(key.length + 1), key).toMatch(/^(|change-me.*|'?\$2b\$12\$change-me.*)$/);
     }
     expect(lines.some((l) => l.startsWith("GEMINI_API_KEY_2="))).toBe(false);
+  });
+
+  it("backups keep personal data at most 3 days past the 30-day promise, and /privacy says so", () => {
+    const backup = readFileSync(resolve(root, "deploy/backup.sh"), "utf8");
+    const days = Number(/-mtime \+(\d+)/.exec(backup)?.[1]);
+    // -mtime +N deletes files more than N full days old: they live at most N + 1 days.
+    expect(days + 1).toBeLessThanOrEqual(3);
+    const privacy = readFileSync(resolve(root, "apps/web/src/app/privacy/page.tsx"), "utf8");
+    expect(privacy).toMatch(/backups are kept for 3 days/i);
   });
 
   it("the Caddyfile has no access log", () => {

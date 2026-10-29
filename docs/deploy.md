@@ -158,10 +158,34 @@ Save with Ctrl+O, Enter, Ctrl+X.
 
 ## 7. First deploy (together; Claude asks first)
 
-```bash
-cd /opt/frontdesk/app
-deploy/deploy.sh v2026.10.26   # the release tag to run
-```
+A deploy always runs a release tag, and the tag must include these deploy files. So the first release is cut **after** this runbook's PR is merged.
+
+1. On your Mac:
+
+   ```bash
+   git switch main && git pull
+   pnpm release
+   ```
+
+   It prints the new tag, e.g. `v2026.10.27`. Pushing the tag publishes it, so Claude asks first:
+
+   ```bash
+   git push origin main v2026.10.27
+   ```
+
+2. On the VM, with that tag:
+
+   ```bash
+   cd /opt/frontdesk/app
+   deploy/deploy.sh v2026.10.27
+   ```
+
+   `deploy.sh` first checks the env file:
+   - it is `chmod 600`
+   - `OWNER_PASSWORD_HASH` is in single quotes
+   - the Turnstile site key is set
+
+   It stops with a one-line fix if any of these fail. It never prints a value.
 
 The first build takes about 10 minutes on the VM. When it prints "is live", run this from your Mac:
 
@@ -183,7 +207,7 @@ All 9 checks should pass. Then:
   30 3 * * * /opt/frontdesk/app/deploy/backup.sh
   ```
 
-  The dumps hold pilot personal data. They are readable only by you and deleted after 7 days.
+  The dumps hold pilot personal data. They are readable only by you and deleted after 3 days.
 
 - **Alerts:**
   1. In GitHub → the repo → **Settings** → **Secrets and variables** → **Actions** → **Variables**, add `PILOT_URL` = `https://casa-fiorella.duckdns.org`.
