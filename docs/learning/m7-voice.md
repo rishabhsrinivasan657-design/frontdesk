@@ -4,18 +4,18 @@ M7 lets a caller book a table by talking. The `/talk` page gets a **Speak** butt
 
 ## 1. Reading order
 
-| #   | File                                                                   | What it's for                                                                                                 |
-| --- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| 1   | `apps/web/src/voice/types.ts`                                          | The two interfaces the page relies on: `SpeechToText` (mic → text) and `TextToSpeech` (text → sound).         |
-| 2   | `apps/web/src/voice/web-speech.ts`                                     | The Web Speech implementations: `SpeechRecognition` (Chrome/Edge/Safari) and `speechSynthesis`.               |
-| 3   | `apps/web/src/voice/speaker.ts`                                        | A queue that speaks one sentence at a time as sentences arrive. `stop()` is barge-in.                         |
-| 4   | `apps/web/src/voice/controller.ts`                                     | The push-to-talk logic: the mic button, barge-in, fallbacks, and sending the final transcript as caller text. |
-| 5   | `apps/web/src/voice/use-voice.ts` + `providers.ts`                     | Connects the controller to the chat socket in React. `providers.ts` picks Web Speech, or the e2e mock.        |
-| 6   | `apps/web/src/components/chat/mic-button.tsx`, `chat-window.tsx`       | The Speak button, the live interim line, the fallback messages, and the voice numbers in the latency readout. |
-| 7   | `packages/core/src/agent/loop.ts` (`TurnInterrupted`, `checkpoint`)    | How a turn can be cancelled, and the places where it never can be.                                            |
-| 8   | `apps/api/src/chat/connection.ts`                                      | `interrupt` cancels the turn in flight; `tts_started` becomes `tts_start_ms` in Postgres.                     |
-| 9   | `apps/web/src/voice/*.test.ts`, `apps/api/src/chat/connection.test.ts` | The behaviour, in unit tests with fake speech.                                                                |
-| 10  | `e2e/voice-mock.ts` + `e2e/voice.spec.ts`                              | Playwright books by voice, barges in, and checks both fallbacks, with speech mocked at the interfaces.        |
+| #   | File                                                                   | What it's for                                                                                                                                   |
+| --- | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `apps/web/src/voice/types.ts`                                          | The two interfaces the page relies on: `SpeechToText` (mic → text) and `TextToSpeech` (text → sound).                                           |
+| 2   | `apps/web/src/voice/web-speech.ts`                                     | The Web Speech implementations: `SpeechRecognition` (Chrome/Edge/Safari) and `speechSynthesis`.                                                 |
+| 3   | `apps/web/src/voice/speaker.ts`                                        | A queue that speaks one sentence at a time as sentences arrive. `stop()` is barge-in.                                                           |
+| 4   | `apps/web/src/voice/controller.ts`                                     | The push-to-talk logic: the mic button, barge-in, fallbacks, and sending the final transcript as caller text.                                   |
+| 5   | `apps/web/src/voice/use-voice.ts` + `providers.ts`                     | Connects the controller to the chat socket in React. `providers.ts` picks Web Speech, or the e2e mock.                                          |
+| 6   | `apps/web/src/components/talk/orb.tsx`, `chat-window.tsx`              | The orb (the Speak button since the launch polish), the live interim line, the fallback messages, and the voice numbers in the latency readout. |
+| 7   | `packages/core/src/agent/loop.ts` (`TurnInterrupted`, `checkpoint`)    | How a turn can be cancelled, and the places where it never can be.                                                                              |
+| 8   | `apps/api/src/chat/connection.ts`                                      | `interrupt` cancels the turn in flight; `tts_started` becomes `tts_start_ms` in Postgres.                                                       |
+| 9   | `apps/web/src/voice/*.test.ts`, `apps/api/src/chat/connection.test.ts` | The behaviour, in unit tests with fake speech.                                                                                                  |
+| 10  | `e2e/voice-mock.ts` + `e2e/voice.spec.ts`                              | Playwright books by voice, barges in, and checks both fallbacks, with speech mocked at the interfaces.                                          |
 
 ## 2. Key concepts
 

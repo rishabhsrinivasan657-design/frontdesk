@@ -1,4 +1,4 @@
-import type { ServerMessage } from "@frontdesk/core";
+import type { CardDetails, ServerMessage } from "@frontdesk/core";
 
 type ActionKind = "book" | "reschedule" | "cancel";
 
@@ -15,6 +15,8 @@ export interface PendingCard {
   kind: ActionKind;
   summary: string;
   expiresAt: string;
+  /** The slot as display labels (absent from servers before the calendar view). */
+  details?: CardDetails;
   outcome?: "executed" | "failed" | "voided";
   reason?: string;
 }
@@ -144,6 +146,7 @@ function onServer(state: ChatState, m: ServerMessage, at: number): ChatState {
           kind: m.kind,
           summary: m.summary,
           expiresAt: m.expiresAt,
+          ...(m.details && { details: m.details }),
         },
       };
     case "action_result":

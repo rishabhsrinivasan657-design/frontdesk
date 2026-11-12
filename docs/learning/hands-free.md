@@ -4,14 +4,14 @@ Push-to-talk means tapping before every sentence. Real phone calls don't work li
 
 ## 1. Reading order
 
-| #   | File                                          | What it does                                                                                                 |
-| --- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| 1   | `apps/web/src/voice/hands-free.ts`            | `HandsFree`: decides when to listen again, watches for barge-in, ducks, commits, and switches off when idle. |
-| 2   | `apps/web/src/voice/speaker.ts`               | `duck(on)`: fades the agent to 25% volume, or back up.                                                       |
-| 3   | `apps/web/src/voice/kokoro-tts.ts`            | `setVolume`: a gain node, ramped over ~50 ms so the fade doesn't click.                                      |
-| 4   | `apps/web/src/voice/use-voice.ts`             | Wires it up; exposes `handsFree`, `toggleHandsFree()` and `agentSpeaking` for the page (and the orb).        |
-| 5   | `apps/web/src/components/chat/mic-button.tsx` | The "Hands-free" / "End conversation" button.                                                                |
-| 6   | `apps/web/src/voice/hands-free.test.ts`       | The behaviour, with a fake recogniser, a fake VAD and a hand-moved clock.                                    |
+| #   | File                                    | What it does                                                                                                 |
+| --- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| 1   | `apps/web/src/voice/hands-free.ts`      | `HandsFree`: decides when to listen again, watches for barge-in, ducks, commits, and switches off when idle. |
+| 2   | `apps/web/src/voice/speaker.ts`         | `duck(on)`: fades the agent to 25% volume, or back up.                                                       |
+| 3   | `apps/web/src/voice/kokoro-tts.ts`      | `setVolume`: a gain node, ramped over ~50 ms so the fade doesn't click.                                      |
+| 4   | `apps/web/src/voice/use-voice.ts`       | Wires it up; exposes `handsFree`, `toggleHandsFree()` and `agentSpeaking` for the page (and the orb).        |
+| 5   | `apps/web/src/components/talk/orb.tsx`  | The "Hands-free" / "End conversation" button.                                                                |
+| 6   | `apps/web/src/voice/hands-free.test.ts` | The behaviour, with a fake recogniser, a fake VAD and a hand-moved clock.                                    |
 
 ## 2. Key concepts
 
