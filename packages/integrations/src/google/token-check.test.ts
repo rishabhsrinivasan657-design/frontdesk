@@ -15,6 +15,29 @@ describe("checkGoogleToken", () => {
     expect(await checkGoogleToken(expired)).toBe(false);
   });
 
+  it("reports Google's reason code on failure, never the error's text or request", async () => {
+    const rejected = Object.assign(new Error("invalid_grant: secret-refresh-token-value"), {
+      response: { status: 400, data: { error: "invalid_grant" } },
+      config: { data: "refresh_token=secret-refresh-token-value" },
+    });
+    const reasons: string[] = [];
+    const ok = await checkGoogleToken(
+      () => ({ getAccessToken: () => Promise.reject(rejected) }),
+      (reason) => reasons.push(reason),
+    );
+    expect(ok).toBe(false);
+    expect(reasons).toEqual(["Google token refresh failed: 400 invalid_grant"]);
+  });
+
+  it("reports an empty token as its own reason", async () => {
+    const reasons: string[] = [];
+    await checkGoogleToken(
+      () => ({ getAccessToken: () => Promise.resolve({ token: null }) }),
+      (reason) => reasons.push(reason),
+    );
+    expect(reasons).toEqual(["Google token refresh returned no token"]);
+  });
+
   it("false when no token comes back", async () => {
     expect(
       await checkGoogleToken(() => ({ getAccessToken: () => Promise.resolve({ token: null }) })),
