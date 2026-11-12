@@ -9,3 +9,4 @@ playwright-report
 .next
 next-env.d.ts
 test-results
+apps/web/public/vad

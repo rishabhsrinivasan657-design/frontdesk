@@ -4,9 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev --webpack -p 3000",
-    "build": "next build --webpack",
-    "start": "next start -p 3000"
+    "dev": "node scripts/copy-vad-assets.mjs && next dev --webpack -p 3000",
+    "build": "node scripts/copy-vad-assets.mjs && next build --webpack",
+    "start": "next start -p 3000",
+    "vad-assets": "node scripts/copy-vad-assets.mjs"
   },
   "dependencies": {
     "@frontdesk/core": "workspace:*",
