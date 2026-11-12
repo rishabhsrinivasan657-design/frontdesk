@@ -33,4 +33,6 @@ export interface TextToSpeech {
   cancel(): void;
   /** Optional: start generating a sentence that will be spoken soon, so it plays without a gap. */
   prepare?(text: string): void;
+  /** Optional: 0–1 loudness, used to duck (fade) the agent while the caller starts talking. */
+  setVolume?(volume: number): void;
 }

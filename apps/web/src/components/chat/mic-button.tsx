@@ -35,3 +35,27 @@ export function MicButton({
     </Button>
   );
 }
+
+/** Hands-free: tap once, then just talk; the mic reopens after each reply. */
+export function HandsFreeButton({
+  on,
+  disabled,
+  onToggle,
+}: {
+  on: boolean;
+  disabled: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <Button
+      type="button"
+      data-testid="hands-free-button"
+      variant={on ? "default" : "outline"}
+      aria-pressed={on}
+      disabled={disabled}
+      onClick={onToggle}
+    >
+      {on ? "End conversation" : "Hands-free"}
+    </Button>
+  );
+}

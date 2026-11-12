@@ -6,7 +6,11 @@ export class FakeTts implements TextToSpeech {
   readonly supported = true;
   readonly spoken: string[] = [];
   cancels = 0;
+  volume = 1;
   private current: { onStart(): void; onEnd(): void } | undefined;
+  setVolume(volume: number): void {
+    this.volume = volume;
+  }
   speak(text: string, h: { onStart(): void; onEnd(): void }): void {
     this.spoken.push(text);
     this.current = h;
