@@ -1,4 +1,5 @@
 import type { SpeechToText, TextToSpeech } from "./types";
+import { createElevenLabsTts } from "./elevenlabs-tts";
 import { createEndpointedStt } from "./endpointed-stt";
 import { createKokoroTts, createSwitchingTts } from "./kokoro-tts";
 import { createSileroVad } from "./vad";
@@ -38,9 +39,12 @@ export function createVoiceProviders(): VoiceProviders {
     kokoroVoice,
   );
   if (!kokoro.supported) return { stt: createStt(), tts: browserVoice };
+  const natural = createSwitchingTts(kokoro, browserVoice);
   return {
     stt: createStt(),
-    tts: createSwitchingTts(kokoro, browserVoice),
+    // `?voice=elevenlabs`: the premium comparison voice, falling back to Kokoro if it's off.
+    tts:
+      choice === "elevenlabs" ? createSwitchingTts(createElevenLabsTts(natural), natural) : natural,
     warmUp: () => void kokoro.load().catch((e: unknown) => console.warn("kokoro unavailable", e)),
   };
 }

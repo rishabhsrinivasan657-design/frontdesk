@@ -78,6 +78,9 @@ services:
       # wss://<api service>.onrender.com/ws
       - key: NEXT_PUBLIC_API_WS_URL
         sync: false
+      # Optional: the `/talk?voice=elevenlabs` comparison voice (free plan key; unset = off).
+      - key: ELEVENLABS_API_KEY
+        sync: false
       # https://<api service>.onrender.com, for the owner dashboard's server-side calls.
       - key: API_URL
         sync: false
