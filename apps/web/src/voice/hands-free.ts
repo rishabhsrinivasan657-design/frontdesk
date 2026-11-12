@@ -34,6 +34,8 @@ export class HandsFree {
   private lastActivity = 0;
   /** Caller text was sent and its turn hasn't ended yet (the chat may not show busy yet). */
   private awaitingReply = false;
+  /** The agent was thinking or speaking at the last update. */
+  private agentActive = false;
   /** We're inside a controller call; its own status/speech changes mustn't trigger another. */
   private acting = false;
 
@@ -86,8 +88,14 @@ export class HandsFree {
       return;
     }
     if (this.awaitingReply || speaker.speaking || this.d.isChatBusy()) {
+      this.agentActive = true;
       this.startMonitor();
       return;
+    }
+    if (this.agentActive) {
+      // The agent thinking or talking isn't silence: the idle clock starts when it goes quiet.
+      this.agentActive = false;
+      this.lastActivity = this.d.now();
     }
     if (this.d.now() - this.lastActivity > IDLE_MS) {
       this.stop();

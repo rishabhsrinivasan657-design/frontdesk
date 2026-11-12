@@ -52,6 +52,11 @@ export class Speaker {
     if (!was) this.opts.onChange(true);
   }
 
+  /** Starts generating a sentence that may be spoken soon (no-op for voices that can't). */
+  prepare(text: string): void {
+    this.tts.prepare?.(text);
+  }
+
   /** Fades the agent down while the caller may be starting to talk (barge-in), or back up. */
   duck(on: boolean): void {
     this.tts.setVolume?.(on ? DUCK_VOLUME : 1);

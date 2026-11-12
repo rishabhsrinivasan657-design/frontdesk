@@ -122,4 +122,16 @@ describe("HandsFree", () => {
     expect(s.hf.on).toBe(false);
     expect(s.stt.starts).toBe(1);
   });
+
+  it("a long reply doesn't count as silence", () => {
+    const s = setup();
+    s.hf.start();
+    s.say("tell me about the menu");
+    s.speaker.enqueue("t1", "Our menu has many dishes.");
+    s.hf.turnDone();
+    s.clock.advance(IDLE_MS + 10_000); // the agent talks for 40 s
+    s.tts.end();
+    expect(s.hf.on).toBe(true);
+    expect(s.stt.starts).toBe(2);
+  });
 });
