@@ -1,4 +1,5 @@
 import type { SpeechToText, TextToSpeech } from "./types";
+import { createElevenLabsTts } from "./elevenlabs-tts";
 import { createEndpointedStt } from "./endpointed-stt";
 import { createKokoroTts, createSwitchingTts } from "./kokoro-tts";
 import { createSileroVad } from "./vad";
@@ -37,10 +38,16 @@ export function createVoiceProviders(): VoiceProviders {
     () => new Worker("/kokoro/worker.mjs", { type: "module" }),
     kokoroVoice,
   );
-  if (!kokoro.supported) return { stt: createStt(), tts: browserVoice };
+  // Fallback chain: Kokoro → ElevenLabs (while Kokoro loads, or where it can't run; off without
+  // a key, and capped below the free plan) → the browser's own voice.
+  const premium = createSwitchingTts(createElevenLabsTts(browserVoice), browserVoice);
+  if (!kokoro.supported) return { stt: createStt(), tts: premium };
+  const natural = createSwitchingTts(kokoro, premium);
   return {
     stt: createStt(),
-    tts: createSwitchingTts(kokoro, browserVoice),
+    // `?voice=elevenlabs`: ElevenLabs first, for comparison.
+    tts:
+      choice === "elevenlabs" ? createSwitchingTts(createElevenLabsTts(natural), natural) : natural,
     warmUp: () => void kokoro.load().catch((e: unknown) => console.warn("kokoro unavailable", e)),
   };
 }
