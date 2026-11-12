@@ -124,6 +124,7 @@ describe("createWebSpeechStt", () => {
     expect(h.calls).toEqual([
       "start",
       "interim:a table",
+      "interim:a table for 4",
       'final:a table for 4:{"speechEnd":1000,"sttFinal":1300}',
       "end",
     ]);
@@ -142,6 +143,7 @@ describe("createWebSpeechStt", () => {
     r.result([{ text: "a table for four", final: false }]);
     t = 1500;
     r.result([{ text: "a table for four", final: true }]);
+    r.onend?.();
     t = 1600;
     r.onspeechend?.();
     expect(h.calls).toContain('final:a table for four:{"speechEnd":900,"sttFinal":1500}');
@@ -205,19 +207,36 @@ describe("createWebSpeechStt", () => {
       expect(finals(h.calls)).toHaveLength(1);
     });
 
-    it("uses Chrome's own final if it comes first, and cancels the timer", () => {
+    it("a final phrase is not the end of the turn: speech after a pause joins the same message", () => {
       const c = fakeClock();
       const stt = createWebSpeechStt(withRecognition(), c.now, c.timers);
       const h = handlers();
       stt.start(h);
       const r = FakeRecognition.last!;
-      c.set(400);
-      r.result([{ text: "a table for four", final: false }]);
-      c.set(700);
-      r.result([{ text: "a table for four", final: true }]);
-      expect(c.pending()).toBe(0);
-      c.advance(SILENCE_MS * 2);
-      expect(finals(h.calls)).toEqual(['final:a table for four:{"speechEnd":400,"sttFinal":700}']);
+      r.result([{ text: "a table for", final: true }]);
+      expect(finals(h.calls)).toEqual([]);
+      c.advance(SILENCE_MS - 100);
+      r.result([
+        { text: "a table for", final: true },
+        { text: " four", final: false },
+      ]);
+      c.advance(SILENCE_MS - 100);
+      expect(finals(h.calls)).toEqual([]);
+      c.advance(100);
+      expect(finals(h.calls)).toHaveLength(1);
+      expect(finals(h.calls)[0]).toContain("final:a table for four:");
+    });
+
+    it("sends what was said if Chrome ends the session before our timer does", () => {
+      const c = fakeClock();
+      const stt = createWebSpeechStt(withRecognition(), c.now, c.timers);
+      const h = handlers();
+      stt.start(h);
+      const r = FakeRecognition.last!;
+      r.result([{ text: "a table", final: false }]);
+      r.onend?.();
+      expect(finals(h.calls)).toHaveLength(1);
+      expect(h.calls.at(-1)).toBe("end");
     });
 
     it("ignores Chrome's late final after we already finalized: onFinal fires once", () => {
@@ -250,6 +269,7 @@ describe("createWebSpeechStt", () => {
       c.advance(SILENCE_MS * 2);
       expect(finals(h.calls)).toEqual([]);
       r.result([{ text: "a table", final: true }]);
+      r.onend?.();
       expect(finals(h.calls)).toHaveLength(1);
     });
 
@@ -262,6 +282,7 @@ describe("createWebSpeechStt", () => {
       r.result([{ text: "a table", final: false }]);
       r.onerror?.({ error: "network" });
       c.advance(SILENCE_MS * 2);
+      r.onend?.();
       expect(finals(h.calls)).toEqual([]);
     });
   });

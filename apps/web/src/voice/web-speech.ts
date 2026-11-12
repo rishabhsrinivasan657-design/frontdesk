@@ -43,13 +43,15 @@ const ERRORS: Record<string, SttError> = {
 
 /**
  * How long without new words before we call the utterance finished (endpointing). With
- * `continuous = false` Chrome decides this itself, and waits about 1.6–1.9 s: far over the spec §8
- * STT budget (p50 400 ms, p95 800 ms). So we listen continuously and end the utterance ourselves.
- * The trade-off: shorter cuts people off when they pause mid-sentence ("a table for… four"),
- * longer misses the budget. `stt_ms` is measured from the last change in words, so it is at least
- * this long.
+ * `continuous = false` Chrome ends the turn itself at the first pause it hears, so we listen
+ * continuously and end the utterance ourselves. In this mode an `isFinal` result only means one
+ * phrase is settled, not that the caller is done, so it never ends the turn.
+ * The trade-off: shorter cuts people off when they pause mid-sentence ("a table for… four"), and
+ * interim words arrive in bursts, so 600 ms even fired while people were still talking. Longer is
+ * over the spec §8 STT budget (p95 800 ms), so a caller in a hurry can tap the mic to send at once.
+ * `stt_ms` is measured from the last change in words, so it is at least this long unless they tap.
  */
-export const SILENCE_MS = 600;
+export const SILENCE_MS = 1500;
 
 /** `setTimeout`/`clearTimeout`, injectable so tests can move time by hand. */
 export interface Timers {
@@ -84,11 +86,11 @@ export function createWebSpeechStt(
       r.interimResults = true;
       r.continuous = true;
       // End of speech: the `speechend` event if it comes first. Chrome often sends the final
-      // result before it, so fall back to the last interim result (the last moment words changed).
+      // result before it, so fall back to the last moment the words changed.
       let speechEnd: number | undefined;
-      let lastInterim: number | undefined;
+      let lastChange: number | undefined;
       let lastText = "";
-      // One utterance, one `onFinal`: whichever of our silence timer or Chrome's final comes first.
+      // One utterance, one `onFinal`: whichever of our silence timer or the session ending is first.
       let done = false;
       let silence: unknown;
       const clearSilence = () => {
@@ -112,27 +114,25 @@ export function createWebSpeechStt(
           .map((res) => res[0]?.transcript ?? "")
           .join("")
           .trim();
-        if (results.every((res) => res.isFinal)) {
-          finish(text, speechEnd ?? lastInterim);
-          return;
-        }
         if (text === lastText) return;
         lastText = text;
-        lastInterim = now();
+        lastChange = now();
         h.onInterim(text);
         clearSilence();
         silence = timers.set(() => {
           silence = undefined;
-          finish(lastText, lastInterim);
+          finish(lastText, lastChange);
           r.stop();
         }, SILENCE_MS);
       };
       r.onerror = (event) => {
         clearSilence();
+        done = true;
         h.onError(ERRORS[event.error] ?? "other");
       };
       r.onend = () => {
-        clearSilence();
+        // Tapping the mic, or Chrome ending the session, sends what we have.
+        finish(lastText, speechEnd ?? lastChange);
         if (active === r) active = undefined;
         h.onEnd();
       };

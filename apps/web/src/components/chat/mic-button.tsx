@@ -31,7 +31,7 @@ export function MicButton({
       disabled={disabled || status === "unsupported"}
       onClick={onPress}
     >
-      {listening ? "Listening…" : "Speak"}
+      {listening ? "Listening… tap to send" : "Speak"}
     </Button>
   );
 }
