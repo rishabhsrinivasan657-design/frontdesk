@@ -38,11 +38,14 @@ export function createVoiceProviders(): VoiceProviders {
     () => new Worker("/kokoro/worker.mjs", { type: "module" }),
     kokoroVoice,
   );
-  if (!kokoro.supported) return { stt: createStt(), tts: browserVoice };
-  const natural = createSwitchingTts(kokoro, browserVoice);
+  // Fallback chain: Kokoro → ElevenLabs (while Kokoro loads, or where it can't run; off without
+  // a key, and capped below the free plan) → the browser's own voice.
+  const premium = createSwitchingTts(createElevenLabsTts(browserVoice), browserVoice);
+  if (!kokoro.supported) return { stt: createStt(), tts: premium };
+  const natural = createSwitchingTts(kokoro, premium);
   return {
     stt: createStt(),
-    // `?voice=elevenlabs`: the premium comparison voice, falling back to Kokoro if it's off.
+    // `?voice=elevenlabs`: ElevenLabs first, for comparison.
     tts:
       choice === "elevenlabs" ? createSwitchingTts(createElevenLabsTts(natural), natural) : natural,
     warmUp: () => void kokoro.load().catch((e: unknown) => console.warn("kokoro unavailable", e)),

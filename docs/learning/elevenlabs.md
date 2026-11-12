@@ -1,6 +1,6 @@
 # ElevenLabs as a comparison voice (learning guide)
 
-ElevenLabs is the best-known paid voice provider. We use it only **for comparison**: `/talk?voice=elevenlabs`. Everyone else hears Kokoro, the free voice that runs in the browser. The free ElevenLabs plan gives roughly 20,000 characters a month on its fast model, which is about 15 short booking calls. That's plenty for showing it side by side, and far too little to make it the default.
+ElevenLabs is the best-known paid voice provider. Kokoro (free, in the browser) stays the main voice: the user preferred it. ElevenLabs is the **fallback**. It speaks while Kokoro is still downloading (the first ~15 s), and on devices that can't run Kokoro, instead of the robotic browser voice. The chain is Kokoro → ElevenLabs → browser voice. `/talk?voice=elevenlabs` puts it first, for comparison. The free ElevenLabs plan gives roughly 20,000 characters a month on its fast model, which is about 15 short booking calls. That's plenty for showing it side by side, and far too little to make it the default.
 
 ## 1. Reading order
 
