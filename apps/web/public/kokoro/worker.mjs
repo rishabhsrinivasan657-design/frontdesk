@@ -6,7 +6,7 @@
 import { KokoroTTS } from "https://cdn.jsdelivr.net/npm/kokoro-js@1.2.1/dist/kokoro.web.js";
 
 const MODEL = "onnx-community/Kokoro-82M-v1.0-ONNX";
-/** A warm, natural American voice; `tts.list_voices()` has the rest. */
+/** A warm, natural American voice; `?voice=<id>` on /talk picks another (`tts.list_voices()`). */
 const VOICE = "af_heart";
 
 let tts;
@@ -29,14 +29,14 @@ self.onmessage = async (e) => {
       const model = await load();
       // The first generation compiles GPU shaders (~2 s); pay that now, not on the first reply.
       const t0 = performance.now();
-      await model.generate("Hello.", { voice: VOICE });
+      await model.generate("Hello.", { voice: m.voice ?? VOICE });
       console.info(`kokoro warm-up: ${Math.round(performance.now() - t0)} ms`);
       self.postMessage({ type: "ready", device });
       return;
     }
     const model = await load();
     const t0 = performance.now();
-    const out = await model.generate(m.text, { voice: VOICE });
+    const out = await model.generate(m.text, { voice: m.voice ?? VOICE });
     console.info(`kokoro: ${Math.round(performance.now() - t0)} ms for ${m.text.length} chars`);
     const audio = out.audio;
     self.postMessage({ type: "audio", id: m.id, audio, rate: out.sampling_rate }, [audio.buffer]);

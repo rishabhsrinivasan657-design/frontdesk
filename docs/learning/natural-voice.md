@@ -5,7 +5,7 @@ Replies used to be read by the browser's default voice, which on a Mac is often 
 1. **The best browser voice.** It now picks the best US-English voice the browser has, instead of the default: neural "Natural" voices (Edge), then "Google US English" (Chrome), then macOS "Premium"/"Enhanced". This is free and instant.
 2. **Kokoro.** An open-source neural text-to-speech model (82 million parameters, Apache-licensed) that runs **inside your browser**. It sounds close to a person, costs nothing per word and needs no server.
 
-The browser voice speaks until Kokoro has loaded. `/talk?voice=browser` forces the browser voice, so you can compare the two.
+The browser voice speaks until Kokoro has loaded. `/talk?voice=browser` forces the browser voice, and `/talk?voice=af_bella` (any Kokoro voice id, such as `am_michael`) picks a different Kokoro voice, so you can compare them.
 
 ## 1. Reading order
 

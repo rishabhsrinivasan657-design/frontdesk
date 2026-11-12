@@ -17,7 +17,7 @@ export interface KokoroTts extends TextToSpeech {
  * which hands-free barge-in will need. Sentences are generated ahead with `prepare`, so the next
  * one is usually ready when the current one ends.
  */
-export function createKokoroTts(makeWorker: () => Worker): KokoroTts {
+export function createKokoroTts(makeWorker: () => Worker, voice?: string): KokoroTts {
   let worker: Worker | undefined;
   let loading: Promise<void> | undefined;
   let ready = false;
@@ -50,7 +50,7 @@ export function createKokoroTts(makeWorker: () => Worker): KokoroTts {
     if (!p) {
       const id = nextId++;
       p = new Promise((resolve) => waiting.set(id, resolve));
-      ensureWorker().postMessage({ type: "say", id, text });
+      ensureWorker().postMessage({ type: "say", id, text, voice });
       cache.set(text, p);
       // Keep the cache small: replies rarely repeat.
       if (cache.size > 20) cache.delete(cache.keys().next().value!);
@@ -77,7 +77,7 @@ export function createKokoroTts(makeWorker: () => Worker): KokoroTts {
           w.removeEventListener("message", onReady);
         };
         w.addEventListener("message", onReady);
-        w.postMessage({ type: "load" });
+        w.postMessage({ type: "load", voice });
       });
       return loading;
     },
