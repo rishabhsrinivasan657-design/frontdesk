@@ -31,7 +31,8 @@ export function createVoiceProviders(): VoiceProviders {
   if (choice === "browser") return { stt: createStt(), tts: browserVoice };
   // The browser voice speaks until Kokoro has downloaded; loading starts at the first mic press.
   const kokoro = createKokoroTts(
-    () => new Worker(new URL("./kokoro.worker.ts", import.meta.url), { type: "module" }),
+    // A static module worker (public/kokoro/worker.mjs), so the model runtime loads natively.
+    () => new Worker("/kokoro/worker.mjs", { type: "module" }),
   );
   if (!kokoro.supported) return { stt: createStt(), tts: browserVoice };
   return {
