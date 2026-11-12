@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Chat } from "@/chat/use-chat";
 import { VoiceController, type VoiceStatus } from "./controller";
+import { FILLER_TURN, Filler } from "./filler";
 import { HandsFree } from "./hands-free";
 import { createVoiceProviders } from "./providers";
 import { Speaker } from "./speaker";
@@ -14,6 +15,8 @@ export interface VoiceLatency {
   sttMs?: number;
   /** First sentence arrived → it started playing. */
   ttsStartMs?: number;
+  /** Voice to voice: the caller stopped speaking → the reply's first audio (spec §8 "voice turn total"). */
+  voiceTurnMs?: number;
 }
 
 /** Push-to-talk and spoken replies on top of the chat (spec §8). */
@@ -39,10 +42,15 @@ export function useVoice(chat: Chat) {
 
   useEffect(() => {
     const { stt, tts, warmUp } = createVoiceProviders();
+    /** When the caller stopped speaking, for the voice-to-voice time of the coming reply. */
+    let speechEnd: number | undefined;
     const speaker = new Speaker(tts, {
       onTtsStarted: (turnId, at, sinceSentenceMs) => {
+        if (turnId === FILLER_TURN) return;
         chatRef.current.ttsStarted(turnId, at);
-        setLatency((l) => ({ ...l, ttsStartMs: Math.round(sinceSentenceMs) }));
+        const turn = speechEnd !== undefined ? { voiceTurnMs: Math.round(at - speechEnd) } : {};
+        speechEnd = undefined;
+        setLatency((l) => ({ ...l, ttsStartMs: Math.round(sinceSentenceMs), ...turn }));
       },
       onChange: (speaking) => {
         setAgentSpeaking(speaking);
@@ -54,10 +62,17 @@ export function useVoice(chat: Chat) {
       speaker,
       sendText: (text, timings) => {
         const sent = chatRef.current.send(text, timings);
-        if (sent) hands.heard();
+        if (sent) {
+          hands.heard();
+          filler.sent();
+          speechEnd = timings.speechEnd ?? timings.sttFinal;
+        }
         return sent;
       },
-      sendInterrupt: () => chatRef.current.interrupt(),
+      sendInterrupt: () => {
+        filler.cancel();
+        chatRef.current.interrupt();
+      },
       onStatus: (s) => {
         setStatus(s);
         hands.update();
@@ -65,6 +80,13 @@ export function useVoice(chat: Chat) {
       onInterim: setInterim,
       onSttMs: (ms) => setLatency(ms !== undefined ? { sttMs: Math.round(ms) } : {}),
       onDropped: () => setDropped(true),
+    });
+    const filler = new Filler({
+      speaker,
+      timers: {
+        set: (fn, ms) => setTimeout(fn, ms),
+        clear: (h) => clearTimeout(h as ReturnType<typeof setTimeout>),
+      },
     });
     const hands: HandsFree = new HandsFree({
       controller,
@@ -81,15 +103,19 @@ export function useVoice(chat: Chat) {
     voice.current = { controller, speaker, handsFree: hands, warmUp };
     setStatus(controller.status);
     const off = chatRef.current.onServerMessage((m) => {
+      if (m.type === "agent_sentence") filler.replied();
       if (m.type === "agent_sentence" && controller.used) speaker.enqueue(m.turnId, m.text);
       // How the turn we may have barged in on ended (see VoiceController.turnEnded).
       if (m.type === "turn_metrics") controller.turnEnded("completed");
       if (m.type === "interrupted" || m.type === "error") controller.turnEnded("interrupted");
-      if (m.type === "turn_metrics" || m.type === "interrupted" || m.type === "error")
+      if (m.type === "turn_metrics" || m.type === "interrupted" || m.type === "error") {
+        filler.replied();
         hands.turnDone();
+      }
     });
     return () => {
       off();
+      filler.cancel();
       hands.stop();
       speaker.stop();
       stt.stop();
