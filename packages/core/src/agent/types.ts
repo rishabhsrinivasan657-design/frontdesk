@@ -29,6 +29,22 @@ export interface PendingAction {
   proposedTurn: number;
   /** ISO 8601. */
   expiresAt: string;
+  /** What the guest's booking card and calendar view show. Built from data, like `summary`. */
+  details?: CardDetails;
+}
+
+/** A pending action's slot, ready to display: labels are in the business timezone. */
+export interface CardDetails {
+  /** "Friday, November 6". */
+  date: string;
+  /** "7:00 PM". */
+  time: string;
+  partySize: number;
+  name: string;
+  /** Up to five real seating times that day, around and including `time`. */
+  times: string[];
+  /** A reschedule: where the booking is now. */
+  from?: { date: string; time: string; partySize: number };
 }
 
 export const HANDOFF_REASONS = [

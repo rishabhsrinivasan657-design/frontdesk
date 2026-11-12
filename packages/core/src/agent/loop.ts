@@ -436,6 +436,7 @@ async function modelTurn(turn: Turn): Promise<string> {
         kind: proposed.args.kind,
         summary: proposed.summary,
         expiresAt: proposed.expiresAt,
+        ...(proposed.details && { details: proposed.details }),
       });
       return proposed.summary;
     }

@@ -1,6 +1,8 @@
+import { DateTime } from "luxon";
 import type { Slot } from "../availability/types.js";
+import { localWallTimesOnGrid } from "../availability/local-time.js";
 import { formatWhen } from "../agent/tools/format.js";
-import type { PendingAction } from "../agent/types.js";
+import type { CardDetails, PendingAction } from "../agent/types.js";
 import type { BusinessConfig } from "../config/schema.js";
 import type { Booking } from "../ports/calendar.js";
 
@@ -32,6 +34,47 @@ export function readBack(action: PendingAction, config: BusinessConfig): string 
     case "cancel":
       return `To confirm: cancel your reservation for ${action.reservation!.partySize} on ${when(config, action.reservation!.start)}. Shall I cancel it?`;
   }
+}
+
+const WINDOW = 5;
+const TIME = "h:mm a";
+
+/** The read-back's slot as display data (plan ruling 4 applies: from data, never the LLM). */
+export function cardDetails(action: PendingAction, config: BusinessConfig): CardDetails {
+  const zone = config.business.timezone;
+  const local = (at: string | Date) =>
+    (typeof at === "string" ? DateTime.fromISO(at) : DateTime.fromJSDate(at)).setZone(zone);
+  const { args } = action;
+  // A book or reschedule shows the new slot; a cancel shows the booking it removes.
+  const target = args.kind === "cancel" ? action.reservation! : action.slot!;
+  const start = local(target.start);
+  const name = args.kind === "book" ? args.name : action.reservation!.name;
+  const partySize = args.kind === "book" ? args.partySize : target.partySize;
+  const details: CardDetails = {
+    date: start.toFormat("cccc, LLLL d"),
+    time: start.toFormat(TIME),
+    partySize,
+    name,
+    times: nearbyTimes(config, start),
+  };
+  if (args.kind === "reschedule") {
+    const from = local(action.reservation!.start);
+    details.from = {
+      date: from.toFormat("cccc, LLLL d"),
+      time: from.toFormat(TIME),
+      partySize: action.reservation!.partySize,
+    };
+  }
+  return details;
+}
+
+/** Seating times on the grid that day, a window around `start` (just `start` if off-grid). */
+function nearbyTimes(config: BusinessConfig, start: DateTime): string[] {
+  const grid = localWallTimesOnGrid(config, start.toISODate()!);
+  const at = grid.findIndex((t) => t.hour === start.hour && t.minute === start.minute);
+  if (at < 0) return [start.toFormat(TIME)];
+  const from = Math.max(0, Math.min(at - Math.floor(WINDOW / 2), grid.length - WINDOW));
+  return grid.slice(from, from + WINDOW).map((t) => t.toFormat(TIME));
 }
 
 export function executedReply(

@@ -37,6 +37,7 @@ export {
   type ActionKind,
   type AuditEvent,
   type AuditStage,
+  type CardDetails,
   type HandoffReason,
   type HandoffTicket,
   type PendingAction,

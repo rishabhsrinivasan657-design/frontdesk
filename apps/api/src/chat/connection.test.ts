@@ -135,7 +135,9 @@ describe("openChat", () => {
       kind: "book",
       summary: pending.summary,
       expiresAt: pending.expiresAt,
+      details: pending.details,
     });
+    expect(pending.details?.time).toBe("7:00 PM");
     await chat.onMessage(say("Yes, please"));
     expect(socket.ofType("action_result")[0]?.status).toBe("executed");
   });

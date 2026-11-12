@@ -7,7 +7,7 @@ import type { ActionArgs, PendingAction, SessionState } from "../agent/types.js"
 import { type Booking, CalendarUnavailableError } from "../ports/calendar.js";
 import { insideChangeWindow, recheckSlot } from "./availability.js";
 import { type GateDeps, PENDING_TTL_MS } from "./deps.js";
-import { readBack } from "./summary.js";
+import { cardDetails, readBack } from "./summary.js";
 import { localToday } from "../availability/local-time.js";
 
 export const BOOKING_LIMIT_REPLY =
@@ -45,7 +45,11 @@ export async function propose(
       proposedTurn: session.turn,
       expiresAt: new Date(now.getTime() + PENDING_TTL_MS).toISOString(),
     };
-    const action = { ...draft, summary: readBack(draft, deps.config) };
+    const action = {
+      ...draft,
+      summary: readBack(draft, deps.config),
+      details: cardDetails(draft, deps.config),
+    };
     const previous = await deps.sessions.getPending(session.id);
     // Audit before storing: if the audit write fails, nothing becomes confirmable.
     await deps.audit.append({

@@ -319,6 +319,7 @@ async function sessionMessage(
       kind: pending.args.kind,
       summary: pending.summary,
       expiresAt: pending.expiresAt,
+      ...(pending.details && { details: pending.details }),
     };
   }
   if (session?.handoff) {

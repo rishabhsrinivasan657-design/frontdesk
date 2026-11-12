@@ -253,6 +253,66 @@ describe("propose", () => {
     );
   });
 
+  describe("card details (what the guest's calendar view shows)", () => {
+    it("a booking: its slot, party, name and the real seating times around it", async () => {
+      const fx = agentFixture(testConfig(), []);
+      const slotId = await fx.offer("2026-11-06", "19:00", 4);
+      const result = await propose(fx.deps, fx.session, "turn_1", "book", book(slotId));
+      if (!result.ok) throw new Error(result.message);
+      expect(result.action.details).toEqual({
+        date: "Friday, November 6",
+        time: "7:00 PM",
+        partySize: 4,
+        name: "Ana Ruiz",
+        times: ["6:30 PM", "6:45 PM", "7:00 PM", "7:15 PM", "7:30 PM"],
+      });
+      expect(await fx.deps.sessions.getPending("s1")).toEqual(result.action);
+    });
+
+    it("near opening, the window starts at the first seating instead of centring", async () => {
+      const fx = agentFixture(testConfig(), []);
+      const slotId = await fx.offer("2026-11-06", "17:00", 2);
+      const result = await propose(fx.deps, fx.session, "turn_1", "book", book(slotId, 2));
+      if (!result.ok) throw new Error(result.message);
+      expect(result.action.details?.times).toEqual([
+        "5:00 PM",
+        "5:15 PM",
+        "5:30 PM",
+        "5:45 PM",
+        "6:00 PM",
+      ]);
+    });
+
+    it("a reschedule shows the new slot and where it moves from; a cancel shows the booking", async () => {
+      const fx = agentFixture(testConfig());
+      await fx.find("Ana Ruiz", "ana@example.com");
+      const slotId = await fx.offer("2026-11-07", "19:00", 4);
+      const move = await propose(fx.deps, fx.session, "turn_1", "reschedule", {
+        reservationId: ANA.id,
+        slotId,
+      });
+      if (!move.ok) throw new Error(move.message);
+      expect(move.action.details).toMatchObject({
+        date: "Saturday, November 7",
+        time: "7:00 PM",
+        partySize: 4,
+        name: "Ana Ruiz",
+        from: { date: "Friday, November 6", time: "7:00 PM", partySize: 4 },
+      });
+      const cancel = await propose(fx.deps, fx.session, "turn_2", "cancel", {
+        reservationId: ANA.id,
+      });
+      if (!cancel.ok) throw new Error(cancel.message);
+      expect(cancel.action.details).toMatchObject({
+        date: "Friday, November 6",
+        time: "7:00 PM",
+        partySize: 4,
+        name: "Ana Ruiz",
+      });
+      expect(cancel.action.details?.from).toBeUndefined();
+    });
+  });
+
   it("keeps the new pending action when auditing the superseded one fails", async () => {
     const fx = agentFixture(testConfig(), []);
     const first = await propose(
