@@ -1,0 +1,103 @@
+# Front Desk on Render's free tier (docs/deploy-render.md). In the Render dashboard: New →
+# Blueprint → this repo. Values marked `sync: false` are typed into the dashboard, never committed.
+# Every service sits in one region, so the api reaches Postgres and Redis on Render's private network.
+
+services:
+  # The api and the confirmation worker share one container (deploy/render/start-api.sh),
+  # because Render's background workers aren't free.
+  - type: web
+    name: casa-fiorella-api
+    runtime: docker
+    plan: free
+    region: virginia
+    dockerfilePath: ./deploy/render/api.Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CONVERSATION_SOURCE
+        value: pilot
+      - key: LLM_PROVIDER
+        value: gemini
+      - key: LLM_TIER
+        value: free
+      - key: SPEND_CAP_USD_MONTHLY
+        value: "0"
+      - key: LLM_RECORD
+        value: "0"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: casa-fiorella-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: casa-fiorella-redis
+          property: connectionString
+      # Keys the hashes in rate-limit keys; Render generates it once.
+      - key: KEY_HASH_SECRET
+        generateValue: true
+      # https://<web service>.onrender.com, filled in after the first sync.
+      - key: WEB_ORIGINS
+        sync: false
+      - key: TURNSTILE_HOSTNAMES
+        sync: false
+      - key: TURNSTILE_SECRET_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REFRESH_TOKEN
+        sync: false
+      - key: GOOGLE_CALENDAR_ID
+        sync: false
+      - key: OWNER_EMAIL
+        sync: false
+      # Paste the bcrypt hash from `pnpm owner:hash` as is, without quotes.
+      - key: OWNER_PASSWORD_HASH
+        sync: false
+
+  # The guest page and the owner dashboard. Render passes these variables to the Docker build as
+  # build args, which is how the NEXT_PUBLIC_* values reach the browser bundle.
+  - type: web
+    name: casa-fiorella
+    runtime: docker
+    plan: free
+    region: virginia
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    envVars:
+      - key: PORT
+        value: "3000"
+      - key: TRUST_FORWARDED_FOR
+        value: "1"
+      # wss://<api service>.onrender.com/ws
+      - key: NEXT_PUBLIC_API_WS_URL
+        sync: false
+      # https://<api service>.onrender.com, for the owner dashboard's server-side calls.
+      - key: API_URL
+        sync: false
+      - key: NEXT_PUBLIC_TURNSTILE_SITE_KEY
+        sync: false
+      - key: NEXT_PUBLIC_PRIVACY_CONTACT
+        sync: false
+
+  # BullMQ needs noeviction: an evicted key would silently lose a queued confirmation email.
+  - type: keyvalue
+    name: casa-fiorella-redis
+    plan: free
+    region: virginia
+    maxmemoryPolicy: noeviction
+    ipAllowList: []
+
+databases:
+  # Free Render Postgres is deleted 30 days after it's created (docs/deploy-render.md).
+  - name: casa-fiorella-db
+    plan: free
+    region: virginia
+    databaseName: frontdesk
+    user: frontdesk
