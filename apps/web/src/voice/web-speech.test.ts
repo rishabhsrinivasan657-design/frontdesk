@@ -11,6 +11,7 @@ import {
   type WebSpeechGlobals,
   createWebSpeechStt,
   createWebSpeechTts,
+  pickVoice,
 } from "./web-speech";
 
 describe("createWebSpeechStt", () => {
@@ -281,5 +282,23 @@ describe("createWebSpeechTts", () => {
 
   it("is unsupported without speechSynthesis", () => {
     expect(createWebSpeechTts({}).supported).toBe(false);
+  });
+});
+
+describe("pickVoice", () => {
+  const v = (name: string, lang = "en-US", localService = true) => ({ name, lang, localService });
+  it("prefers natural/neural voices, then Google's, then enhanced ones, over the default", () => {
+    const fred = v("Fred");
+    expect(
+      pickVoice([fred, v("Samantha (Enhanced)"), v("Google US English", "en-US", false)])?.name,
+    ).toBe("Google US English");
+    expect(
+      pickVoice([
+        v("Google US English"),
+        v("Microsoft Aria Online (Natural) - English (United States)"),
+      ])?.name,
+    ).toContain("Aria");
+    expect(pickVoice([fred, v("Samantha (Enhanced)")])?.name).toBe("Samantha (Enhanced)");
+    expect(pickVoice([v("Thomas", "fr-FR")])).toBeUndefined();
   });
 });

@@ -22,14 +22,16 @@ export function useVoice(chat: Chat) {
   /** The last transcript wasn't sent (it barged in on a reply that couldn't be cancelled). */
   const [dropped, setDropped] = useState(false);
   const chatRef = useRef(chat);
-  const voice = useRef<{ controller: VoiceController; speaker: Speaker } | undefined>(undefined);
+  const voice = useRef<
+    { controller: VoiceController; speaker: Speaker; warmUp?: () => void } | undefined
+  >(undefined);
 
   useEffect(() => {
     chatRef.current = chat;
   });
 
   useEffect(() => {
-    const { stt, tts } = createVoiceProviders();
+    const { stt, tts, warmUp } = createVoiceProviders();
     const speaker = new Speaker(tts, {
       onTtsStarted: (turnId, at, sinceSentenceMs) => {
         chatRef.current.ttsStarted(turnId, at);
@@ -47,7 +49,7 @@ export function useVoice(chat: Chat) {
       onSttMs: (ms) => setLatency(ms !== undefined ? { sttMs: Math.round(ms) } : {}),
       onDropped: () => setDropped(true),
     });
-    voice.current = { controller, speaker };
+    voice.current = { controller, speaker, warmUp };
     setStatus(controller.status);
     const off = chatRef.current.onServerMessage((m) => {
       if (m.type === "agent_sentence" && controller.used) speaker.enqueue(m.turnId, m.text);
@@ -74,6 +76,7 @@ export function useVoice(chat: Chat) {
 
   const press = useCallback(() => {
     setDropped(false);
+    voice.current?.warmUp?.();
     voice.current?.controller.press(chatRef.current.state.busy);
   }, []);
   /** The caller typed or clicked instead: speak that turn's reply, forget unsent speech. */

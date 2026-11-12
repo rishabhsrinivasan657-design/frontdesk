@@ -44,6 +44,7 @@ export class Speaker {
     if (!this.firstArrival.has(turnId)) this.firstArrival.set(turnId, this.now());
     const was = this.speaking;
     this.queue.push({ turnId, text });
+    this.tts.prepare?.(text);
     this.next();
     if (!was) this.opts.onChange(true);
   }

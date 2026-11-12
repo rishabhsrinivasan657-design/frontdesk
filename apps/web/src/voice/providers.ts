@@ -1,11 +1,14 @@
 import type { SpeechToText, TextToSpeech } from "./types";
 import { createEndpointedStt } from "./endpointed-stt";
+import { createKokoroTts, createSwitchingTts } from "./kokoro-tts";
 import { createSileroVad } from "./vad";
 import { createWebSpeechStt, createWebSpeechTts } from "./web-speech";
 
 export interface VoiceProviders {
   stt: SpeechToText;
   tts: TextToSpeech;
+  /** The caller started using voice: start loading heavier models (Kokoro). */
+  warmUp?: () => void;
 }
 
 declare global {
@@ -23,7 +26,23 @@ export function createVoiceProviders(): VoiceProviders {
   if (process.env.NEXT_PUBLIC_VOICE_TEST_HOOK === "1" && window.__frontdeskVoice) {
     return window.__frontdeskVoice;
   }
-  return { stt: createStt(), tts: createWebSpeechTts() };
+  const choice = new URLSearchParams(window.location.search).get("voice");
+  const browserVoice = createWebSpeechTts();
+  if (choice === "browser") return { stt: createStt(), tts: browserVoice };
+  // The browser voice speaks until Kokoro has downloaded; loading starts at the first mic press.
+  // `?voice=af_bella` (any Kokoro voice id) picks Kokoro's voice, to compare; default af_heart.
+  const kokoroVoice = choice && /^[a-z]{2}_[a-z]+$/.test(choice) ? choice : undefined;
+  const kokoro = createKokoroTts(
+    // A static module worker (public/kokoro/worker.mjs), so the model runtime loads natively.
+    () => new Worker("/kokoro/worker.mjs", { type: "module" }),
+    kokoroVoice,
+  );
+  if (!kokoro.supported) return { stt: createStt(), tts: browserVoice };
+  return {
+    stt: createStt(),
+    tts: createSwitchingTts(kokoro, browserVoice),
+    warmUp: () => void kokoro.load().catch((e: unknown) => console.warn("kokoro unavailable", e)),
+  };
 }
 
 /**

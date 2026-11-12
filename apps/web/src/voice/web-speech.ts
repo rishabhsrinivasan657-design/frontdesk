@@ -18,8 +18,15 @@ interface RecognitionEvent {
   results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }>;
 }
 
+/** The bits of SpeechSynthesisVoice we look at. */
+export interface VoiceInfo {
+  name: string;
+  lang: string;
+}
+
 interface Utterance {
   lang: string;
+  voice?: unknown;
   onstart: (() => void) | null;
   onend: (() => void) | null;
   onerror: (() => void) | null;
@@ -29,7 +36,7 @@ interface Utterance {
 export interface WebSpeechGlobals {
   SpeechRecognition?: new () => Recognition;
   webkitSpeechRecognition?: new () => Recognition;
-  speechSynthesis?: { speak(u: Utterance): void; cancel(): void };
+  speechSynthesis?: { speak(u: Utterance): void; cancel(): void; getVoices?(): VoiceInfo[] };
   SpeechSynthesisUtterance?: new (text: string) => Utterance;
 }
 
@@ -149,7 +156,23 @@ export function createWebSpeechStt(
   };
 }
 
-/** Speech synthesis with the browser's own voices. */
+/** Better-sounding voices first: neural ones (Edge "Natural"), Google's, then macOS Enhanced/Premium. */
+const VOICE_RANKS = [/natural|neural/i, /^google us english/i, /premium/i, /enhanced/i, /^google/i];
+
+/**
+ * The best US-English voice the browser has, or undefined to keep the default. The default is
+ * often an old, flat system voice, which is what made replies sound robotic.
+ */
+export function pickVoice<V extends VoiceInfo>(voices: V[]): V | undefined {
+  const english = voices.filter((v) => v.lang.replace("_", "-").startsWith("en-US"));
+  for (const rank of VOICE_RANKS) {
+    const found = english.find((v) => rank.test(v.name));
+    if (found) return found;
+  }
+  return english[0];
+}
+
+/** Speech synthesis with the best of the browser's own voices. */
 export function createWebSpeechTts(
   g: WebSpeechGlobals = globalThis as WebSpeechGlobals,
 ): TextToSpeech {
@@ -164,6 +187,9 @@ export function createWebSpeechTts(
       }
       const u = new Utter(text);
       u.lang = "en-US";
+      // Voices load asynchronously in Chrome, so pick at speak time rather than once.
+      const voice = pickVoice(synth.getVoices?.() ?? []);
+      if (voice) u.voice = voice;
       u.onstart = () => h.onStart();
       u.onend = () => h.onEnd();
       u.onerror = () => h.onEnd();
