@@ -27,6 +27,9 @@ export function createKokoroTts(makeWorker: () => Worker, voice?: string): Kokor
   /** Generated (or generating) audio by text, so `prepare` and `speak` share the work. */
   const cache = new Map<string, Promise<{ audio: Float32Array; rate: number } | undefined>>();
   let current: AudioBufferSourceNode | undefined;
+  /** All Kokoro audio goes through this, so ducking is one gain change. */
+  let gain: GainNode | undefined;
+  let volume = 1;
   let generation = 0;
 
   function ensureWorker(): Worker {
@@ -92,13 +95,18 @@ export function createKokoroTts(makeWorker: () => Worker, voice?: string): Kokor
           h.onEnd();
           return;
         }
-        ctx ??= new AudioContext();
+        if (!ctx) {
+          ctx = new AudioContext();
+          gain = ctx.createGain();
+          gain.gain.value = volume;
+          gain.connect(ctx.destination);
+        }
         void ctx.resume();
         const buffer = ctx.createBuffer(1, a.audio.length, a.rate);
         buffer.copyToChannel(a.audio as Float32Array<ArrayBuffer>, 0);
         const src = ctx.createBufferSource();
         src.buffer = buffer;
-        src.connect(ctx.destination);
+        src.connect(gain!);
         src.onended = () => {
           if (current === src) current = undefined;
           h.onEnd();
@@ -107,6 +115,11 @@ export function createKokoroTts(makeWorker: () => Worker, voice?: string): Kokor
         src.start();
         h.onStart();
       });
+    },
+    setVolume(v) {
+      volume = v;
+      // A short ramp, so ducking sounds like a fade rather than a click.
+      if (ctx && gain) gain.gain.setTargetAtTime(v, ctx.currentTime, 0.05);
     },
     cancel() {
       generation += 1;
@@ -127,6 +140,8 @@ export function createSwitchingTts(primary: KokoroTts, fallback: TextToSpeech): 
   return {
     supported: primary.supported || fallback.supported,
     prepare: (text) => primary.prepare?.(text),
+    // Only Kokoro can be ducked; speechSynthesis can't change volume mid-sentence.
+    setVolume: (v) => primary.setVolume?.(v),
     speak: (text, h) => pick().speak(text, h),
     cancel() {
       primary.cancel();

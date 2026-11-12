@@ -1,5 +1,8 @@
 import type { TextToSpeech } from "./types";
 
+/** How loud the agent is while ducked. */
+const DUCK_VOLUME = 0.25;
+
 export interface SpeakerOptions {
   /** The first sentence of a turn started playing: `at` (epoch ms) and the delay since it arrived. */
   onTtsStarted(turnId: string, at: number, sinceSentenceMs: number): void;
@@ -47,6 +50,11 @@ export class Speaker {
     this.tts.prepare?.(text);
     this.next();
     if (!was) this.opts.onChange(true);
+  }
+
+  /** Fades the agent down while the caller may be starting to talk (barge-in), or back up. */
+  duck(on: boolean): void {
+    this.tts.setVolume?.(on ? DUCK_VOLUME : 1);
   }
 
   stop(): void {

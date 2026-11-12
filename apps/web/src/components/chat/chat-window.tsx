@@ -13,7 +13,7 @@ import { FeedbackForm } from "./feedback-form";
 import { HandoffBanner } from "./handoff-banner";
 import { LatencyBadge } from "./latency-badge";
 import { MessageList } from "./message-list";
-import { DROPPED_NOTICE, MicButton, VOICE_NOTICE } from "./mic-button";
+import { DROPPED_NOTICE, HandsFreeButton, MicButton, VOICE_NOTICE } from "./mic-button";
 
 const STATUS = {
   connecting: "Connecting…",
@@ -115,6 +115,11 @@ export function ChatWindow({
           </div>
           {/* Usable while we answer: pressing it then is barge-in. */}
           <MicButton status={voice.status} disabled={closed} onPress={voice.press} />
+          <HandsFreeButton
+            on={voice.handsFree}
+            disabled={closed || voice.status === "unsupported"}
+            onToggle={voice.toggleHandsFree}
+          />
         </div>
         <div className="flex min-h-8 items-center justify-between">
           {canEnd ? (
