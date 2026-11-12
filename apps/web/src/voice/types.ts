@@ -31,4 +31,6 @@ export interface TextToSpeech {
   speak(text: string, handlers: { onStart(): void; onEnd(): void }): void;
   /** Stops the sentence being spoken. */
   cancel(): void;
+  /** Optional: start generating a sentence that will be spoken soon, so it plays without a gap. */
+  prepare?(text: string): void;
 }
