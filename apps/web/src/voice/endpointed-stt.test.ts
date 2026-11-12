@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { COMPLETE_MS, NEUTRAL_MS } from "./endpointer";
+import { COMPLETE_MS, HARD_CAP_MS } from "./endpointer";
 import { createEndpointedStt } from "./endpointed-stt";
 import { FakeRecognition, FakeVad, fakeClock, recordingHandlers, withRecognition } from "./fakes";
-import { createWebSpeechStt } from "./web-speech";
+import { SILENCE_MS, createWebSpeechStt } from "./web-speech";
 
 const finals = (calls: string[]) => calls.filter((c) => c.startsWith("final:"));
 
-async function setup(o: { failVad?: boolean } = {}) {
+async function setup(o: { failVad?: boolean; vad?: FakeVad } = {}) {
   const c = fakeClock();
   const recognizer = createWebSpeechStt(withRecognition(), c.now, c.timers, { silenceMs: null });
-  const vad = new FakeVad(o.failVad);
+  const vad = o.vad ?? new FakeVad(o.failVad);
   const stt = createEndpointedStt({ recognizer, vad, now: c.now, timers: c.timers });
   const h = recordingHandlers();
   stt.start(h);
@@ -95,16 +95,45 @@ describe("createEndpointedStt", () => {
     expect(h.calls.at(-1)).toBe("end");
   });
 
-  it("falls back to word timing when the VAD can't start", async () => {
+  it("falls back to word timing, never quicker than the old 1.5 s timer, when the VAD can't start", async () => {
     const { c, h, r } = await setup({ failVad: true });
     r.onspeechstart?.();
-    r.result([{ text: "I was wondering about", final: false }]);
-    c.advance(500);
-    r.result([{ text: "I was wondering about the menu", final: false }]);
-    c.advance(NEUTRAL_MS - 1);
+    r.result([{ text: "yes", final: false }]);
+    c.advance(SILENCE_MS - 1);
     expect(finals(h.calls)).toEqual([]);
     c.advance(1);
     expect(finals(h.calls)).toHaveLength(1);
     expect(h.calls).toContain("start");
+  });
+
+  it("a caller who finishes before the VAD is ready is still answered", async () => {
+    const vad = new FakeVad(false, true);
+    const { c, h, r } = await setup({ vad });
+    r.result([{ text: "yes", final: false }]);
+    c.advance(200);
+    await vad.ready();
+    c.advance(COMPLETE_MS);
+    expect(finals(h.calls)).toHaveLength(1);
+  });
+
+  it("noise but no words: stops listening after the hard cap", async () => {
+    const { c, vad, h, r, end } = await setup();
+    vad.speechStart();
+    vad.speechEnd(c.now());
+    c.advance(HARD_CAP_MS);
+    expect(r.stopped).toBe(1);
+    end();
+    expect(finals(h.calls)).toEqual([]);
+    expect(h.calls.at(-1)).toBe("end");
+  });
+
+  it("words that arrive after the turn was sent are not shown as pending", async () => {
+    const { c, vad, h, r } = await setup();
+    r.result([{ text: "yes", final: false }]);
+    vad.speechEnd(c.now());
+    c.advance(COMPLETE_MS);
+    const before = h.calls.length;
+    r.result([{ text: "yes please", final: true }]);
+    expect(h.calls.slice(before).filter((x) => x.startsWith("interim:"))).toEqual([]);
   });
 });

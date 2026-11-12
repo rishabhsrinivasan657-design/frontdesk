@@ -24,6 +24,8 @@ export interface EndpointerOptions {
   now: () => number;
   /** The caller has finished: `text` is the whole utterance, `speechEnd` when they went quiet. */
   onEndOfTurn(text: string, speechEnd: number): void;
+  /** Sound but no words for `HARD_CAP_MS` (a cough, a door): stop listening. */
+  onGiveUp?(): void;
 }
 
 /**
@@ -42,7 +44,18 @@ export class Endpointer {
   /** Silences that turned out to be mid-sentence pauses (speech came back), newest last. */
   private readonly pauses: number[] = [];
 
+  /**
+   * No window is shorter than this. Without a VAD, a gap in the words isn't silence (they arrive
+   * late and in bursts), so the caller of this class raises it to the old 1.5 s timer.
+   */
+  minWindowMs = 0;
+
   constructor(private readonly o: EndpointerOptions) {}
+
+  /** Some words have been heard in this utterance. */
+  get heard(): boolean {
+    return this.text !== "";
+  }
 
   get neutralMs(): number {
     if (this.pauses.length < ADAPT_MIN_SAMPLES) return NEUTRAL_MS;
@@ -88,14 +101,10 @@ export class Endpointer {
   }
 
   private window(): number {
-    switch (turnCompleteness(this.text)) {
-      case "complete":
-        return COMPLETE_MS;
-      case "incomplete":
-        return INCOMPLETE_MS;
-      default:
-        return this.neutralMs;
-    }
+    const byWords = { complete: COMPLETE_MS, incomplete: INCOMPLETE_MS, neutral: this.neutralMs }[
+      turnCompleteness(this.text)
+    ];
+    return Math.max(this.minWindowMs, byWords);
   }
 
   private arm(): void {
@@ -123,8 +132,12 @@ export class Endpointer {
   }
 
   private fire(): void {
-    if (this.text) this.emit(this.endAt!);
-    else this.endAt = undefined;
+    if (this.text) {
+      this.emit(this.endAt!);
+      return;
+    }
+    this.endAt = undefined;
+    this.o.onGiveUp?.();
   }
 
   private emit(speechEnd: number): void {

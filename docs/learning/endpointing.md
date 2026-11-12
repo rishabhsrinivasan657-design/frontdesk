@@ -28,12 +28,12 @@ It's still push-to-talk in this PR. Hands-free comes next and builds on this.
 - **VAD.** A model that looks at 32 ms frames of audio and says "speech" or "not speech". `redemptionMs: 200`: it reports the end of speech after 200 ms of non-speech, and we pass "silence began 200 ms ago" to the endpointer. `minSpeechMs: 150`: shorter blips (a click, a tap on the desk) don't count. We use `onSpeechRealStart`, which fires only after those 150 ms, so a blip never leaves the endpointer waiting for an end that never comes.
 - **The silence window.** Once the VAD hears silence, the endpointer waits a window that depends on the words:
 
-  | The words sound… | Example                           | Wait                         |
-  | ---------------- | --------------------------------- | ---------------------------- |
-  | complete         | "yes", "a table for 4 at 7pm"     | 300 ms                       |
-  | can't tell       | "I was wondering about the menu"  | 700 ms (adapts, up to 1.5 s) |
-  | incomplete       | "a table for", "um", "my name is" | 2 s                          |
-  | (always)         | anything                          | 3 s at most                  |
+  | The words sound… | Example                                 | Wait                         |
+  | ---------------- | --------------------------------------- | ---------------------------- |
+  | complete         | "yes", "that's right", "my name is Ana" | 300 ms                       |
+  | can't tell       | "I was wondering about the menu"        | 700 ms (adapts, up to 1.5 s) |
+  | incomplete       | "a table for", "um", "my name is"       | 2 s                          |
+  | (always)         | anything                                | 3 s at most                  |
 
   If the caller speaks again inside the window, nothing is sent. Their pause just becomes part of the sentence.
 
@@ -57,7 +57,7 @@ It's still push-to-talk in this PR. Hands-free comes next and builds on this.
 | Interrupt sent twice on barge-in                           | Only the VAD's speech start is forwarded when the VAD runs (`endpointed-stt.ts`); covered by "forwards the VAD's speech start…"                                                      |
 | A spoken "yes" bypasses the gate                           | Unchanged: the endpointer only produces `onFinal` text, which the controller sends as `user_text`.                                                                                   |
 
-**Live check.** I recorded a voice with `say` ("A table for… [1.2 s pause] four people on Friday at seven") and played it as Chrome's microphone. The real VAD ran on that audio, with scripted words lined up to it. Nothing was sent during the pause, and one message with the whole sentence went out 0.4 s after the speech ended. Chrome's own recognition doesn't work in an automated browser, so a person with a real mic is still the final test.
+**Live check.** I recorded a voice with `say` ("A table for… [1.2 s pause] four people on Friday at seven") and played it as Chrome's microphone. The real VAD ran on that audio, with scripted words lined up to it. Nothing was sent during the pause, and one message with the whole sentence went out 0.4 s after the speech ended. A second run taught us something: back then, a full request like "a table for four people on Friday" counted as finished, and it was sent before "at seven", at a breath pause. So only short answers ("yes", "no", "that's right") get the 300 ms window now. Full requests wait the adaptive 700 ms. Chrome's own recognition doesn't work in an automated browser, so a person with a real mic is still the final test.
 
 ## 4. Quiz
 

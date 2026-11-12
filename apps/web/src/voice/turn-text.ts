@@ -43,10 +43,6 @@ const DANGLING = new Set([
   "we're", "it's", "maybe", "just",
 ]); // prettier-ignore
 
-/** A booking detail: a number, a time of day, or a day. */
-const DETAIL =
-  /\d|\b(am|pm|noon|tonight|tomorrow|today|monday|tuesday|wednesday|thursday|friday|saturday|sunday|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b/;
-
 export function turnCompleteness(text: string): Completeness {
   const words = text
     .toLowerCase()
@@ -59,7 +55,7 @@ export function turnCompleteness(text: string): Completeness {
   if (DANGLING.has(words.at(-1)!)) return "incomplete";
   // "my name is Ana Lopez": a name after the lead-in is a whole answer.
   if (/\bname is \S+/.test(joined)) return "complete";
-  // A request carrying a booking detail that doesn't trail off ("a table for 4 on Friday at 7pm").
-  if (words.length >= 4 && DETAIL.test(joined)) return "complete";
+  // Longer requests ("a table for 4 on Friday…") stay neutral even when they sound whole: a
+  // breath before "at seven" is common, and 300 ms would cut it off.
   return "neutral";
 }

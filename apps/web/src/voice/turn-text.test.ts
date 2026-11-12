@@ -9,7 +9,6 @@ describe("turnCompleteness", () => {
     "that's right",
     "correct",
     "thank you",
-    "A table for 4 on Friday at 7pm",
     "My name is Ana Lopez",
     "cancel it",
   ])("%j sounds finished", (text) => {
@@ -30,10 +29,12 @@ describe("turnCompleteness", () => {
     expect(turnCompleteness(text)).toBe("incomplete");
   });
 
-  it.each(["I was wondering about the menu", "Friday", "we are celebrating a birthday"])(
-    "%j can't be told",
-    (text) => {
-      expect(turnCompleteness(text)).toBe("neutral");
-    },
-  );
+  it.each([
+    "I was wondering about the menu",
+    "Friday",
+    "we are celebrating a birthday",
+    "A table for 4 on Friday at 7pm",
+  ])("%j can't be told", (text) => {
+    expect(turnCompleteness(text)).toBe("neutral");
+  });
 });

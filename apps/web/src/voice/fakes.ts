@@ -132,11 +132,24 @@ export class FakeVad {
   starts = 0;
   stops = 0;
   handlers: { onSpeechStart(): void; onSpeechEnd(at: number): void } | undefined;
-  constructor(private readonly failStart = false) {}
+  private release: (() => void) | undefined;
+  /** `deferred`: `start` stays pending until the test calls `ready()` (the model is loading). */
+  constructor(
+    private readonly failStart = false,
+    private readonly deferred = false,
+  ) {}
   start(h: { onSpeechStart(): void; onSpeechEnd(at: number): void }): Promise<void> {
     this.starts += 1;
     this.handlers = h;
-    return this.failStart ? Promise.reject(new Error("no vad")) : Promise.resolve();
+    if (this.failStart) return Promise.reject(new Error("no vad"));
+    if (!this.deferred) return Promise.resolve();
+    return new Promise((resolve) => (this.release = resolve));
+  }
+  /** Finishes a deferred start and lets its continuations run. */
+  async ready(): Promise<void> {
+    this.release?.();
+    await Promise.resolve();
+    await Promise.resolve();
   }
   stop(): void {
     this.stops += 1;

@@ -25,15 +25,55 @@ const ASSETS = "/vad/";
 
 type MicVad = { start(): Promise<void>; destroy(): Promise<void> | void };
 
-export function createSileroVad(now: () => number = Date.now): Vad {
+/** The part of `@ricky0123/vad-web` we use; injectable so tests needn't load the model. */
+export type SileroLoader = () => Promise<{
+  MicVAD: {
+    // A static method called `new`, not a constructor.
+    new: (opts: {
+      getStream: () => Promise<MediaStream>;
+      onSpeechRealStart: () => void;
+      onSpeechEnd: () => void;
+      [option: string]: unknown;
+    }) => Promise<MicVad>;
+  };
+}>;
+
+const loadVadWeb: SileroLoader = async () => await import("@ricky0123/vad-web");
+
+const micStream = () =>
+  navigator.mediaDevices.getUserMedia({
+    audio: {
+      channelCount: 1,
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true,
+    },
+  });
+
+export function createSileroVad(
+  o: {
+    now?: () => number;
+    load?: SileroLoader;
+    getUserMedia?: () => Promise<MediaStream>;
+  } = {},
+): Vad {
+  const now = o.now ?? Date.now;
+  const load = o.load ?? loadVadWeb;
+  const getUserMedia = o.getUserMedia ?? micStream;
   let current: Promise<MicVad | undefined> | undefined;
   let generation = 0;
+  /** The mic we opened. We close it ourselves: a failed or half-started VAD must not leave it on. */
+  let stream: MediaStream | undefined;
+  const closeMic = () => {
+    stream?.getTracks().forEach((t) => t.stop());
+    stream = undefined;
+  };
   return {
     async start(h) {
       const mine = ++generation;
       current = (async () => {
         // Loaded on first use, so the page itself stays light.
-        const { MicVAD } = await import("@ricky0123/vad-web");
+        const { MicVAD } = await load();
         const vad = await MicVAD.new({
           model: "v5",
           baseAssetPath: ASSETS,
@@ -41,15 +81,12 @@ export function createSileroVad(now: () => number = Date.now): Vad {
           redemptionMs: REDEMPTION_MS,
           minSpeechMs: MIN_SPEECH_MS,
           startOnLoad: false,
-          getStream: () =>
-            navigator.mediaDevices.getUserMedia({
-              audio: {
-                channelCount: 1,
-                echoCancellation: true,
-                noiseSuppression: true,
-                autoGainControl: true,
-              },
-            }),
+          getStream: async () => {
+            const opened = await getUserMedia();
+            if (mine === generation) stream = opened;
+            else opened.getTracks().forEach((t) => t.stop());
+            return opened;
+          },
           onSpeechRealStart: () => {
             if (mine === generation) h.onSpeechStart();
           },
@@ -61,13 +98,19 @@ export function createSileroVad(now: () => number = Date.now): Vad {
           await vad.destroy();
           return undefined;
         }
-        await vad.start();
+        try {
+          await vad.start();
+        } catch (error) {
+          if (mine === generation) closeMic();
+          throw error;
+        }
         return vad;
       })();
       await current;
     },
     stop() {
       generation += 1;
+      closeMic();
       const was = current;
       current = undefined;
       void was?.then((vad) => vad?.destroy()).catch(() => undefined);
