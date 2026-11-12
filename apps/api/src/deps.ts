@@ -140,10 +140,19 @@ export async function buildDeps(env: Env): Promise<{
     redis: async () => (await redis.ping()) === "PONG",
     postgres: async () => (await pg.db.execute(sql`select 1`), true),
     // Without Google, production can't book: fail there; locally the in-memory calendar is fine.
-    google: () =>
-      google
-        ? checkGoogleToken(() => createOAuthClient(google))
-        : Promise.resolve(env.NODE_ENV !== "production"),
+    // The endpoint says only ok/fail; the log says why, with Google's reason code and how long
+    // it took (the readiness timeout is 5 s), never a token.
+    google: async () => {
+      if (!google) return env.NODE_ENV !== "production";
+      const started = Date.now();
+      const ok = await checkGoogleToken(
+        () => createOAuthClient(google),
+        (reason) => console.warn(`${reason} (after ${Date.now() - started} ms)`),
+      );
+      const ms = Date.now() - started;
+      if (ok && ms > 4000) console.warn(`Google token refresh took ${ms} ms`);
+      return ok;
+    },
     worker: async () => (await redis.exists(HEARTBEAT_KEY)) === 1,
   });
 
