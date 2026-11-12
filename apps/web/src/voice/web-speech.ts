@@ -69,7 +69,10 @@ export function createWebSpeechStt(
   g: WebSpeechGlobals = globalThis as WebSpeechGlobals,
   now: () => number = Date.now,
   timers: Timers = realTimers,
+  /** `silenceMs: null`: never end the utterance on our own (an endpointer outside decides). */
+  opts: { silenceMs?: number | null } = {},
 ): SpeechToText {
+  const silenceMs = opts.silenceMs === undefined ? SILENCE_MS : opts.silenceMs;
   const Impl = g.SpeechRecognition ?? g.webkitSpeechRecognition;
   let active: Recognition | undefined;
   let cancelSilence = () => {};
@@ -119,11 +122,12 @@ export function createWebSpeechStt(
         lastChange = now();
         h.onInterim(text);
         clearSilence();
+        if (silenceMs === null) return;
         silence = timers.set(() => {
           silence = undefined;
           finish(lastText, lastChange);
           r.stop();
-        }, SILENCE_MS);
+        }, silenceMs);
       };
       r.onerror = (event) => {
         clearSilence();

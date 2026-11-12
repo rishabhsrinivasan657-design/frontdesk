@@ -1,63 +1,17 @@
 import { describe, expect, it, vi } from "vitest";
-import { fakeClock } from "./fakes";
-import type { SttHandlers } from "./types";
+import {
+  FakeRecognition,
+  type Listener,
+  fakeClock,
+  recordingHandlers as handlers,
+  withRecognition,
+} from "./fakes";
 import {
   SILENCE_MS,
-  type Timers,
   type WebSpeechGlobals,
   createWebSpeechStt,
   createWebSpeechTts,
 } from "./web-speech";
-
-type Listener = (event?: unknown) => void;
-
-/** Stands in for the browser's SpeechRecognition: the test fires its events. */
-class FakeRecognition {
-  static last: FakeRecognition | undefined;
-  lang = "";
-  interimResults = false;
-  continuous = true;
-  started = 0;
-  stopped = 0;
-  onspeechstart: Listener | null = null;
-  onspeechend: Listener | null = null;
-  onresult: Listener | null = null;
-  onerror: Listener | null = null;
-  onend: Listener | null = null;
-  constructor() {
-    FakeRecognition.last = this;
-  }
-  start() {
-    this.started += 1;
-  }
-  stop() {
-    this.stopped += 1;
-  }
-  abort() {
-    this.stopped += 1;
-  }
-  /** One result list, as the browser sends it: earlier results stay, the last may be interim. */
-  result(parts: { text: string; final: boolean }[]) {
-    const results = parts.map((p) => Object.assign([{ transcript: p.text }], { isFinal: p.final }));
-    this.onresult?.({ resultIndex: 0, results });
-  }
-}
-
-function handlers(): SttHandlers & { calls: string[] } {
-  const calls: string[] = [];
-  return {
-    calls,
-    onSpeechStart: () => calls.push("start"),
-    onInterim: (t) => calls.push(`interim:${t}`),
-    onFinal: (t, timings) => calls.push(`final:${t}:${JSON.stringify(timings)}`),
-    onError: (e) => calls.push(`error:${e}`),
-    onEnd: () => calls.push("end"),
-  };
-}
-
-const withRecognition = (): WebSpeechGlobals => ({
-  webkitSpeechRecognition: FakeRecognition,
-});
 
 describe("createWebSpeechStt", () => {
   it("is unsupported without SpeechRecognition, and reports an error instead of throwing", () => {
@@ -140,6 +94,21 @@ describe("createWebSpeechStt", () => {
 
   describe("endpointing (our own silence timer)", () => {
     const finals = (calls: string[]) => calls.filter((c) => c.startsWith("final:"));
+
+    it("silenceMs: null never finalizes on its own", () => {
+      const c = fakeClock();
+      const stt = createWebSpeechStt(withRecognition(), c.now, c.timers, { silenceMs: null });
+      const h = handlers();
+      stt.start(h);
+      const r = FakeRecognition.last!;
+      r.result([{ text: "a table for four", final: false }]);
+      c.advance(10_000);
+      expect(finals(h.calls)).toEqual([]);
+      expect(r.stopped).toBe(0);
+      stt.stop();
+      r.onend?.();
+      expect(finals(h.calls)).toHaveLength(1);
+    });
 
     it("finalizes after SILENCE_MS with no new words, then stops the recognizer", () => {
       const c = fakeClock();

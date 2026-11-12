@@ -1,5 +1,5 @@
 import type { SpeechToText, SttHandlers, TextToSpeech } from "./types";
-import type { Timers } from "./web-speech";
+import type { Timers, WebSpeechGlobals } from "./web-speech";
 
 /** A TextToSpeech for unit tests: nothing plays until the test calls `start()` / `end()`. */
 export class FakeTts implements TextToSpeech {
@@ -75,4 +75,76 @@ export function fakeClock() {
       t = end;
     },
   };
+}
+
+export type Listener = (event?: unknown) => void;
+
+/** Stands in for the browser's SpeechRecognition: the test fires its events. */
+export class FakeRecognition {
+  static last: FakeRecognition | undefined;
+  lang = "";
+  interimResults = false;
+  continuous = true;
+  started = 0;
+  stopped = 0;
+  onspeechstart: Listener | null = null;
+  onspeechend: Listener | null = null;
+  onresult: Listener | null = null;
+  onerror: Listener | null = null;
+  onend: Listener | null = null;
+  constructor() {
+    FakeRecognition.last = this;
+  }
+  start() {
+    this.started += 1;
+  }
+  stop() {
+    this.stopped += 1;
+  }
+  abort() {
+    this.stopped += 1;
+  }
+  /** One result list, as the browser sends it: earlier results stay, the last may be interim. */
+  result(parts: { text: string; final: boolean }[]) {
+    const results = parts.map((p) => Object.assign([{ transcript: p.text }], { isFinal: p.final }));
+    this.onresult?.({ resultIndex: 0, results });
+  }
+}
+
+export function recordingHandlers(): SttHandlers & { calls: string[] } {
+  const calls: string[] = [];
+  return {
+    calls,
+    onSpeechStart: () => calls.push("start"),
+    onInterim: (t) => calls.push(`interim:${t}`),
+    onFinal: (t, timings) => calls.push(`final:${t}:${JSON.stringify(timings)}`),
+    onError: (e) => calls.push(`error:${e}`),
+    onEnd: () => calls.push("end"),
+  };
+}
+
+export const withRecognition = (): WebSpeechGlobals => ({
+  webkitSpeechRecognition: FakeRecognition,
+});
+
+/** A Vad for unit tests: the test calls `speechStart()` / `speechEnd(at)`; `failStart` rejects. */
+export class FakeVad {
+  starts = 0;
+  stops = 0;
+  handlers: { onSpeechStart(): void; onSpeechEnd(at: number): void } | undefined;
+  constructor(private readonly failStart = false) {}
+  start(h: { onSpeechStart(): void; onSpeechEnd(at: number): void }): Promise<void> {
+    this.starts += 1;
+    this.handlers = h;
+    return this.failStart ? Promise.reject(new Error("no vad")) : Promise.resolve();
+  }
+  stop(): void {
+    this.stops += 1;
+  }
+  speechStart(): void {
+    this.handlers?.onSpeechStart();
+  }
+  speechEnd(at: number): void {
+    this.handlers?.onSpeechEnd(at);
+  }
 }
