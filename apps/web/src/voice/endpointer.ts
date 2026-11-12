@@ -6,8 +6,12 @@ import type { Timers } from "./web-speech";
  * the words sound (spec §5.3). Starting values; tuning is one edit here.
  */
 export const COMPLETE_MS = 300;
-export const NEUTRAL_MS = 700;
-export const INCOMPLETE_MS = 2000;
+/**
+ * Tuned on a real caller's recording: mid-sentence pauses of 0.8 s and 1.4 s are normal, so
+ * anything that doesn't clearly sound finished waits longer than that.
+ */
+export const NEUTRAL_MS = 1600;
+export const INCOMPLETE_MS = 2500;
 /** However unfinished it sounds, this much silence ends the turn. */
 export const HARD_CAP_MS = 3000;
 /** Web Speech words lag the audio: wait until the text has been unchanged this long… */
@@ -15,7 +19,7 @@ export const STABLE_MS = 200;
 /** …but never more than this past the window. */
 export const MAX_CATCHUP_MS = 600;
 /** The neutral window adapts to the caller's own mid-sentence pauses, within these bounds. */
-const ADAPT_MAX_MS = 1500;
+const ADAPT_MAX_MS = 2500;
 const ADAPT_MIN_SAMPLES = 3;
 const KEEP_PAUSES = 20;
 

@@ -59,7 +59,7 @@ describe("createEndpointedStt", () => {
     vad.speechEnd(c.now());
     c.advance(150);
     r.result([{ text: "a table for four on friday at 7", final: false }]);
-    c.advance(1000);
+    c.advance(2000);
     expect(finals(h.calls)).toHaveLength(1);
     expect(finals(h.calls)[0]).toContain("final:a table for four on friday at 7:");
   });

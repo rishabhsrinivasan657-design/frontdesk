@@ -27,7 +27,7 @@ function setup() {
 
 describe("Endpointer", () => {
   it("uses the spec's starting windows", () => {
-    expect([COMPLETE_MS, NEUTRAL_MS, INCOMPLETE_MS, HARD_CAP_MS]).toEqual([300, 700, 2000, 3000]);
+    expect([COMPLETE_MS, NEUTRAL_MS, INCOMPLETE_MS, HARD_CAP_MS]).toEqual([300, 1600, 2500, 3000]);
     expect([STABLE_MS, MAX_CATCHUP_MS]).toEqual([200, 600]);
   });
 
@@ -42,24 +42,24 @@ describe("Endpointer", () => {
     expect(ended).toEqual([{ text: "yes", speechEnd: 0, at: 300 }]);
   });
 
-  it("unfinished text waits 2 s", () => {
+  it("unfinished text waits longest", () => {
     const { ep, ended, at } = setup();
     ep.transcript("a table for");
     ep.speechEnd();
-    at(1999);
+    at(INCOMPLETE_MS - 1);
     expect(ended).toEqual([]);
-    at(2000);
-    expect(ended.map((e) => e.at)).toEqual([2000]);
+    at(INCOMPLETE_MS);
+    expect(ended.map((e) => e.at)).toEqual([INCOMPLETE_MS]);
   });
 
-  it("neutral text waits 700 ms", () => {
+  it("neutral text waits longer than a normal mid-sentence pause", () => {
     const { ep, ended, at } = setup();
     ep.transcript("I was wondering about the menu");
     ep.speechEnd();
-    at(699);
+    at(NEUTRAL_MS - 1);
     expect(ended).toEqual([]);
-    at(700);
-    expect(ended.map((e) => e.at)).toEqual([700]);
+    at(NEUTRAL_MS);
+    expect(ended.map((e) => e.at)).toEqual([NEUTRAL_MS]);
   });
 
   it("measures the window from when silence began, as the VAD reports it", () => {
@@ -81,7 +81,9 @@ describe("Endpointer", () => {
     at(900);
     ep.speechEnd();
     at(3000);
-    expect(ended).toEqual([{ text: "a table for four people", speechEnd: 900, at: 1600 }]);
+    expect(ended).toEqual([
+      { text: "a table for four people", speechEnd: 900, at: 900 + NEUTRAL_MS },
+    ]);
   });
 
   it("words that arrive during the window re-pick it from speechEnd", () => {
@@ -90,10 +92,12 @@ describe("Endpointer", () => {
     ep.speechEnd();
     at(400);
     ep.transcript("a table for four on friday at 7");
-    at(699);
+    at(NEUTRAL_MS - 1);
     expect(ended).toEqual([]);
-    at(700);
-    expect(ended.map((e) => [e.text, e.at])).toEqual([["a table for four on friday at 7", 700]]);
+    at(NEUTRAL_MS);
+    expect(ended.map((e) => [e.text, e.at])).toEqual([
+      ["a table for four on friday at 7", NEUTRAL_MS],
+    ]);
   });
 
   it("waits for late words to settle", () => {
@@ -112,7 +116,7 @@ describe("Endpointer", () => {
     const { ep, ended, at } = setup();
     ep.transcript("yes");
     ep.speechEnd();
-    for (let t = 100; t <= 2000 && ended.length === 0; t += 100) {
+    for (let t = 100; t <= 4000 && ended.length === 0; t += 100) {
       at(t);
       ep.transcript(`a table for 4 on friday at 7 ${t}`);
     }
@@ -137,7 +141,7 @@ describe("Endpointer", () => {
     const { ep, ended, at } = setup();
     ep.transcript("a table for");
     ep.speechEnd();
-    for (let t = 1900; t <= 4000 && ended.length === 0; t += 100) {
+    for (let t = 2400; t <= 4000 && ended.length === 0; t += 100) {
       at(t);
       ep.transcript(`a table for ${"x ".repeat(t / 100)}and`);
     }
@@ -148,7 +152,7 @@ describe("Endpointer", () => {
     const { ep, at } = setup();
     expect(ep.neutralMs).toBe(NEUTRAL_MS);
     let t = 0;
-    for (const pause of [1000, 1100, 1200]) {
+    for (const pause of [1800, 1900, 2000]) {
       ep.transcript(`a table ${t} for`);
       ep.speechEnd();
       t += pause;
@@ -157,13 +161,13 @@ describe("Endpointer", () => {
       t += 500;
       at(t);
     }
-    expect(ep.neutralMs).toBe(1300);
+    expect(ep.neutralMs).toBe(2100);
   });
 
-  it("adaptation is bounded at 1.5 s", () => {
+  it("adaptation is bounded at 2.5 s", () => {
     const { ep, at } = setup();
     let t = 0;
-    for (const pause of [1800, 1900, 1950]) {
+    for (const pause of [2300, 2400, 2450]) {
       ep.transcript(`a table ${t} for`);
       ep.speechEnd();
       t += pause;
@@ -172,7 +176,7 @@ describe("Endpointer", () => {
       t += 500;
       at(t);
     }
-    expect(ep.neutralMs).toBe(1500);
+    expect(ep.neutralMs).toBe(2500);
   });
 
   it("flush emits now, once", () => {
