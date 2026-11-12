@@ -1,4 +1,5 @@
 import type { SpeechToText, SttHandlers, TextToSpeech } from "./types";
+import type { Timers } from "./web-speech";
 
 /** A TextToSpeech for unit tests: nothing plays until the test calls `start()` / `end()`. */
 export class FakeTts implements TextToSpeech {
@@ -41,4 +42,37 @@ export class FakeStt implements SpeechToText {
     this.stops += 1;
     this.handlers?.onEnd();
   }
+}
+
+/** A clock and timers the test moves by hand: `advance` fires timers that come due, in order. */
+export function fakeClock() {
+  let t = 0;
+  let nextId = 1;
+  const pending = new Map<number, { at: number; fn: () => void }>();
+  const timers: Timers = {
+    set: (fn, ms) => {
+      const id = nextId++;
+      pending.set(id, { at: t + ms, fn });
+      return id;
+    },
+    clear: (id) => pending.delete(id as number),
+  };
+  return {
+    now: () => t,
+    timers,
+    pending: () => pending.size,
+    set: (ms: number) => (t = ms),
+    advance(ms: number) {
+      const end = t + ms;
+      for (;;) {
+        const due = [...pending].filter(([, p]) => p.at <= end).sort((a, b) => a[1].at - b[1].at);
+        const first = due[0];
+        if (!first) break;
+        pending.delete(first[0]);
+        t = first[1].at;
+        first[1].fn();
+      }
+      t = end;
+    },
+  };
 }

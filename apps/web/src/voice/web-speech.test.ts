@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { fakeClock } from "./fakes";
 import type { SttHandlers } from "./types";
 import {
   SILENCE_MS,
@@ -57,39 +58,6 @@ function handlers(): SttHandlers & { calls: string[] } {
 const withRecognition = (): WebSpeechGlobals => ({
   webkitSpeechRecognition: FakeRecognition,
 });
-
-/** A clock and timers the test moves by hand: `advance` fires timers that come due, in order. */
-function fakeClock() {
-  let t = 0;
-  let nextId = 1;
-  const pending = new Map<number, { at: number; fn: () => void }>();
-  const timers: Timers = {
-    set: (fn, ms) => {
-      const id = nextId++;
-      pending.set(id, { at: t + ms, fn });
-      return id;
-    },
-    clear: (id) => pending.delete(id as number),
-  };
-  return {
-    now: () => t,
-    timers,
-    pending: () => pending.size,
-    set: (ms: number) => (t = ms),
-    advance(ms: number) {
-      const end = t + ms;
-      for (;;) {
-        const due = [...pending].filter(([, p]) => p.at <= end).sort((a, b) => a[1].at - b[1].at);
-        const first = due[0];
-        if (!first) break;
-        pending.delete(first[0]);
-        t = first[1].at;
-        first[1].fn();
-      }
-      t = end;
-    },
-  };
-}
 
 describe("createWebSpeechStt", () => {
   it("is unsupported without SpeechRecognition, and reports an error instead of throwing", () => {
