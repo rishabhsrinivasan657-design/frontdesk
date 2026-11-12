@@ -10,4 +10,3 @@ playwright-report
 next-env.d.ts
 test-results
 apps/web/public/vad
-apps/web/public/kokoro/kokoro.web.js

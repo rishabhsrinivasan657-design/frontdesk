@@ -1,9 +1,9 @@
 // Runs Kokoro (an open 82M-parameter neural TTS model) off the main thread, so generating audio
-// never freezes the page (src/voice/kokoro-tts.ts). Plain JS served as-is: kokoro.web.js is a
-// self-contained browser bundle (copied here by scripts/copy-vad-assets.mjs) whose own dynamic
-// imports must not go through webpack. Messages: {type:"load"} → {type:"ready", device} or
+// never freezes the page (src/voice/kokoro-tts.ts). Plain JS served as-is, because Kokoro's
+// self-contained browser bundle loads its runtime with dynamic imports that webpack would break.
+// The bundle comes from a CDN at a pinned version, like the model weights (Hugging Face). Messages: {type:"load"} → {type:"ready", device} or
 // {type:"error"}; {type:"say", id, text} → {type:"audio", id, audio, rate}.
-import { KokoroTTS } from "./kokoro.web.js";
+import { KokoroTTS } from "https://cdn.jsdelivr.net/npm/kokoro-js@1.2.1/dist/kokoro.web.js";
 
 const MODEL = "onnx-community/Kokoro-82M-v1.0-ONNX";
 /** A warm, natural American voice; `tts.list_voices()` has the rest. */
