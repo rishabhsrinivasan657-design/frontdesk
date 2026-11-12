@@ -20,7 +20,9 @@ export function useTurnstile(siteKey: string | undefined) {
     if (!siteKey || !el.current) return;
     const target = el.current;
     loadTurnstile()
-      .then((api) => resolveTokens.current?.(new TurnstileTokens(api, target, siteKey, () => setFailed(true))))
+      .then((api) =>
+        resolveTokens.current?.(new TurnstileTokens(api, target, siteKey, () => setFailed(true))),
+      )
       .catch(() => setFailed(true));
   }, [siteKey]);
 

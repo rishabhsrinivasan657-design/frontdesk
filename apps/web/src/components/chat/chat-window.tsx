@@ -22,6 +22,7 @@ const STATUS = {
   replaced: "Open in another tab",
   limited: "Unavailable",
   bot_check_failed: "Unavailable",
+  unreachable: "Unavailable",
 } as const;
 
 export function ChatWindow({

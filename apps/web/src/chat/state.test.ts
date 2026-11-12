@@ -243,4 +243,23 @@ describe("refused sockets (M10)", () => {
     const s = run([{ type: "socket", status: "bot_check_failed" }]);
     expect(s.notice).toBe("We couldn't verify you're not a bot. Please reload the page.");
   });
+
+  it("unreachable shows its notice", () => {
+    const s = run([{ type: "socket", status: "unreachable" }]);
+    expect(s.status).toBe("unreachable");
+    expect(s.notice).toBe("We couldn't reach the receptionist. Please reload, or try Chrome.");
+  });
+
+  it("a session after unreachable clears its notice", () => {
+    const s = run([
+      { type: "socket", status: "unreachable" },
+      {
+        type: "server",
+        message: { type: "session", sessionId: "s", resumed: false, transcript: [] },
+        at: 0,
+      },
+    ]);
+    expect(s.status).toBe("open");
+    expect(s.notice).toBeUndefined();
+  });
 });

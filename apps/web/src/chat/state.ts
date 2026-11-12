@@ -28,7 +28,14 @@ export interface Latency {
 }
 
 export interface ChatState {
-  status: "connecting" | "open" | "reconnecting" | "replaced" | "limited" | "bot_check_failed";
+  status:
+    | "connecting"
+    | "open"
+    | "reconnecting"
+    | "replaced"
+    | "limited"
+    | "bot_check_failed"
+    | "unreachable";
   sessionId?: string;
   messages: ChatMessage[];
   pending?: PendingCard;
@@ -47,7 +54,10 @@ export interface ChatState {
 export type ChatEvent =
   | { type: "server"; message: ServerMessage; at: number }
   | { type: "local_send"; text: string; at: number }
-  | { type: "socket"; status: "reconnecting" | "replaced" | "limited" | "bot_check_failed" }
+  | {
+      type: "socket";
+      status: "reconnecting" | "replaced" | "limited" | "bot_check_failed" | "unreachable";
+    }
   | { type: "end_chat" }
   | { type: "feedback_sent" }
   | { type: "feedback_skipped" };
@@ -59,6 +69,7 @@ const SOCKET_NOTICES: Partial<Record<ChatState["status"], string>> = {
   limited:
     "Too many chats from your network right now. Please try again later or call the restaurant.",
   bot_check_failed: "We couldn't verify you're not a bot. Please reload the page.",
+  unreachable: "We couldn't reach the receptionist. Please reload, or try Chrome.",
 };
 
 let localIds = 0;
@@ -103,8 +114,10 @@ function offerFeedback(state: ChatState): ChatState {
 function onServer(state: ChatState, m: ServerMessage, at: number): ChatState {
   switch (m.type) {
     case "session": {
+      // We got through after all: the "couldn't reach" notice no longer applies.
+      const { notice, ...rest } = state;
       return {
-        ...state,
+        ...(state.status === "unreachable" ? rest : { ...rest, ...(notice ? { notice } : {}) }),
         status: "open",
         sessionId: m.sessionId,
         busy: false,

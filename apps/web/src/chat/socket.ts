@@ -8,6 +8,12 @@ export const REPLACED = 4000;
 export const RATE_LIMITED = 4429;
 export const BOT_CHECK_FAILED = 4403;
 const BACKOFF_MS = [250, 500, 1000, 2000, 4000];
+/**
+ * Closes in a row without a `session` (about 8 s of trying) before we tell the caller we can't
+ * reach the api, instead of showing "Reconnecting…" forever. We keep trying every 4 s after
+ * that, since a sleeping free-tier api can take a while to wake; a `session` clears the notice.
+ */
+export const MAX_FAILED_OPENS = 6;
 
 export interface ChatConnection {
   /** Sends the caller's text (typed, or a voice transcript with its timings). False if not open. */
@@ -40,6 +46,8 @@ export function connectChat(opts: ConnectOptions): ChatConnection {
   const now = opts.now ?? (() => performance.now());
   let socket: WebSocket | undefined;
   let attempt = 0;
+  /** Closes since the last `session`. */
+  let failedOpens = 0;
   let stopped = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
 
@@ -49,9 +57,15 @@ export function connectChat(opts: ConnectOptions): ChatConnection {
       openUrl(`${opts.url}?sessionId=${encodeURIComponent(sessionId)}`);
     } else if (opts.botToken) {
       // A token is single-use, so each new session asks for its own.
-      void opts.botToken().then((token) => {
-        if (!stopped) openUrl(`${opts.url}?ts=${encodeURIComponent(token)}`);
-      });
+      opts.botToken().then(
+        (token) => {
+          if (!stopped) openUrl(`${opts.url}?ts=${encodeURIComponent(token)}`);
+        },
+        // The bot check itself failed (Turnstile errored twice, or the browser isn't supported).
+        () => {
+          if (!stopped) opts.onEvent({ type: "socket", status: "bot_check_failed" });
+        },
+      );
     } else {
       openUrl(opts.url);
     }
@@ -65,11 +79,14 @@ export function connectChat(opts: ConnectOptions): ChatConnection {
       if (message.type === "session") {
         opts.storage.setItem(SESSION_KEY, message.sessionId);
         attempt = 0;
+        failedOpens = 0;
       }
       opts.onEvent({ type: "server", message, at: now() });
     };
     ws.onclose = (e: CloseEvent) => {
       if (stopped || socket !== ws) return;
+      // Only the code and reason: the URL carries the one-time bot token.
+      console.warn(`chat socket closed: ${e.code}${e.reason ? ` ${e.reason}` : ""}`);
       if (e.code === REPLACED) {
         // Another tab has this conversation now; reconnecting would take it back and forth.
         opts.onEvent({ type: "socket", status: "replaced" });
@@ -86,7 +103,10 @@ export function connectChat(opts: ConnectOptions): ChatConnection {
         opts.onEvent({ type: "socket", status: "bot_check_failed" });
         return;
       }
-      opts.onEvent({ type: "socket", status: "reconnecting" });
+      failedOpens += 1;
+      if (failedOpens === MAX_FAILED_OPENS) opts.onEvent({ type: "socket", status: "unreachable" });
+      else if (failedOpens < MAX_FAILED_OPENS)
+        opts.onEvent({ type: "socket", status: "reconnecting" });
       const delay = BACKOFF_MS[Math.min(attempt, BACKOFF_MS.length - 1)]!;
       attempt += 1;
       timer = setTimeout(open, delay);

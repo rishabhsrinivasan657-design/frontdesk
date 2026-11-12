@@ -1,7 +1,7 @@
 import type { ServerMessage } from "@frontdesk/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { type ChatEvent } from "./state";
-import { SESSION_KEY, connectChat } from "./socket";
+import { MAX_FAILED_OPENS, SESSION_KEY, connectChat } from "./socket";
 
 class FakeWebSocket {
   static instances: FakeWebSocket[] = [];
@@ -221,5 +221,59 @@ describe("connectChat", () => {
       message: { type: "agent_sentence", turnId: "t", text: "Hi." },
       at: 0,
     });
+  });
+
+  it("after MAX_FAILED_OPENS closes without a session it says unreachable, and keeps trying slowly", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { events } = setup();
+    for (let i = 0; i < MAX_FAILED_OPENS; i++) {
+      latest().drop(1006);
+      vi.runOnlyPendingTimers();
+    }
+    expect(MAX_FAILED_OPENS).toBe(6);
+    expect(events.at(-1)).toEqual({ type: "socket", status: "unreachable" });
+    expect(events.filter((e) => e.type === "socket" && e.status === "unreachable")).toHaveLength(1);
+    // A cold-starting api may still come up: one more try every 4 s, and a session recovers.
+    const before = FakeWebSocket.instances.length;
+    latest().drop(1006);
+    vi.advanceTimersByTime(4000);
+    expect(FakeWebSocket.instances).toHaveLength(before + 1);
+    expect(events.filter((e) => e.type === "socket" && e.status === "unreachable")).toHaveLength(1);
+    latest().open();
+    latest().receive(session("sess_1"));
+    expect(events.at(-1)).toMatchObject({ type: "server" });
+  });
+
+  it("a session resets the count", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { events } = setup();
+    for (let i = 0; i < MAX_FAILED_OPENS - 1; i++) {
+      latest().drop(1006);
+      vi.runOnlyPendingTimers();
+    }
+    latest().open();
+    latest().receive(session("sess_1"));
+    latest().drop(1006);
+    expect(events.at(-1)).toEqual({ type: "socket", status: "reconnecting" });
+    const before = FakeWebSocket.instances.length;
+    vi.runOnlyPendingTimers();
+    expect(FakeWebSocket.instances).toHaveLength(before + 1);
+  });
+
+  it("a rejected bot token reports bot_check_failed", async () => {
+    const { events } = setup(undefined, () => Promise.reject(new Error("x")));
+    await vi.runAllTimersAsync();
+    expect(events).toContainEqual({ type: "socket", status: "bot_check_failed" });
+    expect(FakeWebSocket.instances).toHaveLength(0);
+  });
+
+  it("logs the close code but never the bot token", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    setup(undefined, () => Promise.resolve("secret-token"));
+    await vi.runAllTimersAsync();
+    expect(latest().url).toContain("ts=");
+    latest().drop(1006);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("1006"));
+    for (const call of warn.mock.calls) expect(String(call[0])).not.toContain("secret-token");
   });
 });
