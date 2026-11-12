@@ -2,7 +2,7 @@
 
 **A voice AI receptionist that books real restaurant tables, and never writes to the calendar without the guest's explicit "yes".**
 
-🎬 **[Watch the 2-minute demo](VIDEO_URL)** · 🌐 **Live demo:** coming soon (see [status](#status-what-works-today)) · Built end to end by [Rishabh Srinivasan](LINKEDIN_URL)
+🎬 **Demo video:** coming soon · 🌐 **Live demo:** coming soon (see [status](#status-what-works-today)) · Built end to end by Rishabh Srinivasan
 
 Small restaurants lose bookings because nobody can answer the phone during service, and the calls they do answer are the same five questions over and over. Front Desk takes that load: guests talk (or type) to it in the browser, it checks real availability, books, reschedules and cancels in Google Calendar, emails a confirmation, and hands anything tricky to a human. The demo business is **Casa Fiorella**, a fictional family trattoria. Everything runs on free tiers ($0).
 
