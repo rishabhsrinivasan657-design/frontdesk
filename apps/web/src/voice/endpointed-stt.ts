@@ -3,6 +3,9 @@ import type { SpeechToText, SttHandlers } from "./types";
 import type { Vad } from "./vad";
 import { SILENCE_MS, type Timers } from "./web-speech";
 
+/** Times Chrome may end its session mid-utterance before we give up and send what we have. */
+const MAX_RESTARTS = 3;
+
 const realTimers: Timers = {
   set: (fn, ms) => setTimeout(fn, ms),
   clear: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
@@ -25,6 +28,8 @@ export function createEndpointedStt(o: {
   const now = o.now ?? Date.now;
   const timers = o.timers ?? realTimers;
   let session = 0;
+  /** Marks the live utterance as ended by the caller (tap to send). */
+  let tap = () => {};
   return {
     supported: o.recognizer.supported,
     start(h: SttHandlers) {
@@ -51,21 +56,28 @@ export function createEndpointedStt(o: {
         },
       });
       endpointer.minWindowMs = SILENCE_MS;
-      o.recognizer.start({
+      /** Words from earlier recogniser sessions in this utterance (Chrome restarted mid-way). */
+      let prefix = "";
+      let lastText = "";
+      let restarts = 0;
+      const full = (text: string) => (prefix ? `${prefix} ${text}` : text).trim();
+      const recognizerHandlers = (): SttHandlers => ({
         onSpeechStart: () => {
           if (wordTiming) h.onSpeechStart();
         },
         onInterim: (text) => {
           // Words revised after we sent the turn would look pending, and never be sent.
           if (finished) return;
-          h.onInterim(text);
-          endpointer.transcript(text);
+          lastText = full(text);
+          h.onInterim(lastText);
+          endpointer.transcript(lastText);
           if (wordTiming) endpointer.speechEnd();
         },
-        // The recogniser only finalizes when its session ends (a tap, or Chrome stopping).
+        // The recogniser only finalizes when its session ends: a tap, or Chrome stopping.
         onFinal: (text) => {
-          endpointer.transcript(text);
-          endpointer.flush();
+          lastText = full(text);
+          endpointer.transcript(lastText);
+          if (tapped) endpointer.flush();
         },
         onError: (error) => {
           finished = true;
@@ -73,11 +85,22 @@ export function createEndpointedStt(o: {
           h.onError(error);
         },
         onEnd: () => {
+          if (!finished && !tapped && endpointer.heard && restarts < MAX_RESTARTS) {
+            // Chrome ended the session by itself mid-utterance. Sending now would cut the caller
+            // off, so keep listening and let the endpointer decide when they're done.
+            restarts += 1;
+            prefix = lastText;
+            o.recognizer.start(recognizerHandlers());
+            return;
+          }
           endpointer.flush();
           o.vad.stop();
           h.onEnd();
         },
       });
+      let tapped = false;
+      tap = () => (tapped = true);
+      o.recognizer.start(recognizerHandlers());
       o.vad
         .start({
           onSpeechStart: () => {
@@ -103,6 +126,7 @@ export function createEndpointedStt(o: {
         );
     },
     stop() {
+      tap();
       o.vad.stop();
       o.recognizer.stop();
     },

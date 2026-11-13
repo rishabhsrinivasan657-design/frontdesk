@@ -136,4 +136,20 @@ describe("createEndpointedStt", () => {
     r.result([{ text: "yes please", final: true }]);
     expect(h.calls.slice(before).filter((x) => x.startsWith("interim:"))).toEqual([]);
   });
+
+  it("Chrome ending its session mid-sentence doesn't send half a sentence: it listens on", async () => {
+    const { c, vad, h, r } = await setup();
+    vad.speechStart();
+    r.result([{ text: "I'd like a table for", final: false }]);
+    r.onend?.(); // Chrome stopped by itself; we didn't ask it to
+    expect(finals(h.calls)).toEqual([]);
+    expect(h.calls).not.toContain("end");
+    const second = FakeRecognition.last!;
+    expect(second).not.toBe(r);
+    second.result([{ text: "four on Friday", final: false }]);
+    vad.speechEnd(c.now());
+    c.advance(5000);
+    expect(finals(h.calls)).toHaveLength(1);
+    expect(finals(h.calls)[0]).toContain("final:I'd like a table for four on Friday:");
+  });
 });

@@ -27,7 +27,7 @@ function setup() {
 
 describe("Endpointer", () => {
   it("uses the spec's starting windows", () => {
-    expect([COMPLETE_MS, NEUTRAL_MS, INCOMPLETE_MS, HARD_CAP_MS]).toEqual([300, 1600, 2500, 3000]);
+    expect([COMPLETE_MS, NEUTRAL_MS, INCOMPLETE_MS, HARD_CAP_MS]).toEqual([300, 1600, 3000, 4000]);
     expect([STABLE_MS, MAX_CATCHUP_MS]).toEqual([200, 600]);
   });
 

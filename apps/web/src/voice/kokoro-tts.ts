@@ -149,3 +149,66 @@ export function createSwitchingTts(primary: KokoroTts, fallback: TextToSpeech): 
     },
   };
 }
+
+/** How long the first reply may wait for a Kokoro that's still loading (e.g. from the cache). */
+export const KOKORO_GRACE_MS = 1500;
+
+export interface ConversationTts extends TextToSpeech {
+  /** A new conversation starts: the next reply picks the voice again. */
+  newConversation(): void;
+}
+
+/**
+ * One voice per conversation: switching voices mid-call throws people off. The voice is picked
+ * at the first reply: Kokoro if it's ready (waiting up to `graceMs` if it's still loading),
+ * otherwise `fallback` (ElevenLabs, or the browser voice), and kept until `newConversation()`.
+ * A Kokoro that finishes downloading mid-call is used from the next conversation.
+ */
+export function createConversationTts(
+  kokoro: KokoroTts,
+  fallback: TextToSpeech,
+  graceMs = KOKORO_GRACE_MS,
+): ConversationTts {
+  let locked: Promise<TextToSpeech> | undefined;
+  /** Bumped by cancel(), so a sentence waiting for the voice choice isn't spoken after barge-in. */
+  let generation = 0;
+  function voice(): Promise<TextToSpeech> {
+    locked ??= kokoro.ready
+      ? Promise.resolve(kokoro)
+      : Promise.race([
+          kokoro.load().then(
+            () => (kokoro.ready ? kokoro : fallback),
+            () => fallback,
+          ),
+          new Promise<TextToSpeech>((r) => setTimeout(() => r(fallback), graceMs)),
+        ]).then((v) => {
+          console.info(`voice for this conversation: ${v === kokoro ? "kokoro" : "fallback"}`);
+          return v;
+        });
+    return locked;
+  }
+  return {
+    supported: kokoro.supported || fallback.supported,
+    prepare(text) {
+      void voice().then((v) => v.prepare?.(text));
+    },
+    speak(text, h) {
+      const mine = generation;
+      void voice().then((v) => {
+        if (mine === generation) v.speak(text, h);
+      });
+    },
+    setVolume(v) {
+      kokoro.setVolume?.(v);
+      fallback.setVolume?.(v);
+    },
+    cancel() {
+      generation += 1;
+      kokoro.cancel();
+      fallback.cancel();
+    },
+    newConversation() {
+      locked = undefined;
+    },
+  };
+}

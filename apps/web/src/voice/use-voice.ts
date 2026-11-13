@@ -28,7 +28,13 @@ export function useVoice(chat: Chat) {
   const [dropped, setDropped] = useState(false);
   const chatRef = useRef(chat);
   const voice = useRef<
-    | { controller: VoiceController; speaker: Speaker; handsFree: HandsFree; warmUp?: () => void }
+    | {
+        controller: VoiceController;
+        speaker: Speaker;
+        handsFree: HandsFree;
+        warmUp?: () => void;
+        newConversation?: () => void;
+      }
     | undefined
   >(undefined);
   /** Hands-free conversation is on: the mic reopens by itself and talking over the agent barges in. */
@@ -41,7 +47,7 @@ export function useVoice(chat: Chat) {
   });
 
   useEffect(() => {
-    const { stt, tts, warmUp } = createVoiceProviders();
+    const { stt, tts, warmUp, newConversation } = createVoiceProviders();
     /** When the caller stopped speaking, for the voice-to-voice time of the coming reply. */
     let speechEnd: number | undefined;
     const speaker = new Speaker(tts, {
@@ -100,7 +106,7 @@ export function useVoice(chat: Chat) {
       now: Date.now,
       onChange: setHandsFree,
     });
-    voice.current = { controller, speaker, handsFree: hands, warmUp };
+    voice.current = { controller, speaker, handsFree: hands, warmUp, newConversation };
     setStatus(controller.status);
     const off = chatRef.current.onServerMessage((m) => {
       if (m.type === "agent_sentence") filler.replied();
@@ -155,6 +161,7 @@ export function useVoice(chat: Chat) {
     }
     setDropped(false);
     v.warmUp?.();
+    v.newConversation?.();
     v.handsFree.start();
   }, []);
 

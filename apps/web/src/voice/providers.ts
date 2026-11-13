@@ -1,7 +1,7 @@
 import type { SpeechToText, TextToSpeech } from "./types";
 import { createElevenLabsTts } from "./elevenlabs-tts";
 import { createEndpointedStt } from "./endpointed-stt";
-import { createKokoroTts, createSwitchingTts } from "./kokoro-tts";
+import { createConversationTts, createKokoroTts, createSwitchingTts } from "./kokoro-tts";
 import { createSileroVad } from "./vad";
 import { createWebSpeechStt, createWebSpeechTts } from "./web-speech";
 
@@ -10,7 +10,12 @@ export interface VoiceProviders {
   tts: TextToSpeech;
   /** The caller started using voice: start loading heavier models (Kokoro). */
   warmUp?: () => void;
+  /** A new conversation starts: the voice is picked again at its first reply. */
+  newConversation?: () => void;
 }
+
+/** Set once someone has used voice here, so their next visit preloads Kokoro from the cache. */
+const VOICE_USED_KEY = "frontdesk.voiceUsed";
 
 declare global {
   interface Window {
@@ -30,7 +35,7 @@ export function createVoiceProviders(): VoiceProviders {
   const choice = new URLSearchParams(window.location.search).get("voice");
   const browserVoice = createWebSpeechTts();
   if (choice === "browser") return { stt: createStt(), tts: browserVoice };
-  // The browser voice speaks until Kokoro has downloaded; loading starts at the first mic press.
+  // Kokoro loads at the first mic press (or on page load for a returning voice user).
   // `?voice=af_bella` (any Kokoro voice id) picks Kokoro's voice, to compare; default af_heart.
   const kokoroVoice = choice && /^[a-z]{2}_[a-z]+$/.test(choice) ? choice : undefined;
   const kokoro = createKokoroTts(
@@ -42,13 +47,37 @@ export function createVoiceProviders(): VoiceProviders {
   // a key, and capped below the free plan) → the browser's own voice.
   const premium = createSwitchingTts(createElevenLabsTts(browserVoice), browserVoice);
   if (!kokoro.supported) return { stt: createStt(), tts: premium };
-  const natural = createSwitchingTts(kokoro, premium);
+  const warmUp = () => {
+    try {
+      localStorage.setItem(VOICE_USED_KEY, "1");
+    } catch {
+      // Storage blocked: Kokoro just loads at the first press next time too.
+    }
+    void kokoro.load().catch((e: unknown) => console.warn("kokoro unavailable", e));
+  };
+  // A returning voice user: Kokoro is in the browser cache, so loading it now is cheap and the
+  // first reply can already use it.
+  try {
+    if (localStorage.getItem(VOICE_USED_KEY)) warmUp();
+  } catch {
+    // Storage blocked.
+  }
+  if (choice === "elevenlabs") {
+    // ElevenLabs first, for comparison.
+    const natural = createSwitchingTts(kokoro, premium);
+    return {
+      stt: createStt(),
+      tts: createSwitchingTts(createElevenLabsTts(natural), natural),
+      warmUp,
+    };
+  }
+  // One voice per conversation (no switching mid-call when Kokoro finishes downloading).
+  const tts = createConversationTts(kokoro, premium);
   return {
     stt: createStt(),
-    // `?voice=elevenlabs`: ElevenLabs first, for comparison.
-    tts:
-      choice === "elevenlabs" ? createSwitchingTts(createElevenLabsTts(natural), natural) : natural,
-    warmUp: () => void kokoro.load().catch((e: unknown) => console.warn("kokoro unavailable", e)),
+    tts,
+    warmUp,
+    newConversation: () => tts.newConversation(),
   };
 }
 
