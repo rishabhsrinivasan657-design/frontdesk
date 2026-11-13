@@ -7,6 +7,7 @@ import {
   type TurnResult,
   alreadyHandedOffMessage,
   runTurn,
+  twelveHourTimes,
 } from "@frontdesk/core";
 import type { Price } from "@frontdesk/llm";
 import type { TurnVerdict } from "../abuse/chat-limits.js";
@@ -193,7 +194,8 @@ export async function openChat(
         ctx.feed?.publish({ type: "pending_cleared", sessionId, status: m.status });
       }
       if (m.type === "handoff") ctx.feed?.publish({ type: "handoff", sessionId, reason: m.reason });
-      send(m);
+      // The model reads "19:00" in its data; guests (and the voice) should hear "7:00 PM".
+      send(m.type === "agent_sentence" ? { ...m, text: twelveHourTimes(m.text) } : m);
     });
     return { result, ...(firstOutputMs !== undefined ? { firstOutputMs } : {}) };
   }
@@ -309,7 +311,7 @@ async function sessionMessage(
   const session = await deps.sessions.load(sessionId);
   message.transcript = (session?.transcript ?? []).map(({ role, text, turnId }) => ({
     role,
-    text,
+    text: role === "agent" ? twelveHourTimes(text) : text,
     turnId,
   }));
   const pending = await deps.sessions.getPending(sessionId);

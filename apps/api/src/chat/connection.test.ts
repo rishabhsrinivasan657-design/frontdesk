@@ -161,6 +161,32 @@ describe("openChat", () => {
     expect(again.ofType("session")[0]?.handoff).toMatchObject({ reason: "human_requested" });
   });
 
+  it("says times as 9:00 PM, not 21:00, live and on resume", async () => {
+    const llm: LLMProvider = {
+      model: "hours",
+      async *stream(): AsyncIterable<LLMChunk> {
+        await Promise.resolve();
+        yield {
+          type: "text",
+          text: '@meta {"confidence":0.9,"onTopic":true}\nOn Sundays we are open from 12:00 to 21:00.',
+        };
+      },
+      generate: () => Promise.reject(new Error("not used")),
+    };
+    const { ctx } = context(llm);
+    const socket = new FakeSocket();
+    const chat = await openChat(socket, ctx);
+    await chat.onMessage(say("When are you open on Sunday?"));
+    expect(socket.ofType("agent_sentence").map((m) => m.text)).toEqual([
+      "On Sundays we are open from 12:00 PM to 9:00 PM.",
+    ]);
+    const again = new FakeSocket();
+    await openChat(again, ctx, chat.sessionId);
+    expect(again.ofType("session")[0]?.transcript.at(-1)?.text).toBe(
+      "On Sundays we are open from 12:00 PM to 9:00 PM.",
+    );
+  });
+
   it("relays the loop's messages in order", async () => {
     const { ctx } = context();
     const { socket } = await toReadBack(ctx);

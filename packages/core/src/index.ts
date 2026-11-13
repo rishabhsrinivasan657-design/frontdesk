@@ -64,3 +64,4 @@ export {
 export * from "./agent/index.js";
 export { CONFIDENCE_THRESHOLD, parseMeta, type Meta } from "./guardrails/meta.js";
 export * from "./gate/index.js";
+export { twelveHourTimes } from "./text/twelve-hour.js";
