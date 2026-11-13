@@ -4,7 +4,8 @@ import { BookingStatusChip, Chip, DemoBadge } from "@/components/dashboard/chips
 import { EmptyState, KpiTile, PageHeader, Panel } from "@/components/dashboard/page";
 import { Icon } from "@/components/icons";
 import { formatTime } from "@/dashboard/format";
-import { type BookingRow, sourceParam } from "@/dashboard/types";
+import { sourceParam, sourceQuery } from "@/dashboard/source";
+import type { BookingRow } from "@/dashboard/types";
 import { ownerFetch } from "@/lib/owner-api";
 
 export const metadata: Metadata = { title: "Bookings" };
@@ -42,7 +43,7 @@ export default async function BookingsPage({
     ...upcoming.sort((a, b) => a.start.localeCompare(b.start)),
     ...rows.filter((b) => !isUpcoming(b)).sort((a, b) => b.start.localeCompare(a.start)),
   ];
-  const q = source === "pilot" ? "?source=pilot" : "";
+  const q = sourceQuery(source);
 
   return (
     <>

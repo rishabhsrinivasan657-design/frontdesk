@@ -185,11 +185,6 @@ export type LiveEvent =
   | { type: "pending_cleared"; sessionId: string; status: "executed" | "failed" | "voided" }
   | { type: "handoff"; sessionId: string; reason: string };
 
-/** `?source=` from page search params: anything but "pilot" is live. */
-export function sourceParam(value: string | string[] | undefined): OwnerSource {
-  return value === "pilot" ? "pilot" : "live";
-}
-
 /** One reservation on the owner's calendar (GET /owner/calendar). */
 export interface CalendarReservation {
   id: string;

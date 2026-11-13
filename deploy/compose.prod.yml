@@ -41,6 +41,7 @@ services:
         NEXT_PUBLIC_API_WS_URL: wss://${SITE_HOST}/ws
         NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${NEXT_PUBLIC_TURNSTILE_SITE_KEY}
         NEXT_PUBLIC_PRIVACY_CONTACT: ${NEXT_PUBLIC_PRIVACY_CONTACT:-}
+        NEXT_PUBLIC_DASHBOARD_SOURCE: pilot
     restart: unless-stopped
     environment:
       NODE_ENV: production

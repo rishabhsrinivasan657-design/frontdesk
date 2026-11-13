@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Icon, type IconName } from "@/components/icons";
+import { sourceParam, sourceQuery } from "@/dashboard/source";
 import { cn } from "@/lib/utils";
 
 export const NAV: { href: string; label: string; icon: IconName }[] = [
@@ -17,10 +18,10 @@ export const NAV: { href: string; label: string; icon: IconName }[] = [
 const isActive = (pathname: string, href: string) =>
   href === "/dashboard" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
 
-/** The five views. Links keep `?source=pilot` so switching views keeps the data set. */
+/** The five views. Links keep `?source=` so switching views keeps the data set. */
 export function Nav({ orientation }: { orientation: "vertical" | "horizontal" }) {
   const pathname = usePathname();
-  const pilot = useSearchParams().get("source") === "pilot";
+  const query = sourceQuery(sourceParam(useSearchParams().get("source")));
   const vertical = orientation === "vertical";
   return (
     <nav
@@ -32,7 +33,7 @@ export function Nav({ orientation }: { orientation: "vertical" | "horizontal" })
         return (
           <Link
             key={item.href}
-            href={pilot ? `${item.href}?source=pilot` : item.href}
+            href={`${item.href}${query}`}
             aria-current={active ? "page" : undefined}
             className={cn(
               "flex items-center gap-3 rounded-md text-sm font-medium whitespace-nowrap transition-colors duration-200 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40",

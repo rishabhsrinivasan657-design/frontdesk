@@ -6,7 +6,8 @@ import { EmptyState, KpiTile, PageHeader } from "@/components/dashboard/page";
 import { HANDOFF_OUTCOMES } from "@/dashboard/handoff-outcomes";
 import { StageBudget } from "@/components/dashboard/stage-budget";
 import { formatPct, formatUsd } from "@/dashboard/format";
-import { type MetricsReport, sourceParam } from "@/dashboard/types";
+import { DEFAULT_SOURCE, sourceParam } from "@/dashboard/source";
+import type { MetricsReport } from "@/dashboard/types";
 import { ownerFetch } from "@/lib/owner-api";
 import { cn } from "@/lib/utils";
 
@@ -24,7 +25,7 @@ export default async function MetricsPage({
   const m = await ownerFetch<MetricsReport>(`/metrics?source=${source}&days=${days}`);
   const href = (d: number) => {
     const q = new URLSearchParams({ days: String(d) });
-    if (source === "pilot") q.set("source", "pilot");
+    if (source !== DEFAULT_SOURCE) q.set("source", source);
     return `/dashboard/metrics?${q}`;
   };
   const s = m.summary;

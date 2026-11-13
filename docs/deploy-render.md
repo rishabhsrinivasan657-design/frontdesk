@@ -78,12 +78,13 @@ Never add `GEMINI_API_KEY_2` here: the api refuses to start if it's set.
 
 **On `casa-fiorella`:**
 
-| Variable                         | Value                                     |
-| -------------------------------- | ----------------------------------------- |
-| `NEXT_PUBLIC_API_WS_URL`         | `wss://casa-fiorella-api.onrender.com/ws` |
-| `API_URL`                        | `https://casa-fiorella-api.onrender.com`  |
-| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | the widget's **site** key                 |
-| `NEXT_PUBLIC_PRIVACY_CONTACT`    | optional: where deletion requests go      |
+| Variable                         | Value                                                        |
+| -------------------------------- | ------------------------------------------------------------ |
+| `NEXT_PUBLIC_API_WS_URL`         | `wss://casa-fiorella-api.onrender.com/ws`                    |
+| `API_URL`                        | `https://casa-fiorella-api.onrender.com`                     |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | the widget's **site** key                                    |
+| `NEXT_PUBLIC_PRIVACY_CONTACT`    | optional: where deletion requests go                         |
+| `NEXT_PUBLIC_DASHBOARD_SOURCE`   | `pilot` (set by the Blueprint): the dashboard opens on Pilot |
 
 3. Click **Apply**. The first build takes about 10 minutes.
 
