@@ -2,16 +2,23 @@
 
 **A voice AI receptionist that books real restaurant tables, and never writes to the calendar without the guest's explicit "yes".**
 
-🎬 **Demo video:** coming soon · 🌐 **Live demo:** coming soon (see [status](#status-what-works-today)) · Built end to end by Rishabh Srinivasan
+🎬 **[Watch the demo video](#demo-video)** · 🌐 **Live demo:** [casa-fiorella.onrender.com/talk](https://casa-fiorella.onrender.com/talk) ([status](#status-what-works-today)) · Built end to end by Rishabh Srinivasan
 
-Small restaurants lose bookings because nobody can answer the phone during service, and the calls they do answer are the same five questions over and over. Front Desk takes that load: guests talk (or type) to it in the browser, it checks real availability, books, reschedules and cancels in Google Calendar, emails a confirmation, and hands anything tricky to a human. The demo business is **Casa Fiorella**, a fictional family trattoria. Everything runs on free tiers ($0).
+Small restaurants lose bookings because nobody can answer the phone during service, and the calls they do answer are the same five questions over and over. Front Desk takes that load: guests **talk** (or type) to it in the browser, it checks real availability, books, reschedules and cancels in Google Calendar, emails a confirmation, and hands anything tricky to a human. The demo business is **Casa Fiorella**, a fictional family trattoria. Everything runs on free tiers ($0).
 
-![A real booking: the guest asks, the agent reads it back, the guest confirms, Calendar is written](docs/media/demo.gif)
+![A real booking by voice: the guest asks, the agent reads it back, the guest says yes, the slot appears on the restaurant's calendar](docs/media/demo.gif)
 
-<sub>A real run: Gemini on the free tier, a real Google Calendar event, recorded with Playwright. [Full video (mp4)](docs/media/demo.mp4)</sub>
+<sub>A real run (sped up 3×): Gemini on the free tier, a natural voice running in the browser, and a real Google Calendar event.</sub>
+
+## Demo video
+
+<!-- DEMO_VIDEO: drag the mp4 into this README on github.com, or paste a YouTube link here. -->
+
+_A full walkthrough: booking by voice, changing a booking, an allergy handoff, the owner's dashboard, and what's under the hood._
 
 ## Highlights
 
+- **Voice-first.** Tap the orb, or turn on **hands-free** and just talk. The orb listens, thinks and speaks, a conversation pane slides in, and when a booking is saved a calendar pane shows the slot on the restaurant's evening.
 - **Code-enforced confirmation.** The model can only _propose_ a booking. A separate gate reads it back, waits for the guest's yes, re-checks the slot under a lock, and only then writes to Calendar. A test walks every 2-step message sequence, and no write is ever reachable without a confirm.
 - **Evaluated like a product:** 100 scripted-caller scenarios across 11 categories (bookings, reschedules, prompt injection, angry callers, policy edge cases).
   - **95.0%** task success
@@ -20,44 +27,41 @@ Small restaurants lose bookings because nobody can answer the phone during servi
 
   CI replays them with no API keys and fails on any regression.
 
-- **Owner dashboard.** The home page is the restaurant's day as a calendar, one column per table, read from Google Calendar, with who is talking to Front Desk right now. Handoffs are cards that say who the guest is, what they wanted and what to do next. Metrics answer three questions: is it doing the job, what does it cost (paid-price estimate vs. the $0 actually spent), and how fast is it. Transcripts show per-turn latency and an append-only audit trail. Real pilot data is kept apart from demo and eval data.
-- **Voice.** Browser speech-to-text and text-to-speech, sentence streaming and barge-in.
-- **Built for strangers:**
-  - per-IP and per-session rate limits, and a Cloudflare Turnstile bot check
-  - booking and email caps that `+tags` can't dodge
-  - a 30-day retention job that redacts personal data
-  - no personal data in logs (tested)
-  - a production guard that refuses any paid setting
-- **$0 to run:** Gemini free tier with a hard spend cap of 0, and an Oracle Always Free VM behind Caddy (automatic HTTPS).
+- **Owner dashboard.** The home page is the restaurant's day as a calendar, one column per table, read from Google Calendar, with who is talking to Front Desk right now. Handoffs are cards that say who the guest is, what they wanted and what to do next. Metrics answer three questions: is it doing the job, what does it cost (paid-price estimate vs. the $0 actually spent), and how fast is it, stage by stage against a latency budget.
+- **Built for strangers:** per-visitor and per-session rate limits, a Cloudflare Turnstile bot check, booking and email caps that `+tags` can't dodge, a 30-day retention job that redacts personal data, no personal data in logs (tested), and a production guard that refuses any paid setting.
+- **$0 to run:** Gemini free tier with a hard spend cap of 0, Render's free tier for hosting, and a natural voice that runs in the guest's browser.
 
-| Guest chat                                                    | Owner: one conversation, its latency and audit trail                              |
-| ------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| ![Chat with confirmation card](docs/media/02-talk-booked.png) | ![Conversation detail with audit trail](docs/media/04-dashboard-conversation.png) |
-| **Owner: metrics**                                            | **Owner: guest feedback**                                                         |
-| ![Metrics dashboard](docs/media/06-dashboard-metrics.png)     | ![Feedback page](docs/media/07-dashboard-feedback.png)                            |
+| Guest: the orb, listening                           | Guest: booked, with the calendar pane                               |
+| --------------------------------------------------- | ------------------------------------------------------------------- |
+| ![The orb listening](docs/media/talk-orb.png)       | ![Booking confirmed with calendar pane](docs/media/talk-booked.png) |
+| **Owner: today, one column per table**              | **Owner: handoff cards**                                            |
+| ![Owner's day view](docs/media/dashboard-today.png) | ![Handoff cards](docs/media/dashboard-handoffs.png)                 |
+
+![Latency by stage against its budget](docs/media/dashboard-latency.png)
 
 ## Status: what works today
 
-| Area                                                               | State                                                                                                   |
-| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
-| Book, reschedule, cancel, change party size, FAQ, human handoff    | ✅ Implemented and tested (unit, e2e, 100-scenario evals)                                               |
-| Browser voice: speech in, speech out, sentence streaming, barge-in | ✅ Implemented (Chrome, Edge, Safari; other browsers fall back to chat)                                 |
-| Real Google Calendar writes and Gmail confirmations                | ✅ Implemented, against a demo calendar                                                                 |
-| Owner dashboard, audit trail, per-turn latency, feedback           | ✅ Implemented                                                                                          |
-| Abuse limits, bot check, PII retention, production guard           | ✅ Implemented                                                                                          |
-| Production stack (Docker, Caddy, HTTPS)                            | ✅ Built and run end to end; public hosting waiting on Oracle free-tier capacity                        |
-| Phone calls (a real number)                                        | ❌ Not built. Voice is in the browser only. Telephony is the next step (the STT/TTS layer is swappable) |
-| A real restaurant using it                                         | ❌ Not yet. All bookings land on a demo calendar                                                        |
-| Premium speech (Deepgram) and a smarter endpointer                 | 🔜 Planned                                                                                              |
+| Area                                                            | State                                                                                                                                                                                                                                                      |
+| --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Book, reschedule, cancel, change party size, FAQ, human handoff | ✅ Implemented and tested (unit, e2e, 100-scenario evals)                                                                                                                                                                                                  |
+| Voice: orb, hands-free, barge-in, natural in-browser voice      | ✅ Implemented (Chrome and Edge are best; Safari works; other browsers fall back to chat)                                                                                                                                                                  |
+| Real Google Calendar writes and Gmail confirmations             | ✅ Implemented, against a demo calendar                                                                                                                                                                                                                    |
+| Owner dashboard: day calendar, handoffs, metrics, audit trail   | ✅ Implemented                                                                                                                                                                                                                                             |
+| Abuse limits, bot check, PII retention, production guard        | ✅ Implemented                                                                                                                                                                                                                                             |
+| Public hosting                                                  | ⚠️ Live on Render's free tier. The free services sleep when idle (first load takes about a minute), and chat connections on Render are still being stabilised. If the live demo won't connect, [run it locally](#quickstart): it takes about five minutes. |
+| Phone calls (a real number)                                     | ❌ Not built. Voice is in the browser only. Telephony is the next step (the speech layer is swappable)                                                                                                                                                     |
+| A real restaurant using it                                      | ❌ Not yet. All bookings land on a demo calendar                                                                                                                                                                                                           |
 
 ## The voice engineering
 
 Voice is the part of this I care about most, and most of the hard problems are about turn-taking, not the model:
 
-- **Endpointing.** Deciding when the guest has finished talking. Chrome's built-in endpointing ends the turn at the first pause, which cuts people off at "a table for… four". Front Desk listens continuously and runs its own silence timer, and tapping the mic sends immediately for people in a hurry. The trade-off (snappy vs. not cutting people off) is written up in [docs/learning/m7-voice.md](docs/learning/m7-voice.md).
-- **Barge-in that's safe.** Guests talk over the receptionist. Speaking mutes the reply and cancels the server's turn at the next safe point. If a confirmed booking was already being written, it is _not_ cancelled half-way, and what the guest said over the read-back is never taken as a "yes".
-- **Streaming by sentence.** The first sentence is spoken while the rest is still being generated.
-- **Measured, not guessed.** Every turn records STT, time to first token, tool time, TTS start and total against a latency budget, and the dashboard flags slow turns. On local runs with Gemini's free tier, real turns came in at about **1.5 s median, 2.5 s p95** to a full reply, with the first words in under a second (≈500 turns of my own testing, not real guests).
+- **Endpointing: knowing when the guest has finished.** Chrome's built-in endpointing ends the turn at the first pause, which cuts people off at "a table for… four". Front Desk combines three signals: **Silero VAD** (a ~2 MB neural voice detector running in the browser) hears whether the guest is actually speaking, the **words** set how long to wait ("yes" can be answered at once, "a table for" clearly isn't finished), and the **guest's own habits** stretch the wait for people who pause mid-sentence. If Chrome restarts recognition mid-sentence, the words are stitched back together instead of sent half-finished. See [docs/learning/endpointing.md](docs/learning/endpointing.md).
+- **Hands-free and natural barge-in.** Tap once and talk; the mic reopens after each reply. Talking over the receptionist fades its voice at once and only stops it if you keep talking, so a cough or "mm-hm" doesn't cut it off. A confirmed booking that's already being written is never cancelled half-way, and what the guest says over a read-back is never taken as a "yes". See [docs/learning/hands-free.md](docs/learning/hands-free.md).
+- **A natural voice for $0.** **Kokoro**, an open-source neural text-to-speech model, runs inside the guest's browser (WebGPU, or WASM). ElevenLabs covers the first seconds while it loads, and the voice is locked for the whole conversation so it never changes mid-call. See [docs/learning/natural-voice.md](docs/learning/natural-voice.md).
+- **Covering the slow moments.** If no reply has started 1.2 s after the guest stops, the browser says "one moment", like a person would. It's never sent to the agent, so it can't confirm anything.
+- **Streaming by sentence.** The first sentence is spoken while the rest is still being generated, and times are said the way people say them ("nine PM", not "twenty-one hundred").
+- **Measured, not guessed.** Every turn records speech-to-text, time to first token, tool time, speech start and total against a latency budget, and the dashboard flags slow stages. On Gemini's free tier, replies come in at about **1.5 s median** to a full reply, with the first words in under a second.
 
 ## Key technical decisions
 
@@ -65,13 +69,13 @@ Voice is the part of this I care about most, and most of the hard problems are a
 - **Calendar is the source of truth.** No shadow bookings table to drift out of sync; availability is computed from Calendar plus the business config.
 - **Untrusted text stays untrusted.** The guest's words are fenced as data in the prompt, never instructions, and the gate makes injected "it's already confirmed" tricks inert. Before a reply goes out, every time, date, price and number in it must come from the business config, a tool result, or the guest's own words (grounding check). Prompt-injection scenarios are part of the eval suite.
 - **Evals gate CI.** Recorded conversations replay with no API keys, so every PR is checked against the same 100 scenarios.
-- **Swappable providers.** The LLM, speech-to-text and text-to-speech all sit behind interfaces, so moving to a paid model, Deepgram, or a phone line doesn't touch the agent.
+- **Swappable providers.** The LLM, speech-to-text and text-to-speech all sit behind interfaces, so moving to a paid model, a hosted speech service, or a phone line doesn't touch the agent.
 
 ## How it's built
 
 ```mermaid
 flowchart LR
-  G["Guest browser<br/>/talk: chat + voice"] -- WebSocket --> API["api (Fastify)"]
+  G["Guest browser<br/>/talk: orb, voice + chat<br/>VAD + Kokoro run here"] -- WebSocket --> API["api (Fastify)"]
   O["Owner browser<br/>/dashboard"] --> WEB["web (Next.js)"] --> API
   API --> CORE["core: agent loop<br/>confirmation gate<br/>guardrails"]
   CORE <--> LLM["Gemini (free tier)"]
@@ -82,7 +86,7 @@ flowchart LR
 ```
 
 - **Design:** [docs/superpowers/specs/2026-10-22-frontdesk-design.md](docs/superpowers/specs/2026-10-22-frontdesk-design.md).
-- **Learning notes:** one per milestone, with reading order, concepts and a quiz, in [docs/learning/](docs/learning/).
+- **Learning notes:** one per milestone and feature, with reading order, concepts and a quiz, in [docs/learning/](docs/learning/).
 
 ## Prerequisites
 
@@ -99,6 +103,20 @@ pnpm infra:up      # postgres on :54320, redis on :63790
 pnpm verify        # lint, format check, typecheck, unit tests (no Docker needed)
 pnpm test:infra    # smoke tests against the running containers
 ```
+
+### Run the app locally
+
+Only a free [Gemini API key](https://aistudio.google.com/apikey) is required. Without Google credentials, bookings go to an in-memory calendar; see [docs/google-setup.md](docs/google-setup.md) to use a real one.
+
+```bash
+# in .env: set GEMINI_API_KEY (and optionally OWNER_EMAIL + OWNER_PASSWORD_HASH from `pnpm owner:hash`)
+pnpm db:migrate
+pnpm api                                 # terminal 1: api on :4000
+pnpm --filter @frontdesk/worker start    # terminal 2: emails and background jobs
+pnpm web                                 # terminal 3: site on :3000
+```
+
+Open <http://localhost:3000/talk> in Chrome, tap the orb and ask for a table. The owner dashboard is at <http://localhost:3000/dashboard>.
 
 Host ports are non-standard on purpose so they don't clash with a local Postgres or Redis. Change `POSTGRES_PORT` / `REDIS_PORT` and the URLs in `.env` if you need different ones.
 
@@ -120,9 +138,10 @@ If `frontdesk_eval` is reported missing, your Postgres volume predates the init 
 
 ## Pilot and deploy
 
-Front Desk is ready to run as a public pilot on an Oracle Cloud Always Free VM behind Caddy (automatic HTTPS), at $0. The production stack (`deploy/compose.prod.yml`) has been built and run end to end; going live is waiting on Oracle free-tier capacity. See:
+The public demo runs on Render's free tier from [`render.yaml`](render.yaml) (a Blueprint: web, api + worker, Postgres and Redis). The same app also runs on an Oracle Cloud Always Free VM behind Caddy (`deploy/compose.prod.yml`). See:
 
-- [docs/deploy.md](docs/deploy.md): setup and deploys
+- [docs/deploy-render.md](docs/deploy-render.md): the Render Blueprint, step by step
+- [docs/deploy.md](docs/deploy.md): the VM setup and deploys
 - [docs/pilot.md](docs/pilot.md): the weekly routine, and comparing real numbers with the evals
 - `pnpm release`: tags the weekly `vYYYY.MM.DD` release
 - `pnpm smoke <url>`: checks a deployed site without spending any LLM quota
