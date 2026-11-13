@@ -9,7 +9,7 @@ was empty, even right after a real booking.
 
 Two settings that each made sense on their own:
 
-- The api on Render runs with `CONVERSATION_SOURCE=pilot`. Production *requires* it (pilot-guard),
+- The api on Render runs with `CONVERSATION_SOURCE=pilot`. Production _requires_ it (pilot-guard),
   so real guests are never mixed with demo or test chats. Every conversation is saved as **pilot**.
 - The dashboard opened on **Live** unless the link said `?source=pilot`.
 
@@ -31,7 +31,7 @@ Locally nothing changes: the variable is unset, so the dashboard still opens on 
 
 ## Quiz yourself
 
-1. Why does a `NEXT_PUBLIC_*` variable have to be a Docker *build* arg, not just a runtime env var?
+1. Why does a `NEXT_PUBLIC_*` variable have to be a Docker _build_ arg, not just a runtime env var?
 2. With Pilot as the default, what URL does the Live button point to, and why can't it just drop
    `?source=` like before?
 3. Why do the api calls (e.g. `/handoffs?source=pilot`) still check `source === "pilot"` directly?
