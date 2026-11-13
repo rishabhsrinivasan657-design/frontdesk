@@ -129,6 +129,35 @@ describe("api server", () => {
     expect(lines.join("\n")).not.toContain(sessionId);
   });
 
+  it("logs where a chat socket got to, under one request id and without the URL", async () => {
+    const lines: string[] = [];
+    const deps = memoryDeps();
+    const chat: ChatContext = {
+      deps,
+      log: new InMemoryConversationLog(),
+      price: { input: 0, output: 0 },
+      newSessionId: () => `sess_${++n}`,
+      logger: { error: vi.fn() },
+      hub: new SessionHub(),
+    };
+    app = buildServer({
+      chat,
+      webOrigins: [ORIGIN],
+      logger: { stream: { write: (line: string) => void lines.push(line) } },
+    });
+    const url = (await app.listen({ port: 0, host: "127.0.0.1" })).replace("http", "ws") + "/ws";
+    const client = await connect(`${url}?sessionId=sess_hidden`);
+    await client.next("session");
+    const parsed = lines.map(
+      (l) => JSON.parse(l) as { msg: string; reqId?: string; upgrade?: boolean },
+    );
+    const request = parsed.find((l) => l.msg === "ws request");
+    const handler = parsed.find((l) => l.msg === "ws handler started");
+    expect(request?.upgrade).toBe(true);
+    expect(handler?.reqId).toBe(request?.reqId);
+    expect(lines.join("\n")).not.toContain("sess_hidden");
+  });
+
   it("ready answers 200 when ready and 503 with the failing check otherwise", async () => {
     let up = true;
     const ready = () =>
