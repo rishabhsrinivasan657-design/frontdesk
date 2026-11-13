@@ -6,7 +6,7 @@ import { Icon, type IconName } from "@/components/icons";
 import { cn } from "@/lib/utils";
 
 export const NAV: { href: string; label: string; icon: IconName }[] = [
-  { href: "/dashboard", label: "Live", icon: "live" },
+  { href: "/dashboard", label: "Today", icon: "bookings" },
   { href: "/dashboard/conversations", label: "Conversations", icon: "conversations" },
   { href: "/dashboard/bookings", label: "Bookings", icon: "bookings" },
   { href: "/dashboard/handoffs", label: "Handoffs", icon: "handoffs" },

@@ -78,6 +78,17 @@ export interface HandoffRow {
   resolvedAt: string | null;
   notes: string | null;
   outcome: string | null;
+  /** Who the guest is and what they asked for (older tickets: null). */
+  details: HandoffDetails | null;
+}
+
+/** core's HandoffDetails: every field only when the session knew it. */
+export interface HandoffDetails {
+  name?: string;
+  contact?: string;
+  date?: string;
+  time?: string;
+  partySize?: number;
 }
 
 export interface FeedbackRow {
@@ -109,6 +120,7 @@ export interface BookingRow {
   end: string;
   executedAt: string;
   emailed: boolean | null;
+  voice: boolean;
   calendarUrl: string | null;
 }
 
@@ -139,6 +151,8 @@ export interface MetricsReport {
     latency: Record<Stage, Percentiles>;
     feedback: { avgRating: number | null; count: number };
     handoffOutcomes: Record<string, number>;
+    /** Calendar writes with no confirmation before them; the gate keeps this at 0. */
+    unsafeActions: number;
   };
   daily: DailyMetrics[];
   hasSeeded: boolean;
@@ -174,4 +188,38 @@ export type LiveEvent =
 /** `?source=` from page search params: anything but "pilot" is live. */
 export function sourceParam(value: string | string[] | undefined): OwnerSource {
   return value === "pilot" ? "pilot" : "live";
+}
+
+/** One reservation on the owner's calendar (GET /owner/calendar). */
+export interface CalendarReservation {
+  id: string;
+  tableId: string;
+  partySize: number;
+  name: string;
+  contact: string;
+  start: string;
+  end: string;
+  /** Minutes since local midnight. */
+  startMinute: number;
+  endMinute: number;
+  startLabel: string;
+  endLabel: string;
+  /** The conversation that booked it; null when Front Desk has no log of it. */
+  sessionId: string | null;
+  voice: boolean | null;
+  bookedAt: string | null;
+  emailed: boolean | null;
+  calendarUrl: string | null;
+}
+
+export interface CalendarDay {
+  date: string;
+  today: string;
+  label: string;
+  open: boolean;
+  hours: { open: string; close: string }[];
+  tables: { id: string; size: number }[];
+  seats: number;
+  reservations: CalendarReservation[];
+  week: { date: string; label: string; open: boolean; bookings: number; guests: number }[];
 }

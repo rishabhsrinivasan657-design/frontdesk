@@ -28,12 +28,31 @@ For the launch demo, the guest page (`/talk`) became voice-first. A floating orb
 - **Checkmarks are claims.** The calendar pane only ticks what the code really did: the guest confirmed, the slot was re-checked and saved, and the action was audited. It doesn't claim an email was sent, because that depends on the contact the guest gave.
 - **Keep the test ids.** The layout changed completely, but every `data-testid` the e2e tests use stayed, so the 22 browser tests checked the new UI without being rewritten.
 
-## 3. Quiz
+## 3. The owner dashboard
+
+| #   | File                                                 | What it does                                                                                                 |
+| --- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| 1   | `packages/core/src/availability/day-view.ts`         | `dayView()` and `weekStrip()`: the restaurant's day from calendar reservations, in local minutes and labels. |
+| 2   | `apps/api/src/owner/routes.ts`                       | `GET /owner/calendar`: reads the calendar, joins each reservation to the conversation that booked it.        |
+| 3   | `packages/core/src/agent/handoff.ts`                 | `handoffDetails()`: who the guest is and what they asked for, from the session, never the model.             |
+| 4   | `packages/db/drizzle/0005_handoff_details.sql`       | The `details` column; `retention.ts` wipes it with the transcript after 30 days.                             |
+| 5   | `packages/db/src/owner/metrics.ts`                   | `unsafeActions`: calendar writes with no `confirmed` audit entry before them. The gate keeps it at 0.        |
+| 6   | `apps/web/src/components/dashboard/day-calendar.tsx` | The vertical day view: one column per table, the how-full strip, the now line, the details popover.          |
+| 7   | `apps/web/src/app/dashboard/handoffs/page.tsx`       | Handoff cards: guest, what they want, facts, what to do (`dashboard/handoff-guidance.ts`), resolve.          |
+
+- **The calendar is the source of truth, and it has limits.** The dashboard reads the same calendar the agent books into, so what the owner sees is what Front Desk will respect. That calendar only contains Front Desk's own events, though, so a booking made by hand in Google Calendar is invisible to both. The mockup assumed otherwise, and the build says so rather than faking it.
+- **Facts come from state, not from the model.** A handoff card's name, contact, date and party come from the pending action, a reservation the guest looked up, or the last availability check. A check returns nearby alternatives, so only its date and party are trusted, never a time. When the model wrote no summary, the card shows the guest's last words in quotes instead of pretending to know what they wanted.
+- **A metric that should be zero is still worth showing.** "Unsafe actions" counts writes with no confirmation before them. It can only be non-zero if the gate is broken, which is exactly why it belongs on the page.
+- **Live without a second stream.** The "Live now" tile listens for a browser event the live board fires whenever its card count changes, so one connection feeds both.
+
+## 4. Quiz
 
 1. Why does `cardDetails()` live next to `readBack()` instead of in the browser?
 2. A guest in London books 7:00 PM at a New York restaurant. Which time does the calendar pane show, and which code makes that so?
 3. The receptionist's reply has finished streaming, but it's still being read aloud. What does the orb show, and why?
 4. Why isn't "Confirmation email queued" one of the checkmarks?
+5. A staff member adds a booking by hand in Google Calendar. Does it show on the Today page? Why or why not?
+6. Why does a handoff card show a date and party from an availability check, but not a time?
 
 <details><summary>Answers</summary>
 
@@ -41,5 +60,7 @@ For the launch demo, the guest page (`/talk`) became voice-first. A floating orb
 2. 7:00 PM, the restaurant's time. `cardDetails()` formats with `config.business.timezone`, and the browser only displays the label.
 3. Speaking: `orbState()` checks `speaking` (fed from `agentSpeaking`) before `busy`, and the speaker reports playing until its queue is empty.
 4. An email is only sent when the guest gave an email address. The pane doesn't know which contact was given, so it doesn't claim it.
+5. No. The Google adapter only lists events carrying Front Desk's private marker, so a hand-made event is invisible to the dashboard and to availability. Showing it would need the adapter to read unmarked events, which changes availability too.
+6. A check returns the requested time plus nearby alternatives, so no single time is "the" request. Only a pending action pins one exact slot.
 
 </details>

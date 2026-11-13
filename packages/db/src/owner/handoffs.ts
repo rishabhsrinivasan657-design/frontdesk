@@ -40,7 +40,7 @@ export function toHandoffRow(r: {
     createdAt: isoOf(r.createdAt),
     resolvedAt: isoOrNullOf(r.resolvedAt),
     outcome: r.outcome as HandoffOutcome | null,
-    details: (r.details ?? null),
+    details: r.details ?? null,
   };
 }
 

@@ -6,7 +6,7 @@ Clickable mockups agreed with the owner on 2026-11-12. They're standalone HTML f
 
 The orb alone → the conversation pane slides in on the first message → the calendar pane slides in once a booking is written.
 
-## `dashboard-mockup.html`: the owner dashboard (not built yet)
+## `dashboard-mockup.html`: the owner dashboard (built in PR #30)
 
 **Agreed:**
 
@@ -25,9 +25,10 @@ The orb alone → the conversation pane slides in on the first message → the c
 - **Metrics:** three sections. "Is it doing the job?", "What does it cost to run?" (paid-price estimate next to the $0.00 actually spent) and "How fast is it?" (each stage against its budget). The trend charts stay.
 - **Feedback and Conversations:** unchanged apart from styling.
 
-**Backend this needs:**
+**Backend (as built):**
 
-1. `GET /owner/calendar?from&to`: reservations from the calendar adapter's `listReservations`, so bookings staff added by hand show up too. Each one is marked as made by Front Desk if its reservation id is in the bookings log. Today `/owner/bookings` only knows Front Desk's own writes.
-2. Handoff tickets store the guest's name and contact, plus the requested date, time and party when they're known. Today a handoff stores only the reason, a summary and the transcript.
+1. `GET /owner/calendar?date=`: that day's reservations from the calendar adapter's `listReservations`, joined to Front Desk's booking log (conversation, voice or chat, email). It also returns the tables, opening hours and a 7-day strip.
+   - **Correction to the mockup:** the calendar adapter only reads events Front Desk created (they carry a private Front Desk marker), so bookings staff add by hand in Google Calendar are not visible. They aren't visible to availability either. The "added by staff" colour was dropped; cards show voice or chat instead. Reading hand-made events is a follow-up that touches availability too.
+2. Handoff tickets store the guest's name and contact, plus the requested date, time and party when the session knew them (`handoffDetails()` in core; migration 0005; wiped by retention). Seeded demo handoffs have none.
 3. A count of unsafe actions from the audit trail (an `executed` entry without a `confirmed` one before it). It should always be 0.
 4. Seats and tables for "guests expected" come from the business config (`seating.tables`).

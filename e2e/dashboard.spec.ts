@@ -74,6 +74,30 @@ test("live shows a caller's session and its pending read-back", async ({ page, b
   await guest.context().close();
 });
 
+test("a guest's booking lands on the owner's calendar for that day", async ({ page, browser }) => {
+  const guest = await (await browser.newContext()).newPage();
+  await guest.goto("/talk");
+  await expect(guest.getByTestId("connection")).toHaveText("Connected");
+  const who = details();
+  await say(guest, bookAt("21:00"));
+  await say(guest, who);
+  await guest.getByTestId("confirmation-card").getByRole("button", { name: "Confirm" }).click();
+  await expect(guest.getByTestId("action-status")).toHaveText("Booked");
+  await guest.context().close();
+
+  await openDashboard(page);
+  await page.goto("/dashboard?date=2026-11-07");
+  await expect(page.getByRole("heading", { level: 1, name: "Saturday, November 7" })).toBeVisible();
+  const name = who.split(",")[0]!;
+  const booking = page.getByTestId("calendar-booking").filter({ hasText: name });
+  await expect(booking).toContainText("9:00 PM");
+  await expect(booking).toContainText("Chat");
+  await booking.click();
+  const detailsPanel = page.getByTestId("booking-details");
+  await expect(detailsPanel).toContainText("4 guests");
+  await expect(detailsPanel.getByRole("link", { name: "Open conversation" })).toBeVisible();
+});
+
 test("conversations search opens a transcript with tool calls, audit trail and latency", async ({
   page,
 }) => {

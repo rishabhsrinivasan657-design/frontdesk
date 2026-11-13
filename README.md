@@ -20,7 +20,7 @@ Small restaurants lose bookings because nobody can answer the phone during servi
 
   CI replays them with no API keys and fails on any regression.
 
-- **Owner dashboard.** Live conversations, transcripts with per-turn latency against a budget, an append-only audit trail, bookings, a handoff queue with outcomes, guest feedback and metrics. Real pilot data is kept apart from demo and eval data.
+- **Owner dashboard.** The home page is the restaurant's day as a calendar, one column per table, read from Google Calendar, with who is talking to Front Desk right now. Handoffs are cards that say who the guest is, what they wanted and what to do next. Metrics answer three questions: is it doing the job, what does it cost (paid-price estimate vs. the $0 actually spent), and how fast is it. Transcripts show per-turn latency and an append-only audit trail. Real pilot data is kept apart from demo and eval data.
 - **Voice.** Browser speech-to-text and text-to-speech, sentence streaming and barge-in.
 - **Built for strangers:**
   - per-IP and per-session rate limits, and a Cloudflare Turnstile bot check

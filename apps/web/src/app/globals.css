@@ -280,6 +280,19 @@ select {
     transform: none;
   }
 }
+@keyframes fd-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.fd-drop {
+  animation: fd-drop 0.45s both;
+}
 @keyframes fd-word {
   from {
     opacity: 0;
