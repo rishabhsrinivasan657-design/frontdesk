@@ -111,11 +111,20 @@ pnpm install
 
 pnpm may warn about "ignored build scripts". That's expected; nothing needs approving.
 
-**2. Configure.** Copy the example settings, then open `.env` and set `GEMINI_API_KEY=` to your key. Leave everything else as it is.
+**2. Configure.** Copy the example settings, then open `.env` and set `GEMINI_API_KEY=` to your key. To turn on the owner dashboard, also set the two `OWNER_` lines to the demo login below. Leave everything else as it is.
 
 ```bash
 cp .env.example .env
 ```
+
+```bash
+# in .env
+GEMINI_API_KEY=your-key
+OWNER_EMAIL=owner@example.com
+OWNER_PASSWORD_HASH='$2b$12$g06Ra4SZOQz7y9V/n2WDUucb/q.NF0mLe1KXxwcq9jVwCAgvIOWj2'
+```
+
+That hash is for the local demo password `casa-fiorella-demo`. It only works on your own machine: the hosted demo has its own login, and you should never use this one on a server other people can reach.
 
 **3. Start the database and cache**
 
@@ -136,6 +145,8 @@ pnpm web           # terminal 2: the site on :3000
 
 **5. Talk to it.** Open <http://localhost:3000/talk> in Chrome, allow the microphone, and tap the orb (or **🎧 Hands-free conversation**) and ask for a table. You can also just type.
 
+**6. See the owner's side.** Open <http://localhost:3000/dashboard> and sign in as `owner@example.com` with the password `casa-fiorella-demo`. Your bookings are on the Today page, and anything the receptionist passed to a human is under Handoffs.
+
 Bookings go to an in-memory calendar that resets when the api restarts. That's all you need to try it. The optional extras below add a real calendar, emails and the owner dashboard.
 
 ### How the voice is set up
@@ -148,7 +159,7 @@ Nothing to install: the voice runs in the browser.
 
 ### Optional extras
 
-- **Owner dashboard** (<http://localhost:3000/dashboard>): make a password hash, then add `OWNER_EMAIL=you@example.com` and `OWNER_PASSWORD_HASH='<the hash>'` to `.env` (single quotes, because the hash contains `$`). Restart `pnpm api`. To make the hash without your password showing on screen, run:
+- **Your own dashboard password** instead of the demo one: make a password hash, put it in `OWNER_PASSWORD_HASH='<the hash>'` in `.env` (single quotes, because the hash contains `$`), and restart `pnpm api`. To make the hash without your password showing on screen, run:
 
   ```bash
   read -rs PW && printf %s "$PW" | pnpm owner:hash; unset PW
