@@ -18,8 +18,24 @@ export interface Vad {
 
 /** Silence the VAD needs before it says speech ended; the endpointer decides the rest. */
 const REDEMPTION_MS = 200;
-/** Shorter blips are ignored. */
-const MIN_SPEECH_MS = 150;
+/**
+ * How sure the model must be that a frame is speech (0–1), and how long speech must last.
+ * The library's defaults (0.3) catch whispers but also fans, TVs and keyboards. Real speech
+ * scores well above 0.8, so these ignore most background noise.
+ */
+export interface VadSensitivity {
+  /** A frame above this starts speech. */
+  positive: number;
+  /** Speech ends once frames fall below this. */
+  negative: number;
+  /** Shorter sounds are ignored. */
+  minSpeechMs: number;
+}
+
+/** For the caller's own turn. */
+export const TURN: VadSensitivity = { positive: 0.6, negative: 0.45, minSpeechMs: 250 };
+/** For talking over the agent (hands-free): stricter, so noise doesn't fade or stop it. */
+export const BARGE_IN: VadSensitivity = { positive: 0.8, negative: 0.65, minSpeechMs: 300 };
 /** Where `scripts/copy-vad-assets.mjs` puts the model, worklet and onnxruntime files. */
 const ASSETS = "/vad/";
 
@@ -55,7 +71,7 @@ export function createSileroVad(
     now?: () => number;
     load?: SileroLoader;
     getUserMedia?: () => Promise<MediaStream>;
-  } = {},
+  } & Partial<VadSensitivity> = {},
 ): Vad {
   const now = o.now ?? Date.now;
   const load = o.load ?? loadVadWeb;
@@ -79,7 +95,9 @@ export function createSileroVad(
           baseAssetPath: ASSETS,
           onnxWASMBasePath: ASSETS,
           redemptionMs: REDEMPTION_MS,
-          minSpeechMs: MIN_SPEECH_MS,
+          positiveSpeechThreshold: o.positive ?? TURN.positive,
+          negativeSpeechThreshold: o.negative ?? TURN.negative,
+          minSpeechMs: o.minSpeechMs ?? TURN.minSpeechMs,
           startOnLoad: false,
           getStream: async () => {
             const opened = await getUserMedia();

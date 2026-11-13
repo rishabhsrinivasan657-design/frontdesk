@@ -3,8 +3,11 @@ import type { Speaker } from "./speaker";
 import type { Vad } from "./vad";
 import type { Timers } from "./web-speech";
 
-/** Speech this long over the agent is a real barge-in; shorter ("mm-hm", a cough) is not. */
-export const COMMIT_MS = 250;
+/**
+ * Speech this long (after the VAD's own 300 ms) over the agent is a real barge-in; shorter
+ * ("mm-hm", a cough, a burst of background noise) only fades it for a moment.
+ */
+export const COMMIT_MS = 500;
 /** With nothing said for this long, hands-free switches itself off (frees the mic). */
 export const IDLE_MS = 30_000;
 

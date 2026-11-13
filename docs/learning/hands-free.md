@@ -46,3 +46,5 @@ Push-to-talk means tapping before every sentence. Real phone calls don't work li
 5. Stopping the speech triggered a re-check that pressed the mic again from inside the first press, so two recognisers started. A live Chrome run showed two "start" lines at the same moment.
 
 </details>
+
+**Update (noise):** the barge-in detector is now much stricter (speech above 0.8 confidence, at least 300 ms), and committing takes 500 ms more, so background noise doesn't fade or stop the agent. See `endpointing.md`, "Background noise".

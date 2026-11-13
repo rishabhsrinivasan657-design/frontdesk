@@ -7,7 +7,7 @@ import { FILLER_TURN, Filler } from "./filler";
 import { HandsFree } from "./hands-free";
 import { createVoiceProviders } from "./providers";
 import { Speaker } from "./speaker";
-import { createSileroVad } from "./vad";
+import { BARGE_IN, createSileroVad } from "./vad";
 
 /** Voice stages measured in the browser, for the latency readout. */
 export interface VoiceLatency {
@@ -97,7 +97,7 @@ export function useVoice(chat: Chat) {
     const hands: HandsFree = new HandsFree({
       controller,
       speaker,
-      vad: createSileroVad(),
+      vad: createSileroVad(BARGE_IN),
       isChatBusy: () => chatRef.current.state.busy,
       timers: {
         set: (fn, ms) => setTimeout(fn, ms),
