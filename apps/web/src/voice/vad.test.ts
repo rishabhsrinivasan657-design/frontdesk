@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { type SileroLoader, createSileroVad } from "./vad";
+import { BARGE_IN, type SileroLoader, createSileroVad } from "./vad";
 
 /** A MediaStream stand-in that records whether its tracks were stopped. */
 function fakeStream() {
@@ -49,5 +49,35 @@ describe("createSileroVad", () => {
     expect(track.stopped).toBe(false);
     vad.stop();
     expect(track.stopped).toBe(true);
+  });
+});
+
+describe("VAD sensitivity", () => {
+  it("ignores background noise: much stricter than the library's defaults (0.3, 400 ms)", async () => {
+    const seen: Record<string, unknown>[] = [];
+    const load: SileroLoader = () =>
+      Promise.resolve({
+        MicVAD: {
+          new: (opts) => {
+            seen.push(opts);
+            return Promise.resolve({ start: () => Promise.resolve(), destroy: () => {} });
+          },
+        },
+      });
+    const { stream } = fakeStream();
+    await createSileroVad({ load, getUserMedia: () => Promise.resolve(stream) }).start(handlers);
+    await createSileroVad({ load, getUserMedia: () => Promise.resolve(stream), ...BARGE_IN }).start(
+      handlers,
+    );
+    expect(seen[0]).toMatchObject({
+      positiveSpeechThreshold: 0.6,
+      negativeSpeechThreshold: 0.45,
+      minSpeechMs: 250,
+    });
+    expect(seen[1]).toMatchObject({
+      positiveSpeechThreshold: 0.8,
+      negativeSpeechThreshold: 0.65,
+      minSpeechMs: 300,
+    });
   });
 });

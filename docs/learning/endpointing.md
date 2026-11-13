@@ -64,6 +64,15 @@ It's still push-to-talk in this PR. Hands-free comes next and builds on this.
 - **Chrome ending its session by itself.** In continuous mode, Chrome sometimes ends a recognition session mid-sentence. We used to treat that as "the caller finished" and sent the half sentence. Now, if the caller has said something and _we_ didn't stop it (no tap, no end of turn), we restart recognition and keep adding to the same sentence. That's up to 3 times per utterance. The endpointer, not Chrome, decides when the turn is over.
 - **More patience for unfinished sentences.** "A table for…" or "um" now waits 3 s (was 2.5 s), and the absolute limit is 4 s (was 3 s). "Yes" still goes after 300 ms.
 
+**Background noise (third round).** The user found the voice detector too sensitive to background noise. We had kept the library's default threshold: a frame counts as speech above **0.3** confidence. That catches whispers, but also fans, TVs and keyboards. Now:
+
+| Detector                            | Speech above | Ends below | Minimum length |
+| ----------------------------------- | ------------ | ---------- | -------------- |
+| Your turn (`TURN`)                  | 0.6          | 0.45       | 250 ms         |
+| Talking over the agent (`BARGE_IN`) | 0.8          | 0.65       | 300 ms         |
+
+Barge-in also needs **500 ms** of continuous talking (was 250 ms) before it stops the agent. A burst of noise only fades it for a moment. We checked the user's own recording: it gives the same three speech segments at 0.3, 0.6 and 0.8 (the edges move by 100 ms or less), so real speech isn't lost. `getUserMedia` also asks the browser for its own noise suppression.
+
 **Live check.** I recorded a voice with `say` ("A table for… [1.2 s pause] four people on Friday at seven") and played it as Chrome's microphone. The real VAD ran on that audio, with scripted words lined up to it. Nothing was sent during the pause, and one message with the whole sentence went out 0.4 s after the speech ended. A second run taught us something: back then, a full request like "a table for four people on Friday" counted as finished, and it was sent before "at seven", at a breath pause. So only short answers ("yes", "no", "that's right") get the 300 ms window now. Full requests wait the adaptive window. Chrome's own recognition doesn't work in an automated browser, so a person with a real mic is still the final test.
 
 ## 4. Quiz
