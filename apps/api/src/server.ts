@@ -170,6 +170,14 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
         }
         const guard = opts.chatGuard;
         const ip = req.ip;
+        req.log.info(
+          {
+            ipKind: ip.includes(":") ? "v6" : "v4",
+            ipPrefix: ip.split(/[.:]/).slice(0, 2).join("."),
+            hasXff: req.headers["x-forwarded-for"] !== undefined,
+          },
+          "ws client address",
+        );
         const peer = {
           send: (text: string) => socket.send(text),
           close: (code?: number) => socket.close(code),
@@ -184,7 +192,9 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
           });
         }
         const ready: Promise<Chat | undefined> = (async () => {
-          if (admitted && (await admitted) !== "ok") {
+          const verdict = admitted ? await admitted : "ok";
+          if (verdict !== "ok") {
+            req.log.warn({ verdict }, "ws refused by chat limits");
             socket.close(RATE_LIMITED, "rate limited");
             return undefined;
           }
@@ -195,6 +205,7 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
           if (bot && !(await mayResume(requested))) {
             const token = typeof req.query.ts === "string" ? req.query.ts : "";
             if (!(await bot.verify(token, ip))) {
+              req.log.warn({ hadToken: token !== "" }, "ws refused by bot check");
               socket.close(BOT_CHECK_FAILED, "bot check failed");
               return undefined;
             }
