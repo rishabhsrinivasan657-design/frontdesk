@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { ChatState } from "@/chat/state";
 import { useChat } from "@/chat/use-chat";
 import { useTurnstile } from "@/chat/use-turnstile";
+import { wakeApi, wakingUp } from "@/chat/wake";
 import { useVoice } from "@/voice/use-voice";
 import { Icon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
@@ -33,6 +35,25 @@ const STATUS = {
   unreachable: "Unavailable",
 } as const;
 
+const WAKING_NOTICE =
+  "Waking up the receptionist. After a quiet spell our free server takes about a minute to start.";
+
+/** Whether to explain a slow first connection (see chat/wake.ts); re-checked every second. */
+function useWaking(url: string, status: ChatState["status"]): boolean {
+  const [mountedAt] = useState(() => Date.now());
+  const [now, setNow] = useState(mountedAt);
+  const everOpened = useRef(false);
+  if (status === "open") everOpened.current = true;
+  useEffect(() => wakeApi(url), [url]);
+  const settled = everOpened.current || status === "limited" || status === "bot_check_failed";
+  useEffect(() => {
+    if (settled) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [settled]);
+  return wakingUp(status, everOpened.current, now - mountedAt);
+}
+
 /**
  * The guest's page: the orb alone at first; the conversation pane slides in once someone speaks
  * or types; the calendar pane slides in once the gate has written a booking (launch polish).
@@ -50,6 +71,7 @@ export function ChatWindow({
   const turnstile = useTurnstile(turnstileSiteKey || undefined);
   const chat = useChat(url, turnstile.botToken);
   const { state } = chat;
+  const waking = useWaking(url, state.status);
   const voice = useVoice(chat);
   const ended = state.feedback !== undefined;
   const closed = state.status !== "open" || state.handoff !== undefined || ended;
@@ -94,10 +116,16 @@ export function ChatWindow({
           The security check couldn&apos;t load. Please disable blockers for this site and reload.
         </p>
       )}
-      {state.notice && (
-        <p role="alert" className="text-xs text-destructive">
-          {state.notice}
+      {waking ? (
+        <p data-testid="waking-notice" role="status" className="text-xs text-muted-foreground">
+          {WAKING_NOTICE}
         </p>
+      ) : (
+        state.notice && (
+          <p role="alert" className="text-xs text-destructive">
+            {state.notice}
+          </p>
+        )
       )}
       {voiceNotice && (
         <p data-testid="voice-notice" className="text-xs text-muted-foreground">
@@ -136,7 +164,7 @@ export function ChatWindow({
               state.status === "open" ? "bg-success" : "animate-pulse bg-warning",
             )}
           />
-          <span data-testid="connection">{STATUS[state.status]}</span>
+          <span data-testid="connection">{waking ? "Waking up…" : STATUS[state.status]}</span>
         </div>
       </header>
 
