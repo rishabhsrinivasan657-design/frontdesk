@@ -54,6 +54,34 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
           },
   });
   void app.register(websocket, { options: { maxPayload: MAX_PAYLOAD_BYTES } });
+  void app.register((instance, _o, done) => {
+    // ws aborts a bad handshake without logging anything; with a listener it hands that to us.
+    instance.websocketServer.on("wsClientError", (error, socket, req) => {
+      app.log.warn(
+        { handshake: error.message, ...upgradeHeaders(req.headers) },
+        "ws handshake refused",
+      );
+      socket.end("HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n");
+    });
+    done();
+  });
+  // Where a chat socket stops on its way in (Render debugging): never the URL, it holds tokens.
+  app.addHook("onRequest", (request, _reply, done) => {
+    if (request.routeOptions.url === "/ws" || request.url.startsWith("/ws")) {
+      const socket = request.raw.socket;
+      request.log.info(
+        {
+          upgrade: request.ws,
+          readable: socket.readable,
+          writable: socket.writable,
+          ...upgradeHeaders(request.headers),
+        },
+        "ws request",
+      );
+      socket.once("end", () => request.log.warn("ws peer ended the connection"));
+    }
+    done();
+  });
 
   app.get("/health", () => ({ ok: true }));
   const ready = opts.ready;
@@ -84,6 +112,7 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
       "/ws",
       { websocket: true },
       (socket, req) => {
+        req.log.info("ws handler started");
         // Browsers always send Origin; a page on another site must not talk as its visitor.
         const origin = req.headers.origin;
         if (origin !== undefined && !opts.webOrigins.includes(origin)) {
@@ -157,4 +186,17 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
   });
 
   return app;
+}
+
+/** The handshake headers worth seeing when a socket fails; none of them carry secrets. */
+function upgradeHeaders(headers: Record<string, string | string[] | undefined>) {
+  return {
+    hdrUpgrade: headers.upgrade,
+    hdrConnection: headers.connection,
+    hdrVersion: headers["sec-websocket-version"],
+    hdrExtensions: headers["sec-websocket-extensions"],
+    hdrProtocol: headers["sec-websocket-protocol"],
+    hasKey: typeof headers["sec-websocket-key"] === "string",
+    hasOrigin: typeof headers.origin === "string",
+  };
 }
