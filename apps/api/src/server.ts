@@ -100,6 +100,15 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
   void app.register((scoped, _o, done) => {
     scoped.get("/ws-probe", { websocket: true }, (socket, req) => {
       req.log.info("ws-probe connected");
+      if (req.url.includes("close=now")) {
+        socket.close(4403, "bot check failed");
+        return;
+      }
+      if (req.url.includes("close=later")) {
+        socket.send("about-to-close");
+        setTimeout(() => socket.close(4403, "bot check failed"), 300);
+        return;
+      }
       socket.send("immediate");
       setTimeout(() => socket.send("after-200ms"), 200);
       setTimeout(() => socket.send("after-2s"), 2000);
