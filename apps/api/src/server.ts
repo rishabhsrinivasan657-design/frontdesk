@@ -195,6 +195,9 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
           const verdict = admitted ? await admitted : "ok";
           if (verdict !== "ok") {
             req.log.warn({ verdict }, "ws refused by chat limits");
+            socket.send(
+              JSON.stringify({ type: "error", code: "rate_limited", message: `limits:${verdict}` }),
+            );
             socket.close(RATE_LIMITED, "rate limited");
             return undefined;
           }
@@ -206,6 +209,13 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
             const token = typeof req.query.ts === "string" ? req.query.ts : "";
             if (!(await bot.verify(token, ip))) {
               req.log.warn({ hadToken: token !== "" }, "ws refused by bot check");
+              socket.send(
+                JSON.stringify({
+                  type: "error",
+                  code: "server_error",
+                  message: "bot_check_failed",
+                }),
+              );
               socket.close(BOT_CHECK_FAILED, "bot check failed");
               return undefined;
             }
