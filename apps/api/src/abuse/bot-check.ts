@@ -35,14 +35,26 @@ export class TurnstileBotCheck implements BotCheck {
         }).toString(),
         signal: AbortSignal.timeout(TIMEOUT_MS),
       });
-      if (!res.ok) return false;
-      const body = (await res.json()) as { success?: unknown; hostname?: unknown };
-      return (
-        body.success === true &&
-        typeof body.hostname === "string" &&
-        this.o.hostnames.includes(body.hostname)
-      );
-    } catch {
+      if (!res.ok) {
+        console.warn(`Turnstile siteverify answered HTTP ${res.status}`);
+        return false;
+      }
+      const body = (await res.json()) as {
+        success?: unknown;
+        hostname?: unknown;
+        "error-codes"?: unknown;
+      };
+      if (body.success !== true) {
+        console.warn(`Turnstile rejected the token: ${JSON.stringify(body["error-codes"] ?? [])}`);
+        return false;
+      }
+      if (typeof body.hostname !== "string" || !this.o.hostnames.includes(body.hostname)) {
+        console.warn(`Turnstile token is for ${String(body.hostname)}, not TURNSTILE_HOSTNAMES`);
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.warn(`Turnstile siteverify failed: ${error instanceof Error ? error.name : "error"}`);
       return false;
     }
   }
