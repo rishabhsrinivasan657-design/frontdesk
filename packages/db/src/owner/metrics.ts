@@ -35,6 +35,8 @@ export interface MetricsReport {
     feedback: { avgRating: number | null; count: number };
     /** Resolved handoffs by what came of them; `not_needed` = an unnecessary handoff (§12). */
     handoffOutcomes: Record<HandoffOutcome, number>;
+    /** Calendar writes with no `confirmed` audit entry before them. The gate makes this 0. */
+    unsafeActions: number;
   };
   /** One entry per day of the window, oldest first, days without conversations included. */
   daily: DailyMetrics[];
@@ -139,6 +141,14 @@ export async function metrics(
     from handoffs h join conversations c on c.id = h.session_id
     where ${window} and h.outcome is not null group by 1`,
   );
+  const [unsafe] = await rows<{ count: number }>(
+    db,
+    sql`select count(*)::int as count
+    from audit_log a join conversations c on c.id = a.session_id
+    where ${window} and a.stage = 'executed'
+      and not exists (select 1 from audit_log b
+        where b.action_id = a.action_id and b.stage = 'confirmed' and b.seq < a.seq)`,
+  );
   const handoffOutcomes = Object.fromEntries(
     HANDOFF_OUTCOMES.map((o) => [o, outcomeRows.find((r) => r.outcome === o)?.count ?? 0]),
   ) as Record<HandoffOutcome, number>;
@@ -186,6 +196,7 @@ export async function metrics(
       avgCostUsd: conversations ? sum("cost") / conversations : null,
       feedback: { avgRating: rated?.avg ?? null, count: rated?.count ?? 0 },
       handoffOutcomes,
+      unsafeActions: unsafe?.count ?? 0,
       latency: {
         stt: p("stt"),
         llmTtft: p("llmTtft"),

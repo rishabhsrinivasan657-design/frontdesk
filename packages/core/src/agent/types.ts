@@ -103,6 +103,19 @@ export interface HandoffTicket {
   summary: string;
   transcript: TranscriptEntry[];
   createdAt: string;
+  /** Who the guest is and what they asked for, as far as the session knows (never the model). */
+  details?: HandoffDetails;
+}
+
+/** The owner's follow-up facts. Labels are in the business timezone; each field only if known. */
+export interface HandoffDetails {
+  name?: string;
+  contact?: string;
+  /** "Saturday, November 7". */
+  date?: string;
+  /** "7:00 PM": only when one slot was actually proposed or booked. */
+  time?: string;
+  partySize?: number;
 }
 
 export function newSession(id: string, now: Date): SessionState {

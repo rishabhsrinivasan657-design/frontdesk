@@ -41,7 +41,13 @@ async function start(withOwner = true) {
   const c = chat();
   // Every route set the api registers, so the guard test sees all of them.
   const ownerRoutes = [
-    ownerRestRoutes({ reads: {} as OwnerReads, calendarId: null, now: () => new Date() }),
+    ownerRestRoutes({
+      reads: {} as OwnerReads,
+      calendarId: null,
+      now: () => new Date(),
+      calendar: c.deps.calendar,
+      config: c.deps.config,
+    }),
     ownerLiveRoutes({
       hub: c.hub,
       sessions: c.deps.sessions,

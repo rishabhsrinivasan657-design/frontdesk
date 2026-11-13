@@ -1,3 +1,4 @@
+import { CalendarUnavailableError } from "@frontdesk/core";
 import type { BookingRow, ConversationSummary, MetricsReport } from "@frontdesk/db";
 import bcrypt from "bcryptjs";
 import type { FastifyInstance } from "fastify";
@@ -45,6 +46,7 @@ const bookingRow = (o: Partial<BookingRow>): BookingRow => ({
   end: "2026-11-07T01:30:00.000Z",
   executedAt: "2026-11-04T18:01:00.000Z",
   emailed: true,
+  voice: false,
   ...o,
 });
 const report = {
@@ -84,8 +86,9 @@ afterEach(async () => {
 
 async function start(calendarId: string | null = CAL) {
   const reads = fakeReads();
+  const deps = memoryDeps();
   const chat: ChatContext = {
-    deps: memoryDeps(),
+    deps,
     log: new InMemoryConversationLog(),
     price: { input: 0, output: 0 },
     newSessionId: () => "sess_x",
@@ -97,7 +100,15 @@ async function start(calendarId: string | null = CAL) {
     webOrigins: [ORIGIN],
     logger: false,
     owner: testOwner({ email: EMAIL, passwordHash: bcrypt.hashSync(PASSWORD, 4) }),
-    ownerRoutes: [ownerRestRoutes({ reads, calendarId, now: () => NOW })],
+    ownerRoutes: [
+      ownerRestRoutes({
+        reads,
+        calendarId,
+        now: () => NOW,
+        calendar: deps.calendar,
+        config: deps.config,
+      }),
+    ],
   });
   const res = await app.inject({
     method: "POST",
@@ -114,7 +125,7 @@ async function start(calendarId: string | null = CAL) {
       headers: { cookie, origin: ORIGIN, "content-type": "application/json" },
       payload: JSON.stringify(body),
     });
-  return { reads, get, post };
+  return { reads, deps, get, post };
 }
 
 describe("owner REST routes", () => {
@@ -238,6 +249,91 @@ describe("owner REST routes", () => {
       ttsStart: { p50: 150, p95: 300 },
       firstOutput: { p50: 800, p95: 1800 },
     });
+  });
+});
+
+describe("owner calendar", () => {
+  const at = (iso: string) => new Date(iso);
+
+  it("shows the day's reservations from the calendar, joined to their conversations", async () => {
+    const { get, deps, reads } = await start();
+    const made = await deps.calendar.createReservation({
+      start: at("2026-11-07T19:00:00-05:00"),
+      end: at("2026-11-07T20:30:00-05:00"),
+      tableId: "t4-1",
+      partySize: 4,
+      name: "Bo Chen",
+      contact: "bo@example.com",
+      notes: "",
+    });
+    await deps.calendar.createReservation({
+      start: at("2026-11-05T18:00:00-05:00"),
+      end: at("2026-11-05T19:30:00-05:00"),
+      tableId: "t2-1",
+      partySize: 2,
+      name: "Ana Ruiz",
+      contact: "ana@example.com",
+      notes: "",
+    });
+    reads.listBookings.mockResolvedValue([
+      bookingRow({ reservationId: made.id, sessionId: "sess_9", voice: true }),
+    ]);
+    const res = await get("/owner/calendar?date=2026-11-07");
+    expect(res.statusCode).toBe(200);
+    const body = res.json<{
+      today: string;
+      label: string;
+      tables: unknown[];
+      reservations: unknown[];
+      week: { date: string; bookings: number; guests: number }[];
+    }>();
+    expect(body.today).toBe("2026-11-04");
+    expect(body.label).toBe("Saturday, November 7");
+    expect(body.tables.length).toBeGreaterThan(0);
+    expect(body.reservations).toEqual([
+      expect.objectContaining({
+        id: made.id,
+        name: "Bo Chen",
+        startLabel: "7:00 PM",
+        sessionId: "sess_9",
+        voice: true,
+        calendarUrl: calendarEventUrl(made.id, CAL),
+      }),
+    ]);
+    expect(body.week).toHaveLength(7);
+    expect(body.week.find((d) => d.date === "2026-11-05")).toMatchObject({
+      bookings: 1,
+      guests: 2,
+    });
+  });
+
+  it("a reservation Front Desk has no log of still shows, without a conversation", async () => {
+    const { get, deps } = await start(null);
+    await deps.calendar.createReservation({
+      start: at("2026-11-04T18:00:00-05:00"),
+      end: at("2026-11-04T19:30:00-05:00"),
+      tableId: "t2-2",
+      partySize: 2,
+      name: "Walk-in",
+      contact: "",
+      notes: "",
+    });
+    const body = (await get("/owner/calendar")).json<{ date: string; reservations: unknown[] }>();
+    expect(body.date).toBe("2026-11-04");
+    expect(body.reservations).toEqual([
+      expect.objectContaining({ name: "Walk-in", sessionId: null, voice: null, calendarUrl: null }),
+    ]);
+  });
+
+  it("rejects a malformed date, and says when the calendar is down", async () => {
+    const { get, deps } = await start();
+    expect((await get("/owner/calendar?date=tomorrow")).statusCode).toBe(400);
+    vi.spyOn(deps.calendar, "listReservations").mockRejectedValue(
+      new CalendarUnavailableError("down"),
+    );
+    const res = await get("/owner/calendar");
+    expect(res.statusCode).toBe(503);
+    expect(res.json()).toEqual({ error: "calendar_unavailable" });
   });
 });
 
