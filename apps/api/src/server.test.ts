@@ -192,6 +192,29 @@ function spyGuard(o: { connect?: ConnectVerdict; turn?: TurnVerdict } = {}) {
 }
 
 describe("chat limits (M10)", () => {
+  it("with one trusted hop, counts the visitor's address, not the proxy's (Render)", async () => {
+    const { guard, seen } = spyGuard();
+    const { url } = await start({
+      chatGuard: guard,
+      trustProxy: (address, hop) => hop === 0 && address === "127.0.0.1",
+    });
+    const client = await connect(url, {
+      origin: ORIGIN,
+      "x-forwarded-for": "198.51.100.9, 203.0.113.7",
+    });
+    await client.next("session");
+    // The rightmost entry is the one the proxy added; anything left of it a client could write.
+    expect(seen.connect).toEqual(["203.0.113.7"]);
+  });
+
+  it("an untrusted peer can't claim a forwarded address", async () => {
+    const { guard, seen } = spyGuard();
+    const { url } = await start({ chatGuard: guard, trustProxy: [] });
+    const client = await connect(url, { origin: ORIGIN, "x-forwarded-for": "203.0.113.7" });
+    await client.next("session");
+    expect(seen.connect).toEqual(["127.0.0.1"]);
+  });
+
   it("closes with 4429 when connect is refused", async () => {
     const { guard } = spyGuard({ connect: "too_many_sessions" });
     const { url } = await start({ chatGuard: guard });

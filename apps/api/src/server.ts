@@ -26,7 +26,7 @@ export interface ServerOptions {
   /** Per-IP and per-session limits on the public chat (M10); none when undefined. */
   chatGuard?: ChatGuard;
   /** Peers allowed to say who the client is (X-Forwarded-For). Defaults to loopback only. */
-  trustProxy?: string[];
+  trustProxy?: string[] | ((address: string, hop: number) => boolean);
   /** false for silence; a stream to capture log lines (tests). Defaults to stdout. */
   logger?: boolean | { stream: { write(line: string): void } };
 }
