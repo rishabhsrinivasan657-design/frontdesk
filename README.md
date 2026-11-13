@@ -41,16 +41,16 @@ _A 7-minute walkthrough recorded on the live site: booking a table by voice, int
 
 ## Status: what works today
 
-| Area                                                            | State                                                                                                                                                                                                                                                      |
-| --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Book, reschedule, cancel, change party size, FAQ, human handoff | ✅ Implemented and tested (unit, e2e, 100-scenario evals)                                                                                                                                                                                                  |
-| Voice: orb, hands-free, barge-in, natural in-browser voice      | ✅ Implemented (Chrome and Edge are best; Safari works; other browsers fall back to chat)                                                                                                                                                                  |
-| Real Google Calendar writes and Gmail confirmations             | ✅ Implemented, against a demo calendar                                                                                                                                                                                                                    |
-| Owner dashboard: day calendar, handoffs, metrics, audit trail   | ✅ Implemented                                                                                                                                                                                                                                             |
-| Abuse limits, bot check, PII retention, production guard        | ✅ Implemented                                                                                                                                                                                                                                             |
-| Public hosting                                                  | ⚠️ Live on Render's free tier. The free services sleep when idle (first load takes about a minute), and chat connections on Render are still being stabilised. If the live demo won't connect, [run it locally](#quickstart): it takes about five minutes. |
-| Phone calls (a real number)                                     | ❌ Not built. Voice is in the browser only. Telephony is the next step (the speech layer is swappable)                                                                                                                                                     |
-| A real restaurant using it                                      | ❌ Not yet. All bookings land on a demo calendar                                                                                                                                                                                                           |
+| Area                                                            | State                                                                                                                                                                                                                                                     |
+| --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Book, reschedule, cancel, change party size, FAQ, human handoff | ✅ Implemented and tested (unit, e2e, 100-scenario evals)                                                                                                                                                                                                 |
+| Voice: orb, hands-free, barge-in, natural in-browser voice      | ✅ Implemented (Chrome and Edge are best; Safari works; other browsers fall back to chat)                                                                                                                                                                 |
+| Real Google Calendar writes and Gmail confirmations             | ✅ Implemented, against a demo calendar                                                                                                                                                                                                                   |
+| Owner dashboard: day calendar, handoffs, metrics, audit trail   | ✅ Implemented                                                                                                                                                                                                                                            |
+| Abuse limits, bot check, PII retention, production guard        | ✅ Implemented                                                                                                                                                                                                                                            |
+| Public hosting                                                  | ⚠️ Live on Render's free tier. The free services sleep when idle (first load takes about a minute), and chat connections on Render are still being stabilised. If the live demo won't connect, [run it locally](#quickstart): it takes about ten minutes. |
+| Phone calls (a real number)                                     | ❌ Not built. Voice is in the browser only. Telephony is the next step (the speech layer is swappable)                                                                                                                                                    |
+| A real restaurant using it                                      | ❌ Not yet. All bookings land on a demo calendar                                                                                                                                                                                                          |
 
 ## The voice engineering
 
@@ -90,37 +90,103 @@ flowchart LR
 
 ## Prerequisites
 
-- Node 24 (`.nvmrc`)
-- pnpm 10, via `corepack enable`
-- Docker (for Postgres and Redis)
+- **Node 24** (see `.nvmrc`; `nvm use` picks it up)
+- **pnpm 10**, through `corepack enable` (comes with Node)
+- **Docker Desktop, running** (Postgres and Redis run in containers)
+- **A free [Gemini API key](https://aistudio.google.com/apikey)**: the only key you need
+- **Chrome or Edge** for voice. Safari works too; Firefox has no speech recognition, so you can only type there.
 
 ## Quickstart
 
+Running it locally takes about ten minutes, and it's the most reliable way to try Front Desk (the free hosted demo sleeps when idle).
+
+**1. Install**
+
 ```bash
+git clone https://github.com/rishabhsrinivasan657-design/frontdesk.git
+cd frontdesk
+corepack enable
 pnpm install
-cp .env.example .env
-pnpm infra:up      # postgres on :54320, redis on :63790
-pnpm verify        # lint, format check, typecheck, unit tests (no Docker needed)
-pnpm test:infra    # smoke tests against the running containers
 ```
 
-### Run the app locally
+pnpm may warn about "ignored build scripts". That's expected; nothing needs approving.
 
-Only a free [Gemini API key](https://aistudio.google.com/apikey) is required. Without Google credentials, bookings go to an in-memory calendar; see [docs/google-setup.md](docs/google-setup.md) to use a real one.
+**2. Configure.** Copy the example settings, then open `.env` and set `GEMINI_API_KEY=` to your key. To turn on the owner dashboard, also set the two `OWNER_` lines to the demo login below. Leave everything else as it is.
 
 ```bash
-# in .env: set GEMINI_API_KEY (and optionally OWNER_EMAIL + OWNER_PASSWORD_HASH from `pnpm owner:hash`)
-pnpm db:migrate
-pnpm api                                 # terminal 1: api on :4000
-pnpm --filter @frontdesk/worker start    # terminal 2: emails and background jobs
-pnpm web                                 # terminal 3: site on :3000
+cp .env.example .env
 ```
 
-Open <http://localhost:3000/talk> in Chrome, tap the orb and ask for a table. The owner dashboard is at <http://localhost:3000/dashboard>.
+```bash
+# in .env
+GEMINI_API_KEY=your-key
+OWNER_EMAIL=owner@example.com
+OWNER_PASSWORD_HASH='$2b$12$g06Ra4SZOQz7y9V/n2WDUucb/q.NF0mLe1KXxwcq9jVwCAgvIOWj2'
+```
 
-Host ports are non-standard on purpose so they don't clash with a local Postgres or Redis. Change `POSTGRES_PORT` / `REDIS_PORT` and the URLs in `.env` if you need different ones.
+That hash is for the local demo password `casa-fiorella-demo`. It only works on your own machine: the hosted demo has its own login, and you should never use this one on a server other people can reach.
 
-If `frontdesk_eval` is reported missing, your Postgres volume predates the init script. Recreate it with `docker compose down -v && pnpm infra:up` (this deletes local data).
+**3. Start the database and cache**
+
+```bash
+pnpm infra:up      # Postgres on :54320, Redis on :63790
+pnpm db:migrate    # creates the tables
+```
+
+**4. Run it, in two terminals**
+
+```bash
+pnpm api           # terminal 1: the api on :4000
+```
+
+```bash
+pnpm web           # terminal 2: the site on :3000
+```
+
+**5. Talk to it.** Open <http://localhost:3000/talk> in Chrome, allow the microphone, and tap the orb (or **🎧 Hands-free conversation**) and ask for a table. You can also just type.
+
+**6. See the owner's side.** Open <http://localhost:3000/dashboard> and sign in as `owner@example.com` with the password `casa-fiorella-demo`. Your bookings are on the Today page, and anything the receptionist passed to a human is under Handoffs.
+
+Bookings go to an in-memory calendar that resets when the api restarts. That's all you need to try it. The optional extras below add a real calendar, emails and the owner dashboard.
+
+### How the voice is set up
+
+Nothing to install: the voice runs in the browser.
+
+- **Listening:** the browser's built-in speech recognition (in Chrome and Edge it uses the browser's own speech service).
+- **Knowing when you've finished talking:** Silero VAD, a 2 MB model that comes with `pnpm install`. `pnpm web` copies it into `apps/web/public/vad` on every start.
+- **The natural voice:** Kokoro downloads from Hugging Face the first time you tap the orb, then stays in the browser's cache. It's about **330 MB** where the browser has WebGPU (most recent Chrome and Edge) and about **90 MB** otherwise, so the first download can take a few minutes on a slow connection. Until it finishes, that conversation uses the browser's built-in voice; once it's ready, **End chat** and start again to hear the natural voice. An optional free `ELEVENLABS_API_KEY` in `.env` covers that gap.
+
+### Optional extras
+
+- **Your own dashboard password** instead of the demo one: make a password hash, put it in `OWNER_PASSWORD_HASH='<the hash>'` in `.env` (single quotes, because the hash contains `$`), and restart `pnpm api`. To make the hash without your password showing on screen, run:
+
+  ```bash
+  read -rs PW && printf %s "$PW" | pnpm owner:hash; unset PW
+  ```
+
+  Type a password of at least 12 characters, then press Enter.
+
+- **A real Google Calendar and confirmation emails:** follow [docs/google-setup.md](docs/google-setup.md). Then run the worker in a third terminal; it needs these Google credentials to start:
+
+  ```bash
+  pnpm --filter @frontdesk/worker start
+  ```
+
+### Checks
+
+```bash
+pnpm verify        # lint, format check, typecheck and unit tests (no Docker needed)
+pnpm test:infra    # smoke tests against the running containers
+pnpm eval          # the scripted conversations (uses your Gemini key)
+```
+
+### Troubleshooting
+
+- **`pnpm infra:up` fails:** start Docker Desktop first.
+- **A port is already in use:** the host ports are non-standard on purpose so they don't clash with a local Postgres or Redis. Change `POSTGRES_PORT` / `REDIS_PORT` and the URLs in `.env`.
+- **The orb says voice isn't available:** use Chrome or Edge, and allow the microphone for `localhost`.
+- **`frontdesk_eval` is reported missing:** your Postgres volume predates the init script. Recreate it with `docker compose down -v && pnpm infra:up` (this deletes local data).
 
 ## Workspace
 
