@@ -11,8 +11,8 @@ For the launch demo, the guest page (`/talk`) became voice-first. A floating orb
 | 3   | `packages/core/src/gate/propose.ts`              | Stores `details` on the pending action along with `summary`.                                                |
 | 4   | `packages/core/src/protocol/messages.ts`         | `pending_action` (and a resumed `session`) carry an optional `details`.                                     |
 | 5   | `apps/web/src/components/talk/orb-state.ts`      | `orbState()`: idle, listening, thinking, speaking or unavailable, from real signals only.                   |
-| 6   | `apps/web/src/voice/use-voice.ts`                | `speaking`: the speaker's start and stop events, which used to be thrown away.                              |
-| 7   | `apps/web/src/components/talk/orb.tsx`           | The orb button and the live transcript.                                                                     |
+| 6   | `apps/web/src/voice/use-voice.ts`                | `agentSpeaking` (added by the hands-free work): the speaker's start and stop events, which the orb follows. |
+| 7   | `apps/web/src/components/talk/orb.tsx`           | The orb button, the hands-free pill and the live transcript.                                                |
 | 8   | `apps/web/src/components/talk/calendar-pane.tsx` | The booked slot on the restaurant's evening, with honest checkmarks.                                        |
 | 9   | `apps/web/src/components/chat/chat-window.tsx`   | The three-pane layout and when each pane appears.                                                           |
 | 10  | `apps/web/src/app/globals.css`                   | The `fd-*` animations and the warmer palette.                                                               |
@@ -39,7 +39,7 @@ For the launch demo, the guest page (`/talk`) became voice-first. A floating orb
 
 1. Both are built from the gate's data (`slot`, `reservation`, `args`), never the LLM's words, so the card and the read-back can't disagree. The browser would have to re-parse text or re-implement timezone rules.
 2. 7:00 PM, the restaurant's time. `cardDetails()` formats with `config.business.timezone`, and the browser only displays the label.
-3. Speaking: `orbState()` checks `speaking` before `busy`, and the speaker reports playing until its queue is empty.
+3. Speaking: `orbState()` checks `speaking` (fed from `agentSpeaking`) before `busy`, and the speaker reports playing until its queue is empty.
 4. An email is only sent when the guest gave an email address. The pane doesn't know which contact was given, so it doesn't claim it.
 
 </details>
