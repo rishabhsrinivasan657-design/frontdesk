@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import websocket from "@fastify/websocket";
 import Fastify, { type FastifyInstance } from "fastify";
 import type { BotCheck } from "./abuse/bot-check.js";
@@ -93,6 +94,45 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
   }
   void app.register(ownerPlugin(opts.owner, opts.webOrigins, opts.ownerRoutes), {
     prefix: "/owner",
+  });
+
+  // TEMPORARY Render probe (claude/ws-probe branch only): which server frames reach the client?
+  void app.register((scoped, _o, done) => {
+    scoped.get("/ws-probe", { websocket: true }, (socket, req) => {
+      req.log.info("ws-probe connected");
+      socket.send("immediate");
+      setTimeout(() => socket.send("after-200ms"), 200);
+      setTimeout(() => socket.send("after-2s"), 2000);
+      socket.on("message", (data: Buffer) => socket.send(`echo:${data.toString("utf8")}`));
+    });
+    done();
+  });
+  // Raw upgrade on a separate path, bypassing @fastify/websocket and ws entirely.
+  app.addHook("onReady", (done) => {
+    const others = app.server.listeners("upgrade") as ((...a: unknown[]) => void)[];
+    app.server.removeAllListeners("upgrade");
+    app.server.on(
+      "upgrade",
+      (req: import("node:http").IncomingMessage, sock: import("node:net").Socket, head: Buffer) => {
+        if (!req.url?.startsWith("/raw-probe")) {
+          for (const l of others) l.call(app.server, req, sock, head);
+          return;
+        }
+        app.log.info("raw-probe connected");
+        const key = String(req.headers["sec-websocket-key"] ?? "");
+        const accept = createHash("sha1")
+          .update(key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11")
+          .digest("base64");
+        const frame = (t: string) => Buffer.concat([Buffer.from([0x81, t.length]), Buffer.from(t)]);
+        sock.on("error", () => sock.destroy());
+        sock.write(
+          `HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ${accept}\r\n\r\n`,
+        );
+        setTimeout(() => sock.write(frame("raw-after-200ms")), 200);
+        setTimeout(() => sock.write(frame("raw-after-2s")), 2000);
+      },
+    );
+    done();
   });
 
   // Sessions that passed the bot check but may not be stored yet (no turn), by expiry time.
