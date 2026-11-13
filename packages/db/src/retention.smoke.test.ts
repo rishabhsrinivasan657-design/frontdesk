@@ -52,6 +52,7 @@ async function seed(o: { source: "live" | "pilot"; startedAt: string; seeded?: b
     reason: "human_requested",
     summary: "Ana Ruiz wants a private room",
     transcript: [{ role: "caller", text: "Ana Ruiz here", turnId: "t1" }],
+    details: { name: "Ana Ruiz", contact: "ana.handoff@example.com", partySize: 9 },
     createdAt: o.startedAt,
     resolvedAt: o.startedAt,
     notes: "Called Ana on 555-0100",
@@ -110,7 +111,14 @@ describe("purgePilotPii", () => {
     const result = await purgePilotPii(conn.db, { before: BEFORE, now: NOW });
     expect(result.conversations).toBeGreaterThanOrEqual(1);
     const out = await dump(id);
-    for (const pii of ["Ana", "ana@example.com", "555-0100", "nut allergy", "private room"]) {
+    for (const pii of [
+      "Ana",
+      "ana@example.com",
+      "ana.handoff@example.com",
+      "555-0100",
+      "nut allergy",
+      "private room",
+    ]) {
       expect(out).not.toContain(pii);
     }
     const [c] = await conn.db.select().from(conversations).where(eq(conversations.id, id));

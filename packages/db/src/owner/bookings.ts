@@ -21,6 +21,8 @@ export interface BookingRow {
   executedAt: string;
   /** The confirmation email: sent, failed every attempt so far, or not attempted. */
   emailed: boolean | null;
+  /** The guest talked to Front Desk (at least one spoken turn), rather than only typing. */
+  voice: boolean;
 }
 
 const STATUS: Record<ActionKind, BookingStatus> = {
@@ -50,6 +52,7 @@ export async function listBookings(
     at: Date;
     email_sent: boolean;
     email_failed: boolean;
+    voice: boolean;
   }>(
     db,
     sql`select * from (
@@ -58,7 +61,9 @@ export async function listBookings(
         exists (select 1 from audit_log e where e.action_id = a.action_id
           and e.stage = 'email_sent') as email_sent,
         exists (select 1 from audit_log e where e.action_id = a.action_id
-          and e.stage = 'email_failed') as email_failed
+          and e.stage = 'email_failed') as email_failed,
+        exists (select 1 from turns t where t.conversation_id = a.session_id
+          and t.stt_ms is not null) as voice
       from audit_log a join conversations c on c.id = a.session_id
       where a.stage = 'executed' and a.result ? 'id' and ${sourceIs(o.source)}
       order by a.result->>'id', a.seq desc
@@ -80,5 +85,6 @@ export async function listBookings(
     end: isoOf(r.result.end),
     executedAt: isoOf(r.at),
     emailed: r.email_sent ? true : r.email_failed ? false : null,
+    voice: r.voice,
   }));
 }

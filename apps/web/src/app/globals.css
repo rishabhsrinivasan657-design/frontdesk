@@ -2,12 +2,13 @@
 
 /*
  * Front Desk design system (design-system/front-desk/MASTER.md, "Trattoria warm").
- * Brand: appetizing red + warm gold on cream. shadcn/ui token names, design-system values.
+ * Brand: appetizing red + warm gold on cream (launch polish: warm neutral page and borders, so
+ * red is kept for what matters: the guest's words, actions and the booked slot). shadcn/ui token names, design-system values.
  * Ruling: the master's "vibrant block" style is toned down to flat cards with 1px borders,
  * so dense data stays readable; its colors, fonts and spacing are used as generated.
  */
 :root {
-  --background: #fef2f2;
+  --background: #faf6f0;
   --foreground: #450a0a;
   --card: #ffffff;
   --card-foreground: #450a0a;
@@ -19,10 +20,10 @@
   --accent: #a16207;
   --accent-foreground: #ffffff;
   --muted: #f0edf1;
-  --muted-foreground: #475569;
+  --muted-foreground: #6b5d55;
   --destructive: #dc2626;
-  --border: #fecaca;
-  --input: #fecaca;
+  --border: #ece2d8;
+  --input: #e3d5c8;
   --ring: #dc2626;
   --radius: 0.5rem;
 
@@ -88,6 +89,258 @@ a[href],
 summary,
 select {
   cursor: pointer;
+}
+
+/* ── Talk page (launch polish): the orb, the panes and their motion. ── */
+
+/* The button stays put (a steady click target); only what's inside it floats. */
+.fd-orb {
+  position: relative;
+  display: grid;
+  place-items: center;
+  border-radius: 9999px;
+}
+.fd-orb-float {
+  position: absolute;
+  inset: 0;
+  animation: fd-float 6s ease-in-out infinite;
+}
+.fd-orb-ball {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background:
+    radial-gradient(circle at 32% 28%, rgb(255 255 255 / 0.85) 0 8%, transparent 30%),
+    radial-gradient(circle at 70% 75%, rgb(201 150 43 / 0.9), transparent 55%),
+    radial-gradient(circle at 40% 45%, #e0483f, #8f1d18 75%);
+  box-shadow:
+    0 30px 60px -20px rgb(143 29 24 / 0.55),
+    inset 0 -12px 30px rgb(0 0 0 / 0.18);
+  animation: fd-breathe 4s ease-in-out infinite;
+  transition: transform 0.3s ease;
+}
+.fd-orb:hover .fd-orb-ball {
+  transform: scale(1.04);
+}
+.fd-orb:disabled .fd-orb-float {
+  animation: none;
+}
+.fd-orb:disabled {
+  filter: grayscale(0.7);
+  opacity: 0.6;
+}
+.fd-orb-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: 2px solid rgb(200 49 43 / 0.45);
+  opacity: 0;
+  pointer-events: none;
+}
+.fd-orb[data-state="listening"] .fd-orb-ring {
+  animation: fd-ripple 1.8s cubic-bezier(0.2, 0.6, 0.3, 1) infinite;
+}
+.fd-orb[data-state="listening"] .fd-orb-ring:nth-child(3) {
+  animation-delay: 0.6s;
+}
+.fd-orb[data-state="listening"] .fd-orb-ring:nth-child(4) {
+  animation-delay: 1.2s;
+}
+.fd-orb[data-state="thinking"] .fd-orb-ball {
+  animation: fd-shimmer 1.2s linear infinite;
+}
+.fd-orb[data-state="thinking"]::after {
+  content: "";
+  position: absolute;
+  inset: -14px;
+  border-radius: 9999px;
+  border: 2px dashed rgb(201 150 43 / 0.6);
+  animation: fd-spin 3s linear infinite;
+}
+.fd-orb[data-state="speaking"] .fd-orb-ball {
+  animation: fd-talk 0.45s ease-in-out infinite alternate;
+}
+.fd-bars span {
+  width: 4px;
+  border-radius: 2px;
+  background: var(--primary);
+  animation: fd-bar 0.8s ease-in-out infinite;
+}
+.fd-bars span:nth-child(2) {
+  animation-delay: 0.1s;
+}
+.fd-bars span:nth-child(3) {
+  animation-delay: 0.25s;
+}
+.fd-bars span:nth-child(4) {
+  animation-delay: 0.15s;
+}
+.fd-bars span:nth-child(5) {
+  animation-delay: 0.3s;
+}
+
+.fd-pop {
+  animation: fd-pop 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+.fd-word {
+  display: inline-block;
+  animation: fd-word 0.25s both;
+}
+.fd-dots i {
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background: #c9b8ad;
+  animation: fd-blink 1s infinite;
+}
+.fd-dots i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.fd-dots i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+/* The booked slot fills in, then its label and the checks appear one by one. */
+.fd-slot::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--primary);
+  transform-origin: left;
+  animation: fd-fill 0.7s 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.fd-slot[data-kind="cancel"]::before {
+  background: var(--muted-foreground);
+}
+.fd-later {
+  animation: fd-rise 0.4s both;
+}
+
+@keyframes fd-float {
+  50% {
+    transform: translateY(-10px);
+  }
+}
+@keyframes fd-breathe {
+  50% {
+    transform: scale(1.03);
+    filter: saturate(1.1);
+  }
+}
+@keyframes fd-ripple {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+@keyframes fd-shimmer {
+  50% {
+    filter: hue-rotate(18deg) brightness(1.12);
+  }
+}
+@keyframes fd-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes fd-talk {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.07);
+  }
+  70% {
+    transform: scale(1.02);
+  }
+  100% {
+    transform: scale(1.09);
+  }
+}
+@keyframes fd-bar {
+  0%,
+  100% {
+    height: 4px;
+  }
+  50% {
+    height: 18px;
+  }
+}
+@keyframes fd-pop {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fd-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.fd-drop {
+  animation: fd-drop 0.45s both;
+}
+@keyframes fd-word {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+    filter: blur(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+@keyframes fd-blink {
+  50% {
+    transform: translateY(-4px);
+    background: var(--primary);
+  }
+}
+@keyframes fd-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes fd-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fd-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.fd-slide-in {
+  animation: fd-slide-in 0.6s 0.15s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
 @media (prefers-reduced-motion: reduce) {

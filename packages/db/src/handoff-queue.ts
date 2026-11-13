@@ -17,6 +17,7 @@ export class PgHandoffQueue implements HandoffQueue {
         reason: ticket.reason,
         summary: ticket.summary,
         transcript: ticket.transcript,
+        details: ticket.details ?? null,
         createdAt: ticket.createdAt,
       })
       // Ticket ids are deterministic for retried producers (e.g. the email worker).
@@ -37,6 +38,7 @@ export class PgHandoffQueue implements HandoffQueue {
       summary: r.summary,
       transcript: r.transcript as TranscriptEntry[],
       createdAt: iso(r.createdAt),
+      ...(r.details ? { details: r.details } : {}),
     }));
   }
 

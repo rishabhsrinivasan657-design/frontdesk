@@ -1,8 +1,10 @@
 # Front Desk
 
-**An AI receptionist that books real restaurant tables, and never writes to the calendar without the guest's explicit "yes".**
+**A voice AI receptionist that books real restaurant tables, and never writes to the calendar without the guest's explicit "yes".**
 
-Guests chat or talk to it in the browser. It checks availability, books, reschedules and cancels reservations in Google Calendar, emails a confirmation, and hands off to a human when it's unsure. The demo business is **Casa Fiorella**, a fictional family trattoria. Everything runs on free tiers ($0).
+🎬 **Demo video:** coming soon · 🌐 **Live demo:** coming soon (see [status](#status-what-works-today)) · Built end to end by Rishabh Srinivasan
+
+Small restaurants lose bookings because nobody can answer the phone during service, and the calls they do answer are the same five questions over and over. Front Desk takes that load: guests talk (or type) to it in the browser, it checks real availability, books, reschedules and cancels in Google Calendar, emails a confirmation, and hands anything tricky to a human. The demo business is **Casa Fiorella**, a fictional family trattoria. Everything runs on free tiers ($0).
 
 ![A real booking: the guest asks, the agent reads it back, the guest confirms, Calendar is written](docs/media/demo.gif)
 
@@ -18,7 +20,7 @@ Guests chat or talk to it in the browser. It checks availability, books, resched
 
   CI replays them with no API keys and fails on any regression.
 
-- **Owner dashboard.** Live conversations, transcripts with per-turn latency against a budget, an append-only audit trail, bookings, a handoff queue with outcomes, guest feedback and metrics. Real pilot data is kept apart from demo and eval data.
+- **Owner dashboard.** The home page is the restaurant's day as a calendar, one column per table, read from Google Calendar, with who is talking to Front Desk right now. Handoffs are cards that say who the guest is, what they wanted and what to do next. Metrics answer three questions: is it doing the job, what does it cost (paid-price estimate vs. the $0 actually spent), and how fast is it. Transcripts show per-turn latency and an append-only audit trail. Real pilot data is kept apart from demo and eval data.
 - **Voice.** Browser speech-to-text and text-to-speech, sentence streaming and barge-in.
 - **Built for strangers:**
   - per-IP and per-session rate limits, and a Cloudflare Turnstile bot check
@@ -34,14 +36,49 @@ Guests chat or talk to it in the browser. It checks availability, books, resched
 | **Owner: metrics**                                            | **Owner: guest feedback**                                                         |
 | ![Metrics dashboard](docs/media/06-dashboard-metrics.png)     | ![Feedback page](docs/media/07-dashboard-feedback.png)                            |
 
+## Status: what works today
+
+| Area                                                               | State                                                                                                   |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| Book, reschedule, cancel, change party size, FAQ, human handoff    | ✅ Implemented and tested (unit, e2e, 100-scenario evals)                                               |
+| Browser voice: speech in, speech out, sentence streaming, barge-in | ✅ Implemented (Chrome, Edge, Safari; other browsers fall back to chat)                                 |
+| Real Google Calendar writes and Gmail confirmations                | ✅ Implemented, against a demo calendar                                                                 |
+| Owner dashboard, audit trail, per-turn latency, feedback           | ✅ Implemented                                                                                          |
+| Abuse limits, bot check, PII retention, production guard           | ✅ Implemented                                                                                          |
+| Production stack (Docker, Caddy, HTTPS)                            | ✅ Built and run end to end; public hosting waiting on Oracle free-tier capacity                        |
+| Phone calls (a real number)                                        | ❌ Not built. Voice is in the browser only. Telephony is the next step (the STT/TTS layer is swappable) |
+| A real restaurant using it                                         | ❌ Not yet. All bookings land on a demo calendar                                                        |
+| Premium speech (Deepgram) and a smarter endpointer                 | 🔜 Planned                                                                                              |
+
+## The voice engineering
+
+Voice is the part of this I care about most, and most of the hard problems are about turn-taking, not the model:
+
+- **Endpointing.** Deciding when the guest has finished talking. Chrome's built-in endpointing ends the turn at the first pause, which cuts people off at "a table for… four". Front Desk listens continuously and runs its own silence timer, and tapping the mic sends immediately for people in a hurry. The trade-off (snappy vs. not cutting people off) is written up in [docs/learning/m7-voice.md](docs/learning/m7-voice.md).
+- **Barge-in that's safe.** Guests talk over the receptionist. Speaking mutes the reply and cancels the server's turn at the next safe point. If a confirmed booking was already being written, it is _not_ cancelled half-way, and what the guest said over the read-back is never taken as a "yes".
+- **Streaming by sentence.** The first sentence is spoken while the rest is still being generated.
+- **Measured, not guessed.** Every turn records STT, time to first token, tool time, TTS start and total against a latency budget, and the dashboard flags slow turns. On local runs with Gemini's free tier, real turns came in at about **1.5 s median, 2.5 s p95** to a full reply, with the first words in under a second (≈500 turns of my own testing, not real guests).
+
+## Key technical decisions
+
+- **The model proposes, code disposes.** Tools that write (book, move, cancel) only create a _pending action_. A deterministic gate reads it back in plain words, and only an unambiguous "yes" executes it, after re-checking the slot under a lock. An exhaustive test walks every two-message sequence to prove no write is reachable without a confirm.
+- **Calendar is the source of truth.** No shadow bookings table to drift out of sync; availability is computed from Calendar plus the business config.
+- **Untrusted text stays untrusted.** The guest's words are fenced as data in the prompt, never instructions, and the gate makes injected "it's already confirmed" tricks inert. Before a reply goes out, every time, date, price and number in it must come from the business config, a tool result, or the guest's own words (grounding check). Prompt-injection scenarios are part of the eval suite.
+- **Evals gate CI.** Recorded conversations replay with no API keys, so every PR is checked against the same 100 scenarios.
+- **Swappable providers.** The LLM, speech-to-text and text-to-speech all sit behind interfaces, so moving to a paid model, Deepgram, or a phone line doesn't touch the agent.
+
 ## How it's built
 
-```
-Browser (/talk: chat + voice) ──WebSocket──▶ api (Fastify) ──▶ core: agent loop, gate, guardrails
-Browser (/dashboard: owner) ──▶ web (Next.js) ──▶ api /owner/*        │
-                                                     Gemini (free) ◀───┤──▶ Google Calendar (source of truth)
-                                    Postgres: conversations, audit ◀───┤
-                                 Redis: sessions, limits, job queue ◀───┘──▶ worker ──▶ Gmail confirmations
+```mermaid
+flowchart LR
+  G["Guest browser<br/>/talk: chat + voice"] -- WebSocket --> API["api (Fastify)"]
+  O["Owner browser<br/>/dashboard"] --> WEB["web (Next.js)"] --> API
+  API --> CORE["core: agent loop<br/>confirmation gate<br/>guardrails"]
+  CORE <--> LLM["Gemini (free tier)"]
+  CORE <--> CAL["Google Calendar<br/>(source of truth)"]
+  API --> PG[("Postgres<br/>conversations, audit")]
+  API --> R[("Redis<br/>sessions, limits, queue")]
+  R --> W["worker"] --> GM["Gmail confirmations"]
 ```
 
 - **Design:** [docs/superpowers/specs/2026-10-22-frontdesk-design.md](docs/superpowers/specs/2026-10-22-frontdesk-design.md).

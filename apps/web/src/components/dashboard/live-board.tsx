@@ -11,11 +11,18 @@ import { type LiveCard, applyLiveEvent } from "@/dashboard/live-state";
 import type { LiveSession } from "@/dashboard/types";
 import { cn } from "@/lib/utils";
 
+/** Fired on `window` with the number of guests talking to Front Desk right now. */
+export const LIVE_COUNT_EVENT = "frontdesk:live-count";
+
 type Connection = "connecting" | "live" | "reconnecting";
 
 /** Active conversations, streaming (spec §10 Live). Resyncs from the snapshot on every (re)connect. */
 export function LiveBoard({ initial }: { initial: LiveSession[] }) {
   const [cards, setCards] = useState<LiveCard[]>(initial);
+  // The Today page's "Live now" tile listens for this, so it never needs a second stream.
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent(LIVE_COUNT_EVENT, { detail: cards.length }));
+  }, [cards.length]);
   const [connection, setConnection] = useState<Connection>("connecting");
   const [now, setNow] = useState(() => Date.now());
 

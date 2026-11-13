@@ -6,6 +6,18 @@ import { HANDOFF_REASONS } from "../agent/types.js";
 const ACTION_KINDS = ["book", "reschedule", "cancel"] as const;
 const ms = z.number().nonnegative();
 
+/** `PendingAction.details`: the slot as display labels, for the guest's booking card. */
+const CardDetailsSchema = z.strictObject({
+  date: z.string(),
+  time: z.string(),
+  partySize: z.number().int().positive(),
+  name: z.string(),
+  times: z.array(z.string()),
+  from: z
+    .strictObject({ date: z.string(), time: z.string(), partySize: z.number().int().positive() })
+    .optional(),
+});
+
 export const ClientMessageSchema = z.discriminatedUnion("type", [
   z.strictObject({
     type: z.literal("user_text"),
@@ -33,6 +45,7 @@ export const ServerMessageSchema = z.discriminatedUnion("type", [
     kind: z.enum(ACTION_KINDS),
     summary: z.string(),
     expiresAt: z.string(),
+    details: CardDetailsSchema.optional(),
   }),
   z.strictObject({
     type: z.literal("action_result"),
@@ -76,6 +89,7 @@ export const ServerMessageSchema = z.discriminatedUnion("type", [
         kind: z.enum(ACTION_KINDS),
         summary: z.string(),
         expiresAt: z.string(),
+        details: CardDetailsSchema.optional(),
       })
       .optional(),
     handoff: z.strictObject({ reason: z.enum(HANDOFF_REASONS), message: z.string() }).optional(),

@@ -4,6 +4,7 @@ import { LLMError } from "../llm/errors.js";
 import type { LLMChunk, LLMMessage } from "../llm/types.js";
 import { agentFixture } from "../testing/agent-fixtures.js";
 import type { TestLLM } from "../testing/test-llm.js";
+import { ServerMessageSchema } from "../protocol/messages.js";
 import { TurnInterrupted, promisesHandoff, readOnlyCalendar, runTurn } from "./loop.js";
 
 const text = (t: string): LLMChunk => ({ type: "text", text: t });
@@ -90,6 +91,15 @@ describe("runTurn", () => {
     expect(result.messages.map((m) => m.type)).toContain("pending_action");
     expect(s.deps.calendar.writes).toEqual([]);
     expect(await s.deps.sessions.getPending("s1")).toBeDefined();
+  });
+
+  it("sends the slot's display details with the read-back, valid on the wire", async () => {
+    const s = setup();
+    const result = await proposeBooking(s);
+    const pending = result.messages.find((m) => m.type === "pending_action");
+    expect(ServerMessageSchema.parse(pending)).toMatchObject({
+      details: { date: "Saturday, November 7", time: "7:00 PM", partySize: 4, name: "Bo Chen" },
+    });
   });
 
   it("proposes only the first of several write calls", async () => {

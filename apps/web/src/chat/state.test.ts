@@ -94,6 +94,19 @@ describe("chatReducer", () => {
     expect(state.messages.map((m) => m.text)).toEqual(["Hello."]);
   });
 
+  it("a pending action carries the slot details for the calendar view", () => {
+    const details = {
+      date: "Saturday, November 7",
+      time: "7:00 PM",
+      partySize: 4,
+      name: "Bo Chen",
+      times: ["6:30 PM", "6:45 PM", "7:00 PM", "7:15 PM", "7:30 PM"],
+    };
+    const state = run([server({ ...pending, details })]);
+    expect(state.pending?.details).toEqual(details);
+    expect(run([server(pending)]).pending?.details).toBeUndefined();
+  });
+
   it("a pending action shows a card; executed closes it", () => {
     const shown = run([server(pending)]);
     expect(shown.pending?.outcome).toBeUndefined();

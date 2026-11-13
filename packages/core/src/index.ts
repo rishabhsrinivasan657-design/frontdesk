@@ -16,6 +16,15 @@ export {
   type Table,
 } from "./availability/tables.js";
 export type { Reservation, Slot, SlotRequest } from "./availability/types.js";
+export {
+  dayRange,
+  dayView,
+  weekStrip,
+  type DayReservation,
+  type DayView,
+  type WeekDay,
+} from "./availability/day-view.js";
+export { localToday } from "./availability/local-time.js";
 export type {
   LLMChunk,
   LLMMessage,
@@ -37,6 +46,8 @@ export {
   type ActionKind,
   type AuditEvent,
   type AuditStage,
+  type CardDetails,
+  type HandoffDetails,
   type HandoffReason,
   type HandoffTicket,
   type PendingAction,

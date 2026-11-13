@@ -86,6 +86,7 @@ describe("PgHandoffQueue", () => {
       summary: "Confirmation email failed after 5 attempts.",
       transcript: [{ role: "caller", text: "Book a table", turnId: "turn_1" }],
       createdAt: "2026-11-06T23:02:00.000Z",
+      details: { name: "Bo Chen", contact: "bo@example.com", date: "Saturday, November 7" },
     };
     await queue.enqueue(ticket);
     const open = await queue.open();

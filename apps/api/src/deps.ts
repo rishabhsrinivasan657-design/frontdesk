@@ -130,6 +130,8 @@ export async function buildDeps(env: Env): Promise<{
       reads: pgOwnerReads(pg.db, { timezone: config.business.timezone, now }),
       calendarId: google ? google.calendarId : null,
       now,
+      calendar,
+      config,
     }),
   ];
 

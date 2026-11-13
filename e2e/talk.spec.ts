@@ -13,10 +13,19 @@ test("books a table end to end", async ({ page }) => {
   await expect(page.getByTestId("agent-message").last()).toHaveText(OPEN);
   await say(page, details());
   const card = page.getByTestId("confirmation-card");
-  await expect(card).toContainText("a table for 4 on Saturday, November 7 at 7:00 PM");
+  await expect(card).toContainText("Saturday, November 7 · 7:00 PM · Party of 4");
+  // The full read-back is the bubble right above the card.
+  await expect(page.getByTestId("agent-message").last()).toContainText(
+    "a table for 4 on Saturday, November 7 at 7:00 PM",
+  );
   await card.getByRole("button", { name: "Confirm" }).click();
   await expect(page.getByTestId("action-status")).toHaveText("Booked");
   await expect(page.getByTestId("latency")).toContainText("total");
+  // The calendar pane shows the slot the gate just wrote, from the server's details.
+  const calendar = page.getByTestId("calendar-pane");
+  await expect(calendar).toContainText("Saturday, November 7");
+  await expect(calendar.getByTestId("booked-slot")).toContainText("party of 4");
+  await expect(calendar).toContainText("7:00 PM");
 
   const session = await sessionId(page);
   await expect

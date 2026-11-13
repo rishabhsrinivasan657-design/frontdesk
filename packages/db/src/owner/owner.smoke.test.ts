@@ -382,6 +382,29 @@ describe("metrics", () => {
     expect(m.hasSeeded).toBe(false);
   });
 
+  it("counts a calendar write with no confirmation before it as unsafe", async () => {
+    const { now, at } = freshWindow();
+    const safe = await conversation({ tag: uid(), startedAt: at, tokens: [10, 1], costUsd: 0 });
+    await audit(
+      safe,
+      `act_${uid()}`,
+      "book",
+      ["proposed", "confirmed", "executed"],
+      booking(`ev_${uid()}`, "2031-06-12T23:00:00.000Z"),
+    );
+    const before = await metrics(db, { source: "live", days: 7, now, timezone: TZ });
+    const unsafe = await conversation({ tag: uid(), startedAt: at, tokens: [10, 1], costUsd: 0 });
+    await audit(
+      unsafe,
+      `act_${uid()}`,
+      "book",
+      ["proposed", "executed"],
+      booking(`ev_${uid()}`, "2031-06-12T23:00:00.000Z"),
+    );
+    const after = await metrics(db, { source: "live", days: 7, now, timezone: TZ });
+    expect(after.summary.unsafeActions - before.summary.unsafeActions).toBe(1);
+  });
+
   it("metrics never mix sources", async () => {
     const { now, at } = freshWindow();
     await conversation({ tag: uid(), startedAt: at, source: "live" });

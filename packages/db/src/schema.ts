@@ -111,6 +111,8 @@ export const handoffs = pgTable(
     reason: text("reason").notNull(),
     summary: text("summary").notNull(),
     transcript: jsonb("transcript").notNull(),
+    /** core's HandoffDetails: who the guest is and what they asked for. Wiped by retention. */
+    details: jsonb("details"),
     createdAt: at("created_at").notNull(),
     resolvedAt: at("resolved_at"),
     notes: text("notes"),

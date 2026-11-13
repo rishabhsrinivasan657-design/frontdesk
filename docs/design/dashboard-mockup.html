@@ -1,0 +1,1586 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Front Desk dashboard mockup</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display+SC:wght@700&family=Karla:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #faf6f0;
+        --card: #fff;
+        --fg: #3b0d0c;
+        --muted: #6b5d55;
+        --line: #ece2d8;
+        --soft: #f5eee6;
+        --red: #c8312b;
+        --red-soft: #fbe7e4;
+        --gold: #a16207;
+        --gold-soft: #fbf1dc;
+        --green: #2f7d4a;
+        --green-soft: #e3f2e8;
+        --amber: #b45309;
+        --amber-soft: #fef3c7;
+        --blue: #2f5f8a;
+        --blue-soft: #e4eef7;
+        --teal: #0d9488;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font-family: Karla, system-ui, sans-serif;
+        font-size: 14px;
+      }
+      h1,
+      h2 {
+        font-family: "Playfair Display SC", serif;
+        margin: 0;
+      }
+      h1 {
+        font-size: 30px;
+      }
+      h2 {
+        font-size: 18px;
+      }
+      .app {
+        display: grid;
+        grid-template-columns: 232px 1fr;
+        min-height: 100vh;
+      }
+      nav {
+        border-right: 1px solid var(--line);
+        padding: 20px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        background: #fffaf4;
+        position: sticky;
+        top: 0;
+        height: 100vh;
+      }
+      .brand {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        padding: 0 6px 18px;
+      }
+      .logo {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        background: var(--red);
+        color: #fff;
+        display: grid;
+        place-items: center;
+      }
+      .brand b {
+        font-family: "Playfair Display SC", serif;
+        font-size: 18px;
+        display: block;
+      }
+      .brand small {
+        color: var(--gold);
+        letter-spacing: 0.2em;
+        font-size: 10px;
+        font-weight: 700;
+      }
+      nav button {
+        all: unset;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        padding: 9px 12px;
+        border-radius: 10px;
+        cursor: pointer;
+        color: var(--fg);
+      }
+      nav button:hover {
+        background: var(--soft);
+      }
+      nav button.on {
+        background: var(--red-soft);
+        color: var(--red);
+        font-weight: 600;
+      }
+      nav .count {
+        margin-left: auto;
+        background: var(--red);
+        color: #fff;
+        border-radius: 999px;
+        font-size: 11px;
+        padding: 1px 7px;
+        font-weight: 700;
+      }
+      nav .sep {
+        flex: 1;
+      }
+      nav .owner {
+        font-size: 12px;
+        color: var(--muted);
+        padding: 8px 12px;
+        border-top: 1px solid var(--line);
+      }
+      main {
+        padding: 28px 32px 48px;
+        min-width: 0;
+      }
+      .view {
+        display: none;
+      }
+      .view.on {
+        display: block;
+        animation: fade 0.3s;
+      }
+      @keyframes fade {
+        from {
+          opacity: 0;
+          transform: translateY(6px);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+      .head {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 20px;
+      }
+      .head p {
+        margin: 4px 0 0;
+        color: var(--muted);
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border-radius: 999px;
+        padding: 3px 10px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .seg {
+        display: inline-flex;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        overflow: hidden;
+        background: #fff;
+      }
+      .seg button {
+        all: unset;
+        padding: 6px 12px;
+        cursor: pointer;
+        font-size: 13px;
+      }
+      .seg button.on {
+        background: var(--red-soft);
+        color: var(--red);
+        font-weight: 600;
+      }
+      .note {
+        font-size: 12px;
+        color: var(--muted);
+        background: var(--gold-soft);
+        border: 1px dashed #e7cf9e;
+        padding: 8px 12px;
+        border-radius: 10px;
+        margin-top: 14px;
+      }
+
+      /* ── Today ── */
+      .kpis {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+      .kpi {
+        padding: 14px 16px;
+      }
+      .kpi small {
+        color: var(--muted);
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .kpi b {
+        display: block;
+        font-size: 28px;
+        margin-top: 4px;
+        font-variant-numeric: tabular-nums;
+      }
+      .kpi span {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .live-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #3fb36b;
+        animation: ping 1.8s infinite;
+      }
+      @keyframes ping {
+        0% {
+          box-shadow: 0 0 0 0 rgba(63, 179, 107, 0.6);
+        }
+        80%,
+        100% {
+          box-shadow: 0 0 0 8px rgba(63, 179, 107, 0);
+        }
+      }
+      .kpi.alert {
+        border-color: #f3c8c3;
+        background: #fff7f5;
+        cursor: pointer;
+      }
+      .kpi.alert b {
+        color: var(--red);
+      }
+      .week {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 8px;
+        margin-bottom: 14px;
+      }
+      .day {
+        all: unset;
+        cursor: pointer;
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        background: #fff;
+      }
+      .day b {
+        display: block;
+        font-size: 13px;
+      }
+      .day span {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .day .bar {
+        height: 5px;
+        border-radius: 3px;
+        background: var(--soft);
+        margin-top: 8px;
+        overflow: hidden;
+      }
+      .day .bar i {
+        display: block;
+        height: 100%;
+        background: var(--red);
+        border-radius: 3px;
+      }
+      .day.on {
+        border-color: var(--red);
+        box-shadow: 0 0 0 3px var(--red-soft);
+      }
+      .day.closed {
+        opacity: 0.5;
+        cursor: default;
+      }
+      .split {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        align-items: start;
+        margin-top: 16px;
+      }
+      .cal {
+        padding: 0;
+        overflow: hidden;
+      }
+      .cal-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--line);
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .chips {
+        display: flex;
+        gap: 6px;
+      }
+      .chips button {
+        all: unset;
+        cursor: pointer;
+        padding: 6px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        font-size: 13px;
+        background: #fff;
+      }
+      .chips button.on {
+        background: var(--fg);
+        color: #fff;
+        border-color: var(--fg);
+      }
+      .legend {
+        display: flex;
+        gap: 14px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .legend i {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 3px;
+        margin-right: 5px;
+        vertical-align: -1px;
+      }
+      .scroller {
+        overflow: auto;
+        max-height: 760px;
+        position: relative;
+      }
+      .vcal {
+        display: grid;
+        position: relative;
+      }
+      .vcal .corner,
+      .vcal .th {
+        position: sticky;
+        top: 0;
+        z-index: 4;
+        background: #fffaf4;
+        border-bottom: 1px solid var(--line);
+      }
+      .vcal .corner {
+        left: 0;
+        z-index: 6;
+      }
+      .vcal .th {
+        padding: 12px 10px;
+        text-align: center;
+        border-left: 1px solid var(--line);
+      }
+      .vcal .th b {
+        display: block;
+        font-size: 14px;
+      }
+      .vcal .th small {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .vcal .gutter {
+        position: sticky;
+        left: 0;
+        z-index: 3;
+        background: #fffaf4;
+        border-right: 1px solid var(--line);
+      }
+      .vcal .gutter span {
+        position: absolute;
+        right: 10px;
+        font-size: 12px;
+        color: var(--muted);
+        transform: translateY(-50%);
+        white-space: nowrap;
+      }
+      .vcal .heat {
+        position: sticky;
+        left: 76px;
+        z-index: 3;
+        background: #fffaf4;
+        border-right: 1px solid var(--line);
+      }
+      .vcal .heat i {
+        position: absolute;
+        left: 3px;
+        right: 3px;
+        border-radius: 3px;
+      }
+      .vcal .col {
+        position: relative;
+        border-left: 1px solid var(--line);
+        background-image:
+          linear-gradient(var(--line) 1px, transparent 1px),
+          linear-gradient(#f6efe7 1px, transparent 1px);
+        background-size:
+          100% var(--hour),
+          100% calc(var(--hour) / 2);
+      }
+      .ev {
+        position: absolute;
+        left: 6px;
+        right: 6px;
+        border-radius: 12px;
+        padding: 10px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        cursor: pointer;
+        overflow: hidden;
+        transition:
+          transform 0.15s,
+          box-shadow 0.15s;
+        animation: drop 0.45s both;
+      }
+      @keyframes drop {
+        from {
+          opacity: 0;
+          transform: translateY(-8px);
+        }
+      }
+      .ev:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 24px -12px rgba(59, 13, 12, 0.45);
+        z-index: 2;
+      }
+      .ev b {
+        font-size: 14px;
+        line-height: 1.2;
+      }
+      .ev .t {
+        font-size: 12px;
+        opacity: 0.85;
+      }
+      .ev .meta {
+        margin-top: auto;
+        display: flex;
+        gap: 6px;
+        font-size: 11px;
+        font-weight: 600;
+      }
+      .ev .meta span {
+        padding: 2px 7px;
+        border-radius: 999px;
+      }
+      .ev.fd {
+        background: #fdecea;
+        border-left: 4px solid var(--red);
+        color: #5b1410;
+      }
+      .ev.fd .meta span {
+        background: #fff;
+        color: var(--red);
+      }
+      .ev.staff {
+        background: var(--blue-soft);
+        border-left: 4px solid var(--blue);
+        color: #1f3d58;
+      }
+      .ev.staff .meta span {
+        background: #fff;
+        color: var(--blue);
+      }
+      .ev.new {
+        box-shadow: 0 0 0 2px var(--red);
+      }
+      .now {
+        position: absolute;
+        left: 90px;
+        right: 0;
+        height: 2px;
+        background: var(--gold);
+        z-index: 5;
+        pointer-events: none;
+      }
+      .now::before {
+        content: "Now 6:40";
+        position: absolute;
+        left: -82px;
+        top: -9px;
+        font-size: 11px;
+        font-weight: 700;
+        color: #fff;
+        background: var(--gold);
+        padding: 1px 6px;
+        border-radius: 6px;
+      }
+      .side {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .side .card {
+        padding: 14px 16px;
+      }
+      .sh,
+      .side h3 {
+        margin: 0 0 10px;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--muted);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .chat {
+        display: flex;
+        gap: 10px;
+        padding: 8px 0;
+        border-top: 1px solid var(--soft);
+      }
+      .chat:first-of-type {
+        border-top: 0;
+      }
+      .chat .av {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: var(--soft);
+        display: grid;
+        place-items: center;
+        font-size: 13px;
+        flex-shrink: 0;
+      }
+      .chat p {
+        margin: 0;
+        font-size: 13px;
+      }
+      .chat small {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .waves {
+        display: inline-flex;
+        gap: 2px;
+        align-items: center;
+        height: 12px;
+        margin-left: 4px;
+      }
+      .waves i {
+        width: 2px;
+        background: #3fb36b;
+        border-radius: 1px;
+        animation: w 0.9s infinite ease-in-out;
+      }
+      .waves i:nth-child(2) {
+        animation-delay: 0.15s;
+      }
+      .waves i:nth-child(3) {
+        animation-delay: 0.3s;
+      }
+      @keyframes w {
+        0%,
+        100% {
+          height: 3px;
+        }
+        50% {
+          height: 12px;
+        }
+      }
+      .mini-ho {
+        padding: 8px 0;
+        border-top: 1px solid var(--soft);
+        font-size: 13px;
+        cursor: pointer;
+      }
+      .mini-ho:first-of-type {
+        border-top: 0;
+      }
+      .pop {
+        position: fixed;
+        z-index: 10;
+        width: 300px;
+        padding: 16px;
+        box-shadow: 0 20px 50px -20px rgba(59, 13, 12, 0.45);
+        display: none;
+      }
+      .pop.on {
+        display: block;
+        animation: fade 0.2s;
+      }
+      .pop h4 {
+        margin: 0 0 2px;
+        font-size: 16px;
+      }
+      .pop dl {
+        display: grid;
+        grid-template-columns: 90px 1fr;
+        gap: 6px 10px;
+        margin: 12px 0;
+        font-size: 13px;
+      }
+      .pop dt {
+        color: var(--muted);
+      }
+      .pop dd {
+        margin: 0;
+      }
+      .pop .acts {
+        display: flex;
+        gap: 8px;
+      }
+      .btn {
+        all: unset;
+        cursor: pointer;
+        padding: 7px 12px;
+        border-radius: 9px;
+        font-weight: 600;
+        font-size: 13px;
+        border: 1px solid var(--line);
+        background: #fff;
+      }
+      .btn.primary {
+        background: var(--red);
+        color: #fff;
+        border-color: var(--red);
+      }
+      .btn.green {
+        background: var(--green);
+        color: #fff;
+        border-color: var(--green);
+      }
+
+      /* ── Handoffs ── */
+      .tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 14px;
+      }
+      .hcards {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+        gap: 16px;
+      }
+      .hc {
+        padding: 0;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        transition:
+          opacity 0.4s,
+          transform 0.4s;
+      }
+      .hc.done {
+        opacity: 0;
+        transform: scale(0.97);
+      }
+      .hc-top {
+        padding: 14px 18px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--line);
+      }
+      .hc-body {
+        padding: 14px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .who {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+      .who .av {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--soft);
+        display: grid;
+        place-items: center;
+        font-weight: 700;
+      }
+      .who b {
+        display: block;
+        font-size: 15px;
+      }
+      .who small {
+        color: var(--muted);
+      }
+      .want {
+        background: var(--soft);
+        border-radius: 12px;
+        padding: 10px 12px;
+      }
+      .want small,
+      .todo small {
+        display: block;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--muted);
+        margin-bottom: 4px;
+        font-weight: 600;
+      }
+      .todo {
+        border-left: 3px solid var(--gold);
+        padding: 2px 0 2px 12px;
+      }
+      .facts {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .facts span {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 3px 8px;
+        font-size: 12px;
+      }
+      details {
+        font-size: 13px;
+      }
+      summary {
+        cursor: pointer;
+        color: var(--muted);
+        font-weight: 600;
+      }
+      .tx {
+        margin-top: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        max-height: 220px;
+        overflow: auto;
+      }
+      .tx div {
+        max-width: 85%;
+        padding: 6px 10px;
+        border-radius: 12px;
+      }
+      .tx .g {
+        align-self: flex-end;
+        background: var(--red);
+        color: #fff;
+      }
+      .tx .a {
+        background: var(--soft);
+      }
+      .hc-foot {
+        padding: 12px 18px 16px;
+        border-top: 1px solid var(--line);
+        background: #fffcf8;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .hc-foot textarea {
+        font: inherit;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 8px 10px;
+        resize: none;
+        height: 38px;
+      }
+      .outs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .resolved-row {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        padding: 10px 16px;
+        border-top: 1px solid var(--soft);
+        font-size: 13px;
+      }
+      .resolved-row:first-child {
+        border-top: 0;
+      }
+
+      /* ── Metrics ── */
+      .msec {
+        margin-bottom: 22px;
+      }
+      .msec > h2 {
+        margin-bottom: 4px;
+      }
+      .msec > p {
+        margin: 0 0 12px;
+        color: var(--muted);
+      }
+      .mgrid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+      }
+      .m {
+        padding: 16px;
+      }
+      .m small {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .m b {
+        display: block;
+        font-size: 30px;
+        margin: 4px 0;
+        font-variant-numeric: tabular-nums;
+      }
+      .m span {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .m .ok {
+        color: var(--green);
+        font-weight: 600;
+      }
+      .m .warn {
+        color: var(--amber);
+        font-weight: 600;
+      }
+      .gauge {
+        height: 6px;
+        background: var(--soft);
+        border-radius: 3px;
+        margin-top: 10px;
+        position: relative;
+      }
+      .gauge i {
+        position: absolute;
+        inset: 0 auto 0 0;
+        background: var(--green);
+        border-radius: 3px;
+        animation: grow 0.8s both;
+      }
+      .gauge em {
+        position: absolute;
+        top: -4px;
+        bottom: -4px;
+        width: 2px;
+        background: var(--fg);
+      }
+      .cost {
+        display: grid;
+        grid-template-columns: 1.2fr 1fr;
+        gap: 12px;
+      }
+      .cost .card {
+        padding: 16px 18px;
+      }
+      .ctable {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      .ctable td {
+        padding: 8px 0;
+        border-top: 1px solid var(--soft);
+      }
+      .ctable td:last-child {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+        font-weight: 600;
+      }
+      .ctable tr:first-child td {
+        border-top: 0;
+      }
+      .big0 {
+        font-size: 44px;
+        font-weight: 700;
+        color: var(--green);
+      }
+      .stages {
+        padding: 16px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .stage {
+        display: grid;
+        grid-template-columns: 180px 1fr 140px;
+        gap: 12px;
+        align-items: center;
+        font-size: 13px;
+      }
+      .stage .track {
+        height: 10px;
+        background: var(--soft);
+        border-radius: 5px;
+        position: relative;
+      }
+      .stage .track i {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        border-radius: 5px;
+        animation: grow 0.8s both;
+      }
+      .stage .track em {
+        position: absolute;
+        top: -4px;
+        bottom: -4px;
+        width: 2px;
+        background: var(--fg);
+        opacity: 0.5;
+      }
+      .spark {
+        padding: 16px 18px;
+      }
+      svg text {
+        font-family: Karla, sans-serif;
+      }
+      @media (max-width: 1200px) {
+        .kpis {
+          grid-template-columns: repeat(3, 1fr);
+        }
+        .split {
+          grid-template-columns: 1fr;
+        }
+        .mgrid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .cost {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <nav>
+        <div class="brand">
+          <div class="logo">🍴</div>
+          <div><b>Casa Fiorella</b><small>FRONT DESK</small></div>
+        </div>
+        <button class="on" data-v="today">📅 Today</button>
+        <button data-v="handoffs">🤝 Handoffs <span class="count" id="navcount">3</span></button>
+        <button data-v="conv">💬 Conversations</button>
+        <button data-v="feedback">⭐ Feedback</button>
+        <button data-v="metrics">📊 Metrics</button>
+        <div class="sep"></div>
+        <div class="owner">owner@casafiorella.test</div>
+      </nav>
+
+      <main>
+        <!-- TODAY -->
+        <section class="view on" id="today">
+          <div class="head">
+            <div>
+              <h1>Saturday, November 14</h1>
+              <p>Your restaurant's book for the night, live.</p>
+            </div>
+            <div class="seg"><button class="on">Day</button><button>Week</button></div>
+          </div>
+
+          <div class="kpis">
+            <div class="card kpi">
+              <small><span class="live-dot"></span>Live now</small><b id="livecount">2</b
+              ><span>guests talking to Front Desk</span>
+            </div>
+            <div class="card kpi">
+              <small>Bookings tonight</small><b>23</b><span>19 by Front Desk · 4 by staff</span>
+            </div>
+            <div class="card kpi">
+              <small>Guests expected</small><b>71</b><span>of 52 seats · 2 turns</span>
+            </div>
+            <div class="card kpi">
+              <small>Busiest</small><b>7:30 PM</b><span>14 of 16 tables full</span>
+            </div>
+            <div class="card kpi alert" data-go="handoffs">
+              <small>Needs you</small><b>3</b><span>handoffs to resolve →</span>
+            </div>
+          </div>
+
+          <div class="week" id="week"></div>
+
+          <div class="card cal">
+            <div class="cal-top">
+              <h2>Tonight</h2>
+              <div class="chips" id="chips">
+                <button class="on" data-f="all">All 16 tables</button
+                ><button data-f="2">2-tops</button><button data-f="4">4-tops</button
+                ><button data-f="6">6-tops</button>
+              </div>
+              <div class="legend">
+                <span
+                  ><i style="background: #fdecea; border-left: 3px solid var(--red)"></i>Booked by
+                  Front Desk</span
+                ><span
+                  ><i style="background: var(--blue-soft); border-left: 3px solid var(--blue)"></i
+                  >Added by staff</span
+                >
+              </div>
+            </div>
+            <div class="scroller" id="scroller"><div class="vcal" id="vcal"></div></div>
+          </div>
+
+          <div class="split">
+            <div class="card" style="padding: 16px 18px">
+              <h3 class="sh">
+                Live now
+                <span class="pill" style="background: var(--green-soft); color: var(--green)"
+                  >● streaming</span
+                >
+              </h3>
+              <div id="live"></div>
+            </div>
+            <div class="card" style="padding: 16px 18px">
+              <h3 class="sh">
+                Needs you
+                <a
+                  href="#"
+                  data-go="handoffs"
+                  style="
+                    font-size: 12px;
+                    color: var(--red);
+                    text-transform: none;
+                    letter-spacing: 0;
+                  "
+                  >See all →</a
+                >
+              </h3>
+              <div class="mini-ho" data-go="handoffs">
+                <span class="pill" style="background: var(--amber-soft); color: var(--amber)"
+                  >Party of 12</span
+                ><br />Daniel R. wants Saturday 7 PM for a birthday
+              </div>
+              <div class="mini-ho" data-go="handoffs">
+                <span class="pill" style="background: var(--red-soft); color: var(--red)"
+                  >Allergy</span
+                ><br />Severe nut allergy question before booking
+              </div>
+              <div class="mini-ho" data-go="handoffs">
+                <span class="pill" style="background: var(--blue-soft); color: var(--blue)"
+                  >Asked for a person</span
+                ><br />Wants to talk about a private dinner
+              </div>
+            </div>
+          </div>
+          <div class="note">
+            Mockup notes: the thin strip left of the tables shows how full each 15 minutes is.
+            Bookings come from the restaurant's Google Calendar (so staff-added ones show too: new
+            endpoint). "Live now" uses the existing live feed. Seats/tables come from the business
+            config.
+          </div>
+        </section>
+
+        <!-- HANDOFFS -->
+        <section class="view" id="handoffs">
+          <div class="head">
+            <div>
+              <h1>Handoffs</h1>
+              <p>
+                Guests Front Desk passed to you. Each card has what they wanted and what you need to
+                do.
+              </p>
+            </div>
+            <div class="seg" id="hoseg">
+              <button class="on" data-t="open">Open (3)</button
+              ><button data-t="res">Resolved (25)</button>
+            </div>
+          </div>
+          <div class="hcards" id="hcards"></div>
+          <div class="card" id="resolved" style="display: none"></div>
+          <div class="note">
+            Mockup notes: reason, summary and transcript exist today. The guest's name/contact and
+            the structured "facts" chips need a small addition when the handoff is created; "What to
+            do" is a fixed sentence per reason.
+          </div>
+        </section>
+
+        <section class="view" id="conv">
+          <div class="head">
+            <div>
+              <h1>Conversations</h1>
+              <p>
+                Unchanged in this mockup: every chat with transcript, tool calls, audit trail and
+                latency.
+              </p>
+            </div>
+          </div>
+        </section>
+        <section class="view" id="feedback">
+          <div class="head">
+            <div>
+              <h1>Feedback</h1>
+              <p>Unchanged (you said it's good): guest ratings and comments.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- METRICS -->
+        <section class="view" id="metrics">
+          <div class="head">
+            <div>
+              <h1>Metrics</h1>
+              <p>Is Front Desk doing its job, what does it cost, and how fast is it?</p>
+            </div>
+            <div class="seg">
+              <button>7 days</button><button class="on">30 days</button><button>90 days</button>
+            </div>
+          </div>
+
+          <div class="msec">
+            <h2>Is it doing the job?</h2>
+            <p>Out of 249 conversations in the last 30 days.</p>
+            <div class="mgrid">
+              <div class="card m">
+                <small>Task success</small><b>65.5%</b><span>ended with a confirmed booking</span>
+                <div class="gauge"><i style="width: 65.5%"></i></div>
+              </div>
+              <div class="card m">
+                <small>Handed to you</small><b>10%</b
+                ><span>25 of 249 · <span class="ok">22 were needed</span></span>
+                <div class="gauge"><i style="width: 88%; background: var(--teal)"></i></div>
+              </div>
+              <div class="card m">
+                <small>Guest rating</small><b>4.0<span style="font-size: 16px"> / 5</span></b
+                ><span>8 ratings</span>
+                <div class="gauge"><i style="width: 80%; background: var(--gold)"></i></div>
+              </div>
+              <div class="card m">
+                <small>Unsafe actions</small><b class="ok" style="color: var(--green)">0</b
+                ><span>no write without the guest's yes</span>
+                <div class="gauge"><i style="width: 100%"></i></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="msec">
+            <h2>What does it cost to run?</h2>
+            <p>
+              Front Desk runs entirely on free tiers. Here's what the same traffic would cost on
+              paid plans.
+            </p>
+            <div class="cost">
+              <div class="card">
+                <table class="ctable">
+                  <tr>
+                    <td>AI model (Gemini), at paid prices</td>
+                    <td>$0.00040 / conversation</td>
+                  </tr>
+                  <tr>
+                    <td>Tokens per conversation</td>
+                    <td>5,815</td>
+                  </tr>
+                  <tr>
+                    <td>This month's conversations</td>
+                    <td>249</td>
+                  </tr>
+                  <tr>
+                    <td>Model cost this month, if paid</td>
+                    <td>$0.10</td>
+                  </tr>
+                  <tr>
+                    <td>Hosting, database, email</td>
+                    <td>$0 (free tiers)</td>
+                  </tr>
+                </table>
+              </div>
+              <div
+                class="card"
+                style="display: flex; flex-direction: column; justify-content: center; gap: 4px"
+              >
+                <small style="color: var(--muted)">Actually spent this month</small>
+                <div class="big0">$0.00</div>
+                <span style="color: var(--muted); font-size: 13px"
+                  >Spend cap is set to $0, and the server refuses to start with any paid
+                  setting.</span
+                >
+              </div>
+            </div>
+          </div>
+
+          <div class="msec">
+            <h2>How fast is it?</h2>
+            <p>Typical (p50) time for each step of a reply. The black tick is the budget.</p>
+            <div class="card stages" id="stages"></div>
+          </div>
+
+          <div class="msec">
+            <h2>Trends</h2>
+            <p>Daily task success and handoffs (the existing charts stay, restyled).</p>
+            <div class="card spark">
+              <svg viewBox="0 0 900 160" width="100%" height="160" id="spark"></svg>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div class="card pop" id="pop"></div>
+
+    <script>
+      const $ = (s, el = document) => el.querySelector(s);
+      const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+
+      // Navigation
+      function go(v) {
+        $$("nav button").forEach((b) => b.classList.toggle("on", b.dataset.v === v));
+        $$(".view").forEach((s) => s.classList.toggle("on", s.id === v));
+        $("#pop").classList.remove("on");
+        window.scrollTo(0, 0);
+      }
+      $$("nav button").forEach((b) => (b.onclick = () => go(b.dataset.v)));
+      document.addEventListener("click", (e) => {
+        const t = e.target.closest("[data-go]");
+        if (t) {
+          e.preventDefault();
+          go(t.dataset.go);
+        }
+      });
+
+      // Week strip
+      const days = [
+        ["Thu 12", 14, 40],
+        ["Fri 13", 21, 66],
+        ["Sat 14", 23, 71],
+        ["Sun 15", 16, 44],
+        ["Mon 16", 0, 0],
+        ["Tue 17", 6, 15],
+        ["Wed 18", 9, 24],
+      ];
+      $("#week").innerHTML = days
+        .map(([d, n, g], i) =>
+          n === 0
+            ? `<div class="day closed"><b>${d}</b><span>Closed</span><div class="bar"></div></div>`
+            : `<button class="day ${i === 2 ? "on" : ""}"><b>${d}</b><span>${n} bookings · ${g} guests</span><div class="bar"><i style="width:${Math.round((g / 80) * 100)}%"></i></div></button>`,
+        )
+        .join("");
+
+      // Timeline by table, 5:00 PM to 10:30 PM in 15-min steps (22 steps)
+      const START = 17 * 60,
+        STEPS = 22,
+        STEP = 15;
+      const tables = [...Array(8)]
+        .map((_, i) => `2-top ${i + 1}`)
+        .concat(
+          [...Array(6)].map((_, i) => `4-top ${i + 1}`),
+          ["6-top 1", "6-top 2"],
+        );
+      const names = [
+        "Maya Patel",
+        "Sam Lee",
+        "The Okafors",
+        "Ana Ruiz",
+        "Bo Chen",
+        "Priya N.",
+        "J. Moreau",
+        "Kim family",
+        "Luca B.",
+        "Sofia G.",
+        "T. Nguyen",
+        "Hassan A.",
+        "Ellie W.",
+        "Ravi K.",
+        "Grace L.",
+        "Marco D.",
+        "Yuki T.",
+        "Omar S.",
+        "Lena F.",
+        "Chris P.",
+        "Ada M.",
+        "Noah R.",
+        "Zoe H.",
+      ];
+      const fmt = (m) => {
+        const h = Math.floor(m / 60),
+          mm = m % 60;
+        return `${((h + 11) % 12) + 1}:${String(mm).padStart(2, "0")} PM`;
+      };
+      let seed = 7;
+      const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+      const bookings = [];
+      let k = 0;
+      tables.forEach((t, ti) => {
+        let at = START + Math.floor(rnd() * 4) * 15;
+        while (k < names.length && at < START + 270 && rnd() > 0.18) {
+          const size = t.startsWith("2")
+            ? rnd() > 0.3
+              ? 2
+              : 1
+            : t.startsWith("4")
+              ? 3 + Math.floor(rnd() * 2)
+              : 5 + Math.floor(rnd() * 2);
+          const len = 90;
+          bookings.push({
+            ti,
+            t,
+            start: at,
+            len,
+            name: names[k],
+            size,
+            by: k % 6 === 4 ? "staff" : "fd",
+            isNew: k === 1,
+          });
+          k++;
+          at += len + Math.floor(rnd() * 4) * 15;
+          if (rnd() > 0.55) break;
+        }
+      });
+      const HOUR = 120; // px per hour: roomy, like a calendar day view
+      const END = START + STEPS * STEP;
+      const y = (m) => ((m - START) / 60) * HOUR;
+      const occ = [...Array(STEPS)].map(
+        (_, i) =>
+          bookings.filter((b) => START + i * STEP >= b.start && START + i * STEP < b.start + b.len)
+            .length,
+      );
+      const label = (t) => {
+        const [kind, n] = t.split(" ");
+        return `Table ${kind.replace("-top", "")}·${n}`;
+      };
+      function renderCal(filter) {
+        const cols = tables
+          .map((t, ti) => ({ t, ti }))
+          .filter(({ t }) => filter === "all" || t.startsWith(filter));
+        const vcal = document.getElementById("vcal");
+        vcal.style.gridTemplateColumns = `76px 14px repeat(${cols.length}, minmax(170px, 1fr))`;
+        vcal.style.setProperty("--hour", HOUR + "px");
+        const H = y(END);
+        let h = `<div class="corner"></div><div class="corner" style="left:76px"></div>`;
+        h += cols
+          .map(({ t, ti }) => {
+            const n = bookings.filter((b) => b.ti === ti).length;
+            return `<div class="th"><b>${t.replace("-top", "-top ·")}</b><small>${t[0]} seats · ${n} booking${n === 1 ? "" : "s"}</small></div>`;
+          })
+          .join("");
+        h += `<div class="gutter" style="height:${H}px">${[...Array(6)].map((_, i) => `<span style="top:${i * HOUR + (i === 0 ? 8 : 0)}px">${fmt(START + i * 60)}</span>`).join("")}</div>`;
+        h += `<div class="heat" style="height:${H}px">${occ.map((o, i) => `<i style="top:${((i * STEP) / 60) * HOUR + 1}px;height:${(STEP / 60) * HOUR - 2}px;background:${o >= 13 ? "#d9655d" : o >= 8 ? "#eeb3ac" : "#f6e1dd"}" title="${fmt(START + i * STEP)}: ${o} of 16 tables"></i>`).join("")}</div>`;
+        h += cols
+          .map(
+            ({ ti }, ci) =>
+              `<div class="col" style="height:${H}px">${bookings
+                .filter((b) => b.ti === ti)
+                .map(
+                  (b, j) => `
+      <div class="ev ${b.by} ${b.isNew ? "new" : ""}" data-i="${bookings.indexOf(b)}" style="top:${y(b.start) + 3}px;height:${y(b.start + b.len) - y(b.start) - 6}px;animation-delay:${(ci * 0.03 + j * 0.06).toFixed(2)}s">
+        <b>${b.name}</b><span class="t">${fmt(b.start)} – ${fmt(b.start + b.len)}</span>
+        <div class="meta"><span>👥 ${b.size}</span><span>${b.by === "fd" ? (b.isNew ? "NEW · voice" : "Front Desk") : "Staff"}</span></div>
+      </div>`,
+                )
+                .join("")}</div>`,
+          )
+          .join("");
+        vcal.innerHTML = h;
+        const head = vcal.querySelector(".th").offsetHeight;
+        vcal.insertAdjacentHTML(
+          "beforeend",
+          `<div class="now" style="top:${y(18 * 60 + 40) + head}px"></div>`,
+        );
+      }
+      renderCal("all");
+      $$("#chips button").forEach(
+        (c) =>
+          (c.onclick = () => {
+            $$("#chips button").forEach((x) => x.classList.toggle("on", x === c));
+            renderCal(c.dataset.f);
+          }),
+      );
+      // Booking popover
+      $("#vcal").addEventListener("click", (e) => {
+        const el = e.target.closest(".ev");
+        if (!el) return;
+        const b = bookings[+el.dataset.i];
+        const r = el.getBoundingClientRect();
+        const pop = $("#pop");
+        pop.innerHTML = `<h4>${b.name}</h4><span class="pill" style="background:${b.by === "fd" ? "var(--red-soft);color:var(--red)" : "var(--blue-soft);color:var(--blue)"}">${b.by === "fd" ? "Booked by Front Desk" : "Added by staff"}</span>
+    <dl><dt>When</dt><dd>Sat, Nov 14 · ${fmt(b.start)}–${fmt(b.start + b.len)}</dd><dt>Party</dt><dd>${b.size} ${b.size === 1 ? "guest" : "guests"}</dd><dt>Table</dt><dd>${b.t}</dd><dt>Contact</dt><dd>${b.name.split(" ")[0].toLowerCase()}@example.com</dd>${b.by === "fd" ? `<dt>Booked</dt><dd>${b.isNew ? "4 minutes ago (voice)" : "Thu, 6:12 PM (chat)"}</dd><dt>Email</dt><dd>✓ confirmation sent</dd>` : ""}</dl>
+    <div class="acts">${b.by === "fd" ? `<button class="btn primary" data-go="conv">Open conversation</button>` : ""}<button class="btn">Open in Calendar ↗</button></div>`;
+        pop.style.left = Math.min(r.left, innerWidth - 320) + "px";
+        pop.style.top = Math.min(r.bottom + 8, innerHeight - 300) + "px";
+        pop.classList.add("on");
+        e.stopPropagation();
+      });
+      document.addEventListener("click", (e) => {
+        if (!e.target.closest("#pop")) $("#pop").classList.remove("on");
+      });
+
+      // Live now
+      const live = [
+        ["🎙️", "Voice · 1 min", "“Do you have anything for six on Sunday?”", true],
+        [
+          "💬",
+          "Chat · 3 min",
+          "Reading back: party of 2, Fri 8:15 PM. Waiting for their yes",
+          false,
+        ],
+      ];
+      $("#live").innerHTML = live
+        .map(
+          ([i, m, t, v]) =>
+            `<div class="chat"><div class="av">${i}</div><div><small>${m}${v ? '<span class="waves"><i></i><i></i><i></i></span>' : ""}</small><p>${t}</p></div></div>`,
+        )
+        .join("");
+
+      // Handoff cards
+      const REASONS = {
+        party_too_large: [
+          "Party too large",
+          "var(--amber-soft)",
+          "var(--amber)",
+          "Online booking stops at 8. Call them back to arrange a larger table, or combine tables.",
+        ],
+        allergy_safety: [
+          "Allergy question",
+          "var(--red-soft)",
+          "var(--red)",
+          "Front Desk doesn't give allergy advice. Call them back with the kitchen's answer before they book.",
+        ],
+        human_requested: [
+          "Asked for a person",
+          "var(--blue-soft)",
+          "var(--blue)",
+          "They asked for someone from the team. Call or email them back.",
+        ],
+      };
+      const handoffs = [
+        {
+          r: "party_too_large",
+          name: "Daniel Reyes",
+          contact: "(555) 014-2277",
+          when: "12 min ago",
+          via: "Voice",
+          want: "A table for 12 this Saturday at 7:00 PM for his mother's 60th birthday.",
+          facts: ["Sat, Nov 14", "7:00 PM", "12 guests", "Birthday"],
+          tx: [
+            ["g", "Hi, I'd like to book for Saturday at seven"],
+            ["a", "Of course! How many will be joining?"],
+            ["g", "Twelve of us, it's my mom's 60th"],
+            [
+              "a",
+              "Happy birthday to her! Parties over 8 are arranged by our team, so I'll pass this on and someone will call you back today.",
+            ],
+          ],
+        },
+        {
+          r: "allergy_safety",
+          name: "Ada Mensah",
+          contact: "ada.m@example.com",
+          when: "41 min ago",
+          via: "Chat",
+          want: "Wants to know if the kitchen can guarantee no tree nuts before booking for 2 on Friday.",
+          facts: ["Fri, Nov 13", "Party of 2", "Severe nut allergy"],
+          tx: [
+            ["g", "My partner has a severe tree nut allergy. Can you guarantee a nut-free meal?"],
+            [
+              "a",
+              "That's important to get right, so I'll have our team answer it directly rather than guess. Someone will reach out shortly.",
+            ],
+          ],
+        },
+        {
+          r: "human_requested",
+          name: "Priya Nair",
+          contact: "priya@example.com",
+          when: "2 h ago",
+          via: "Chat",
+          want: "Wants to talk to someone about a private dinner for 20 in December.",
+          facts: ["December", "~20 guests", "Private dinner"],
+          tx: [
+            ["g", "Can I speak to a manager about a private event?"],
+            ["a", "Sure, I'll connect you with our team. They'll reach out by email."],
+          ],
+        },
+      ];
+      function renderHandoffs() {
+        $("#hcards").innerHTML = handoffs
+          .map((h, i) => {
+            const [label, bg, fg, todo] = REASONS[h.r];
+            return `<div class="card hc" id="hc${i}">
+      <div class="hc-top"><span class="pill" style="background:${bg};color:${fg}">${label}</span><small style="color:var(--muted)">${h.via} · ${h.when}</small></div>
+      <div class="hc-body">
+        <div class="who"><div class="av">${h.name
+          .split(" ")
+          .map((s) => s[0])
+          .join("")}</div><div><b>${h.name}</b><small>${h.contact}</small></div></div>
+        <div class="want"><small>What they want</small>${h.want}</div>
+        <div class="facts">${h.facts.map((f) => `<span>${f}</span>`).join("")}</div>
+        <div class="todo"><small>What you need to do</small>${todo}</div>
+        <details><summary>Conversation (${h.tx.length} messages)</summary><div class="tx">${h.tx.map(([w, t]) => `<div class="${w}">${t}</div>`).join("")}</div></details>
+      </div>
+      <div class="hc-foot">
+        <textarea placeholder="Notes (optional): what you did"></textarea>
+        <div class="outs">
+          <button class="btn green" data-res="${i}">✓ Booked it</button>
+          <button class="btn" data-res="${i}">Resolved, no booking</button>
+          <button class="btn" data-res="${i}">Couldn't reach them</button>
+          <button class="btn" data-res="${i}">Wasn't needed</button>
+        </div>
+      </div>
+    </div>`;
+          })
+          .join("");
+      }
+      renderHandoffs();
+      let open = 3;
+      $("#hcards").addEventListener("click", (e) => {
+        const b = e.target.closest("[data-res]");
+        if (!b) return;
+        const card = $("#hc" + b.dataset.res);
+        card.classList.add("done");
+        setTimeout(() => (card.style.display = "none"), 400);
+        open--;
+        $("#navcount").textContent = open;
+        $("#hoseg button").textContent = `Open (${open})`;
+        if (!open) $("#navcount").style.display = "none";
+      });
+      $("#resolved").innerHTML = [
+        [
+          "Booked it",
+          "var(--green)",
+          "Party of 10 · Thu 7:30 PM · Tom H.",
+          "Called back, seated in the back room",
+        ],
+        [
+          "Wasn't needed",
+          "var(--muted)",
+          "Question about parking · Lucy K.",
+          "Front Desk could have answered this",
+        ],
+        [
+          "Couldn't reach them",
+          "var(--amber)",
+          "Late change · Fri 6 PM · M. Diaz",
+          "Left a voicemail twice",
+        ],
+      ]
+        .map(
+          ([o, c, w, n]) =>
+            `<div class="resolved-row"><span class="pill" style="background:var(--soft);color:${c}">${o}</span><b>${w}</b><span style="color:var(--muted)">“${n}”</span></div>`,
+        )
+        .join("");
+      $$("#hoseg button").forEach(
+        (b) =>
+          (b.onclick = () => {
+            $$("#hoseg button").forEach((x) => x.classList.toggle("on", x === b));
+            $("#hcards").style.display = b.dataset.t === "open" ? "" : "none";
+            $("#resolved").style.display = b.dataset.t === "res" ? "" : "none";
+          }),
+      );
+
+      // Metrics: stages
+      const stages = [
+        ["Hearing you (speech to text)", 310, 400],
+        ["First words of the reply", 773, 800],
+        ["AI thinking (first token)", 640, 700],
+        ["Starting to speak", 120, 150],
+        ["Whole reply", 1515, 1800],
+      ];
+      const max = 2000;
+      $("#stages").innerHTML = stages
+        .map(
+          ([n, v, b]) =>
+            `<div class="stage"><span>${n}</span><div class="track"><i style="width:${(v / max) * 100}%;background:${v <= b ? "var(--teal)" : "var(--amber)"}"></i><em style="left:${(b / max) * 100}%"></em></div><span><b>${v >= 1000 ? (v / 1000).toFixed(1) + " s" : v + " ms"}</b> <span style="color:${v <= b ? "var(--green)" : "var(--amber)"}">${v <= b ? "✓ in budget" : "over budget"}</span></span></div>`,
+        )
+        .join("");
+
+      // Metrics: trend
+      const pts = [...Array(30)].map((_, i) => 55 + Math.sin(i / 3) * 12 + (i % 5) * 2);
+      const ho = [...Array(30)].map((_, i) => 8 + Math.cos(i / 2.5) * 5);
+      const line = (arr, c) =>
+        `<polyline fill="none" stroke="${c}" stroke-width="2.5" points="${arr.map((v, i) => `${40 + i * 28},${140 - v * 1.2}`).join(" ")}"/>`;
+      $("#spark").innerHTML =
+        `${[0, 50, 100].map((y) => `<line x1="40" x2="880" y1="${140 - y * 1.2}" y2="${140 - y * 1.2}" stroke="#f0e6dc"/><text x="0" y="${144 - y * 1.2}" font-size="11" fill="#6b5d55">${y}%</text>`).join("")}${line(pts, "#c8312b")}${line(ho, "#0d9488")}<text x="760" y="20" font-size="12" fill="#c8312b">● Task success</text><text x="760" y="38" font-size="12" fill="#0d9488">● Handed off</text>`;
+    </script>
+  </body>
+</html>

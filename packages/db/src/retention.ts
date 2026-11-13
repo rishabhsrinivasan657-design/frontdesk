@@ -57,6 +57,7 @@ export async function purgePilotPii(
       .set({
         summary: REDACTED,
         transcript: [],
+        details: null,
         notes: sql`case when ${handoffs.notes} is null then null else ${REDACTED} end`,
       })
       .where(inArray(handoffs.sessionId, ids));

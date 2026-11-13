@@ -36,6 +36,13 @@
       "when": 1793048890718,
       "tag": "0004_retention_reason",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794536668205,
+      "tag": "0005_handoff_details",
+      "breakpoints": true
     }
   ]
 }
