@@ -11,9 +11,9 @@ export const COMPLETE_MS = 300;
  * anything that doesn't clearly sound finished waits longer than that.
  */
 export const NEUTRAL_MS = 1600;
-export const INCOMPLETE_MS = 2500;
+export const INCOMPLETE_MS = 3000;
 /** However unfinished it sounds, this much silence ends the turn. */
-export const HARD_CAP_MS = 3000;
+export const HARD_CAP_MS = 4000;
 /** Web Speech words lag the audio: wait until the text has been unchanged this long… */
 export const STABLE_MS = 200;
 /** …but never more than this past the window. */

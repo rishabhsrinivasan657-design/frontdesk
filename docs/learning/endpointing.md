@@ -32,8 +32,8 @@ It's still push-to-talk in this PR. Hands-free comes next and builds on this.
   | ---------------- | --------------------------------------- | --------------------------- |
   | complete         | "yes", "that's right", "my name is Ana" | 300 ms                      |
   | can't tell       | "I was wondering about the menu"        | 1.6 s (adapts, up to 2.5 s) |
-  | incomplete       | "a table for", "um", "my name is"       | 2.5 s                       |
-  | (always)         | anything                                | 3 s at most                 |
+  | incomplete       | "a table for", "um", "my name is"       | 3 s                         |
+  | (always)         | anything                                | 4 s at most                 |
 
   If the caller speaks again inside the window, nothing is sent. Their pause just becomes part of the sentence.
 
@@ -59,6 +59,11 @@ It's still push-to-talk in this PR. Hands-free comes next and builds on this.
 
 **Tuned on a real caller.** The first windows (0.7 s neutral, 2 s unfinished) still cut the user off. Their recording, run through the same Silero model, had mid-sentence pauses of about **0.8 s and 1.4 s**. So the neutral window became 1.6 s and the unfinished one 2.5 s, and adaptation can go up to 2.5 s. "Yes" still gets 300 ms. The cost is that a normal sentence waits about 1.6 s before the reply. Smart Turn (a model that hears whether your _intonation_ sounds finished) is the planned way to bring that back down without cutting anyone off.
 
+**Still cut off in hands-free (second round).** Two more fixes:
+
+- **Chrome ending its session by itself.** In continuous mode, Chrome sometimes ends a recognition session mid-sentence. We used to treat that as "the caller finished" and sent the half sentence. Now, if the caller has said something and _we_ didn't stop it (no tap, no end of turn), we restart recognition and keep adding to the same sentence. That's up to 3 times per utterance. The endpointer, not Chrome, decides when the turn is over.
+- **More patience for unfinished sentences.** "A table for…" or "um" now waits 3 s (was 2.5 s), and the absolute limit is 4 s (was 3 s). "Yes" still goes after 300 ms.
+
 **Live check.** I recorded a voice with `say` ("A table for… [1.2 s pause] four people on Friday at seven") and played it as Chrome's microphone. The real VAD ran on that audio, with scripted words lined up to it. Nothing was sent during the pause, and one message with the whole sentence went out 0.4 s after the speech ended. A second run taught us something: back then, a full request like "a table for four people on Friday" counted as finished, and it was sent before "at seven", at a breath pause. So only short answers ("yes", "no", "that's right") get the 300 ms window now. Full requests wait the adaptive window. Chrome's own recognition doesn't work in an automated browser, so a person with a real mic is still the final test.
 
 ## 4. Quiz
@@ -66,7 +71,7 @@ It's still push-to-talk in this PR. Hands-free comes next and builds on this.
 1. Why is "no new words for 1.5 s" a poor way to decide the caller has finished?
 2. What does the VAD tell us that Web Speech can't?
 3. The caller says "a table for", pauses 1 s, then says "four". Walk through what the endpointer does.
-4. Why does "yes" get a 300 ms window but "my name is" 2.5 s?
+4. Why does "yes" get a 300 ms window but "my name is" 3 s?
 5. What is transcript catch-up, and why is it bounded?
 6. How does the endpointer adapt to a slow speaker, and why is there an upper bound?
 7. What happens if the VAD model can't be downloaded?
@@ -77,7 +82,7 @@ It's still push-to-talk in this PR. Hands-free comes next and builds on this.
 
 1. Words arrive late and in bursts, so gaps in the words don't line up with gaps in the voice. A short timer fires mid-sentence, and a long one makes every reply slow.
 2. When the caller is actually making speech sounds, frame by frame, from the audio itself and with no network delay.
-3. VAD says silence; the text "a table for" is incomplete, so the endpointer waits 2.5 s. After 1 s the VAD hears speech again, so the window is cancelled and the 1 s pause is saved for adaptation. "four" arrives, the VAD hears silence, and "a table for four" can't be judged from the words, so the turn ends after the neutral window (1.6 s, or the caller's adapted window).
+3. VAD says silence; the text "a table for" is incomplete, so the endpointer waits 3 s. After 1 s the VAD hears speech again, so the window is cancelled and the 1 s pause is saved for adaptation. "four" arrives, the VAD hears silence, and "a table for four" can't be judged from the words, so the turn ends after the neutral window (1.6 s, or the caller's adapted window).
 4. "Yes" is a whole answer, and waiting longer only adds delay. "my name is" promises more: answering after 300 ms would cut the caller off.
 5. Waiting until the words have been unchanged for 200 ms after the window, so a late last word is included. It's bounded (600 ms) so a recogniser that keeps revising can't stall the reply.
 6. It saves pauses that turned out to be mid-sentence and uses their 90th percentile + 100 ms as the "can't tell" window. The 2.5 s cap stops one odd pause from making every reply slow.

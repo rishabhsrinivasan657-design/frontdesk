@@ -42,13 +42,13 @@ The spec §8 budget for "TTS start" is 150 ms (p50). The browser voice starts in
 
 ## 4. Potential holes
 
-| What could go wrong                                | What happens                                                                                                      |
-| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Kokoro fails to load (blocked CDN, no WebGPU/WASM) | `warmUp` logs "kokoro unavailable" and the browser voice keeps speaking.                                          |
-| A reply arrives before Kokoro is ready             | It's spoken by the browser voice (`kokoro-tts.test.ts` › "speaks with the browser voice until Kokoro is ready…"). |
-| Barge-in while Kokoro is speaking                  | `cancel()` stops the playing audio, and both voices are cancelled ("barge-in cancels both voices").               |
-| A voice switches halfway through a sentence        | It can't: the voice is chosen per sentence.                                                                       |
-| A sentence fails to generate                       | Its `onEnd` still fires, so the queue never stalls.                                                               |
+| What could go wrong                                | What happens                                                                                                                                                  |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Kokoro fails to load (blocked CDN, no WebGPU/WASM) | `warmUp` logs "kokoro unavailable" and the browser voice keeps speaking.                                                                                      |
+| A reply arrives before Kokoro is ready             | It's spoken by the browser voice (`kokoro-tts.test.ts` › "speaks with the browser voice until Kokoro is ready…").                                             |
+| Barge-in while Kokoro is speaking                  | `cancel()` stops the playing audio, and both voices are cancelled ("barge-in cancels both voices").                                                           |
+| The voice changes mid-conversation                 | It can't: the voice is chosen at the first reply and kept until the next conversation (`kokoro-tts.test.ts` › "keeps one voice for the whole conversation…"). |
+| A sentence fails to generate                       | Its `onEnd` still fires, so the queue never stalls.                                                                                                           |
 
 ## 5. Quiz
 
@@ -70,3 +70,12 @@ The spec §8 budget for "TTS start" is 150 ms (p50). The browser voice starts in
 6. The browser can only cancel echo it knows about. Audio the page plays itself can be subtracted from the mic; the OS-level `speechSynthesis` probably can't. Without that, the agent would hear itself and interrupt itself.
 
 </details>
+
+## 6. One voice per conversation (added later)
+
+Users noticed the voice **changing mid-call**: the first replies came from the fallback voice, then Kokoro took over once it finished downloading. It sounds like a different person picked up. Now `createConversationTts` picks the voice at the first reply and keeps it until the next conversation (a new hands-free start):
+
+- If Kokoro is ready, it's Kokoro. If it's still loading, the first reply waits up to 1.5 s for it.
+- Otherwise the whole conversation uses the fallback: ElevenLabs if it's set up, else the browser voice. Kokoro is used from the next conversation.
+- Returning voice users get Kokoro from the first word. The page remembers (in `localStorage`) that you used voice, and starts loading Kokoro, already in the browser's cache, as soon as the page opens.
+- Barge-in while the first reply waits for the choice: that sentence is dropped, not spoken later.
