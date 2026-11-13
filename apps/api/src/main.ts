@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { config, parse } from "dotenv";
 import { buildDeps, REPO_ROOT } from "./deps.js";
 import { buildServer } from "./server.js";
+import { trustProxySetting } from "./trust-proxy.js";
 
 config({ path: resolve(REPO_ROOT, ".env"), quiet: true });
 const defaults = parse(readFileSync(resolve(REPO_ROOT, ".env.example")));
@@ -25,7 +26,7 @@ const app = buildServer({
   ...(built.botCheck ? { botCheck: built.botCheck } : {}),
   ready: built.ready,
   webOrigins: list(env.WEB_ORIGINS ?? ""),
-  trustProxy: list(env.TRUST_PROXY ?? "127.0.0.1,::1"),
+  trustProxy: trustProxySetting(env),
 });
 // 0.0.0.0 only inside a container, where Caddy is the one door in (docs/deploy.md).
 await app.listen({ port: Number(env.API_PORT || 4000), host: env.API_HOST || "127.0.0.1" });

@@ -18,6 +18,10 @@ services:
         value: production
       - key: CONVERSATION_SOURCE
         value: pilot
+      # Read each visitor's address from Render's proxy, so they don't all share one set of
+      # chat limits (apps/api/src/trust-proxy.ts).
+      - key: TRUST_PRIVATE_PROXY
+        value: "1"
       - key: LLM_PROVIDER
         value: gemini
       - key: LLM_TIER

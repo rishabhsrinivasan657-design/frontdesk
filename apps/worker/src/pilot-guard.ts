@@ -28,6 +28,12 @@ const RULES: { key: string; ok: (v: string) => boolean; why: string }[] = [
     why: "must list single proxy addresses, not ranges",
   },
   {
+    // Render: one hop, only from a private-network peer (apps/api/src/trust-proxy.ts).
+    key: "TRUST_PRIVATE_PROXY",
+    ok: (v) => v === "" || v === "1",
+    why: "must be 1 or unset",
+  },
+  {
     key: "WEB_ORIGINS",
     ok: (v) => {
       const origins = v
