@@ -88,6 +88,9 @@ services:
         sync: false
       - key: NEXT_PUBLIC_PRIVACY_CONTACT
         sync: false
+      # The api stores every guest as pilot (CONVERSATION_SOURCE above), so the dashboard opens there.
+      - key: NEXT_PUBLIC_DASHBOARD_SOURCE
+        value: pilot
 
   # BullMQ needs noeviction: an evicted key would silently lose a queued confirmation email.
   - type: keyvalue

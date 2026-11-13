@@ -6,7 +6,8 @@ import { Icon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatTime, formatUsd } from "@/dashboard/format";
-import { type ConversationSummary, sourceParam } from "@/dashboard/types";
+import { DEFAULT_SOURCE, sourceParam, sourceQuery } from "@/dashboard/source";
+import type { ConversationSummary } from "@/dashboard/types";
 import { ownerFetch } from "@/lib/owner-api";
 
 export const metadata: Metadata = { title: "Conversations" };
@@ -28,7 +29,7 @@ export default async function ConversationsPage({
   const older = new URLSearchParams({ source, before: rows.at(-1)?.startedAt ?? "" });
   if (q) older.set("q", q);
   const detail = (id: string) =>
-    `/dashboard/conversations/${encodeURIComponent(id)}${source === "pilot" ? "?source=pilot" : ""}`;
+    `/dashboard/conversations/${encodeURIComponent(id)}${sourceQuery(source)}`;
 
   return (
     <>
@@ -37,7 +38,7 @@ export default async function ConversationsPage({
         description="Every conversation Front Desk has had, with its transcript, tool calls, audit trail and latency."
       />
       <form role="search" className="mb-4 flex gap-2" action="/dashboard/conversations">
-        {source === "pilot" && <input type="hidden" name="source" value="pilot" />}
+        {source !== DEFAULT_SOURCE && <input type="hidden" name="source" value={source} />}
         <label htmlFor="q" className="sr-only">
           Search conversations
         </label>
@@ -59,7 +60,7 @@ export default async function ConversationsPage({
         </Button>
         {(q || before) && (
           <Link
-            href={`/dashboard/conversations${source === "pilot" ? "?source=pilot" : ""}`}
+            href={`/dashboard/conversations${sourceQuery(source)}`}
             className="self-center text-sm text-muted-foreground hover:text-foreground"
           >
             Clear

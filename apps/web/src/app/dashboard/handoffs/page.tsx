@@ -7,7 +7,8 @@ import { Icon } from "@/components/icons";
 import { formatTime, relativeTime } from "@/dashboard/format";
 import { nextStep, whatTheyWant } from "@/dashboard/handoff-guidance";
 import { outcomeLabel } from "@/dashboard/handoff-outcomes";
-import { type HandoffRow, sourceParam } from "@/dashboard/types";
+import { sourceParam, sourceQuery } from "@/dashboard/source";
+import type { HandoffRow } from "@/dashboard/types";
 import { ownerFetch } from "@/lib/owner-api";
 import { cn } from "@/lib/utils";
 
@@ -33,7 +34,7 @@ export default async function HandoffsPage({
     const qs = q.toString();
     return `/dashboard/handoffs${qs ? `?${qs}` : ""}`;
   };
-  const sourceQ = source === "pilot" ? "?source=pilot" : "";
+  const sourceQ = sourceQuery(source);
 
   return (
     <>

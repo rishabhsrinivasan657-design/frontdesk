@@ -11,7 +11,8 @@ import { LatencyStrip } from "@/components/dashboard/latency-strip";
 import { Panel, PanelHeader } from "@/components/dashboard/page";
 import { Icon } from "@/components/icons";
 import { formatClock, formatSlot, formatTime, formatUsd } from "@/dashboard/format";
-import { type AuditRow, type ConversationDetail, sourceParam } from "@/dashboard/types";
+import { sourceParam, sourceQuery } from "@/dashboard/source";
+import type { AuditRow, ConversationDetail } from "@/dashboard/types";
 import { ownerFetch } from "@/lib/owner-api";
 
 export const metadata: Metadata = { title: "Conversation" };
@@ -59,7 +60,7 @@ export default async function ConversationPage({
   return (
     <>
       <Link
-        href={`/dashboard/conversations${source === "pilot" ? "?source=pilot" : ""}`}
+        href={`/dashboard/conversations${sourceQuery(source)}`}
         className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
       >
         <Icon name="chevronLeft" className="size-3.5" /> All conversations
@@ -174,7 +175,7 @@ export default async function ConversationPage({
                 )}
                 {!handoff.resolvedAt && (
                   <Link
-                    href={`/dashboard/handoffs${source === "pilot" ? "?source=pilot" : ""}#${handoff.id}`}
+                    href={`/dashboard/handoffs${sourceQuery(source)}#${handoff.id}`}
                     className="font-medium text-primary hover:underline"
                   >
                     Resolve in the handoff queue →

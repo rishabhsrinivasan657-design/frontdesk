@@ -4,7 +4,8 @@ import { DemoBadge } from "@/components/dashboard/chips";
 import { EmptyState, PageHeader } from "@/components/dashboard/page";
 import { Icon } from "@/components/icons";
 import { formatTime, relativeTime } from "@/dashboard/format";
-import { type FeedbackRow, sourceParam } from "@/dashboard/types";
+import { sourceParam, sourceQuery } from "@/dashboard/source";
+import type { FeedbackRow } from "@/dashboard/types";
 import { ownerFetch } from "@/lib/owner-api";
 
 export const metadata: Metadata = { title: "Feedback" };
@@ -17,7 +18,7 @@ export default async function FeedbackPage({
 }) {
   const source = sourceParam((await searchParams).source);
   const rows = await ownerFetch<FeedbackRow[]>(`/feedback?source=${source}`);
-  const sourceQ = source === "pilot" ? "?source=pilot" : "";
+  const sourceQ = sourceQuery(source);
 
   return (
     <>

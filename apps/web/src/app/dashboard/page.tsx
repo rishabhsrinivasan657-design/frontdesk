@@ -9,7 +9,7 @@ import { Icon } from "@/components/icons";
 import { busiest, minuteLabel, visibleRange } from "@/dashboard/day";
 import { relativeTime } from "@/dashboard/format";
 import type { CalendarDay, HandoffRow, LiveSession } from "@/dashboard/types";
-import { sourceParam } from "@/dashboard/types";
+import { DEFAULT_SOURCE, sourceParam, sourceQuery } from "@/dashboard/source";
 import { ownerFetch, ownerFetchUnlessDown } from "@/lib/owner-api";
 import { cn } from "@/lib/utils";
 
@@ -36,11 +36,11 @@ export default async function TodayPage({
     ownerFetch<LiveSession[]>("/live"),
     ownerFetch<HandoffRow[]>(`/handoffs?status=open&source=${source}`),
   ]);
-  const sourceQ = source === "pilot" ? "?source=pilot" : "";
+  const sourceQ = sourceQuery(source);
   const dayHref = (d: string) => {
     const p = new URLSearchParams();
     if (d !== day?.today) p.set("date", d);
-    if (source === "pilot") p.set("source", "pilot");
+    if (source !== DEFAULT_SOURCE) p.set("source", source);
     const s = p.toString();
     return `/dashboard${s ? `?${s}` : ""}`;
   };

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
+import { sourceParam, sourceQuery } from "@/dashboard/source";
 import { cn } from "@/lib/utils";
 
 const OPTIONS = [
@@ -12,7 +13,7 @@ const OPTIONS = [
 /** Live vs pilot data (spec §10). Eval runs live in their own database and never show here. */
 export function SourceSwitch({ compact = false }: { compact?: boolean }) {
   const pathname = usePathname();
-  const current = useSearchParams().get("source") === "pilot" ? "pilot" : "live";
+  const current = sourceParam(useSearchParams().get("source"));
   return (
     <div className="flex flex-col gap-1.5">
       <span
@@ -32,7 +33,7 @@ export function SourceSwitch({ compact = false }: { compact?: boolean }) {
         {OPTIONS.map((o) => (
           <Link
             key={o.value}
-            href={o.value === "pilot" ? `${pathname}?source=pilot` : pathname}
+            href={`${pathname}${sourceQuery(o.value)}`}
             title={o.hint}
             aria-pressed={current === o.value}
             className={cn(
