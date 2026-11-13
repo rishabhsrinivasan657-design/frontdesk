@@ -12,9 +12,9 @@ Small restaurants lose bookings because nobody can answer the phone during servi
 
 ## Demo video
 
-<!-- DEMO_VIDEO: drag the mp4 into this README on github.com, or paste a YouTube link here. -->
+[![Front Desk demo video (7 min): click to watch on YouTube](docs/media/demo-video-thumb.jpg)](https://youtu.be/md3PwHh_4NE)
 
-_A full walkthrough: booking by voice, changing a booking, an allergy handoff, the owner's dashboard, and what's under the hood._
+_A 7-minute walkthrough recorded on the live site: booking a table by voice, interrupting it mid-sentence, moving a booking, a party of 20 handed to the team, the owner's dashboard, and what's under the hood. Long pauses are trimmed and some parts are sped up; the on-screen chip says by how much._
 
 ## Highlights
 
