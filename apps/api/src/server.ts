@@ -135,8 +135,10 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
           });
         }
         const ready: Promise<Chat | undefined> = (async () => {
-          if (admitted && (await admitted) !== "ok") {
-            socket.close(RATE_LIMITED, "rate limited");
+          const verdict = admitted ? await admitted : "ok";
+          if (verdict !== "ok") {
+            req.log.warn({ verdict }, "ws refused by chat limits");
+            refuse(socket, "rate_limited", REFUSED_LIMITED, RATE_LIMITED, "rate limited");
             return undefined;
           }
           const requested =
@@ -146,7 +148,8 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
           if (bot && !(await mayResume(requested))) {
             const token = typeof req.query.ts === "string" ? req.query.ts : "";
             if (!(await bot.verify(token, ip))) {
-              socket.close(BOT_CHECK_FAILED, "bot check failed");
+              req.log.warn({ hadToken: token !== "" }, "ws refused by bot check");
+              refuse(socket, "server_error", REFUSED_BOT, BOT_CHECK_FAILED, "bot check failed");
               return undefined;
             }
             checked = true;
@@ -199,4 +202,23 @@ function upgradeHeaders(headers: Record<string, string | string[] | undefined>) 
     hasKey: typeof headers["sec-websocket-key"] === "string",
     hasOrigin: typeof headers.origin === "string",
   };
+}
+
+const REFUSED_LIMITED =
+  "Too many chats from your network right now. Please try again later or call the restaurant.";
+const REFUSED_BOT = "We couldn't verify you're not a bot. Please reload the page.";
+
+/**
+ * Says why before closing. Render's proxy drops close frames from the server, so a bare close
+ * left the page on "Connecting…" forever; a normal message gets through.
+ */
+function refuse(
+  socket: { send: (text: string) => void; close: (code: number, reason: string) => void },
+  code: "rate_limited" | "server_error",
+  message: string,
+  closeCode: number,
+  reason: string,
+): void {
+  socket.send(JSON.stringify({ type: "error", code, message }));
+  socket.close(closeCode, reason);
 }

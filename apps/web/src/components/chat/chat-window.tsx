@@ -71,7 +71,8 @@ export function ChatWindow({
   const turnstile = useTurnstile(turnstileSiteKey || undefined);
   const chat = useChat(url, turnstile.botToken);
   const { state } = chat;
-  const waking = useWaking(url, state.status);
+  // A refusal the server explained wins over the "waking up" note.
+  const waking = useWaking(url, state.status) && !state.notice;
   const voice = useVoice(chat);
   const ended = state.feedback !== undefined;
   const closed = state.status !== "open" || state.handoff !== undefined || ended;

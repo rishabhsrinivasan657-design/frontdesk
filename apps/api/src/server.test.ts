@@ -197,7 +197,10 @@ describe("chat limits (M10)", () => {
     const { url } = await start({ chatGuard: guard });
     const client = await connect(url);
     expect(await client.closed).toBe(4429);
-    expect(client.received).toEqual([]);
+    // Said as a message too: Render's proxy drops close frames.
+    expect(client.received).toEqual([
+      expect.objectContaining({ type: "error", code: "rate_limited" }),
+    ]);
   });
 
   it("releases the socket slot when it closes", async () => {
@@ -311,7 +314,8 @@ describe("bot check (M10)", () => {
     const { url } = await start({ botCheck: check });
     const client = await connect(url);
     expect(await client.closed).toBe(4403);
-    expect(client.received).toEqual([]);
+    expect(client.received).toHaveLength(1);
+    expect(client.received[0]).toMatchObject({ type: "error", code: "server_error" });
   });
 
   it("new session with a bad token closes 4403", async () => {
